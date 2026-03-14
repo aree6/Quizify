@@ -54,6 +54,18 @@ export interface Material {
   updated_at: string;
 }
 
+export interface CoursePreview {
+  title: string;
+  courseCode: string;
+  courseName: string;
+  topics: string[];
+  lesson: string;
+  questions: Array<{ prompt: string; options: string[]; correct: number }>;
+  questionCount: number;
+  generationSource: string;
+  contextChunksUsed: number;
+}
+
 export interface PublicQuestion {
   id: string;
   prompt: string;
