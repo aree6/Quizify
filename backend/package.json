@@ -8,9 +8,15 @@
     "start": "node src/server.js"
   },
   "dependencies": {
+    "@langchain/openai": "^0.6.0",
+    "@langchain/textsplitters": "^0.1.0",
     "cors": "^2.8.5",
     "dotenv": "^16.6.1",
     "express": "^4.21.2",
+    "jszip": "^3.10.1",
+    "multer": "^2.0.2",
+    "openai": "^5.23.0",
+    "pdf-parse": "^1.1.1",
     "@supabase/supabase-js": "^2.57.4"
   }
 }
