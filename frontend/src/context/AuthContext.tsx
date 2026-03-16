@@ -1,11 +1,11 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import type { AuthState, LoginCredentials, User } from '../types';
-import { authService } from '../services/auth';
+import { authService, clearSelectedRole } from '../services/auth';
 import { supabase } from '../services/supabase';
 
 interface AuthContextType extends AuthState {
   login: (credentials: LoginCredentials) => Promise<void>;
-  loginWithGoogle: () => Promise<void>;
+  loginWithGoogle: (opts?: { role?: 'Lecturer' | 'Admin' | 'Student' }) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -32,9 +32,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const initAuth = async () => {
-      // Check for dev token first
       const token = localStorage.getItem('authToken');
-      if (token && token.startsWith('dev-token-')) {
+
+      if (token?.startsWith('dev-token-')) {
         const devUser = getDevUser();
         if (devUser) {
           setState({ user: devUser, isAuthenticated: true, isLoading: false });
@@ -42,12 +42,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
 
-      // Check Supabase session
+      if (token?.startsWith('mock-token-')) {
+        try {
+          const user = await authService.validateToken(token);
+          setState({ user, isAuthenticated: true, isLoading: false });
+          return;
+        } catch {
+          setState({ user: null, isAuthenticated: false, isLoading: false });
+          return;
+        }
+      }
+
       const { data: { session } } = await supabase.auth.getSession();
-      
+
       if (session) {
         try {
           const user = await authService.validateToken(session.access_token);
+          localStorage.setItem('authToken', session.access_token);
           setState({ user, isAuthenticated: true, isLoading: false });
         } catch {
           setState({ user: null, isAuthenticated: false, isLoading: false });
@@ -59,16 +70,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     initAuth();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session) {
-        authService.validateToken(session.access_token)
-          .then((user) => {
-            localStorage.setItem('authToken', session.access_token);
-            setState({ user, isAuthenticated: true, isLoading: false });
-          });
+        try {
+          const user = await authService.validateToken(session.access_token);
+          localStorage.setItem('authToken', session.access_token);
+          setState({ user, isAuthenticated: true, isLoading: false });
+        } catch {
+          localStorage.removeItem('authToken');
+          setState({ user: null, isAuthenticated: false, isLoading: false });
+        }
       } else {
         const token = localStorage.getItem('authToken');
-        if (!token?.startsWith('dev-token-')) {
+        if (!token?.startsWith('dev-token-') && !token?.startsWith('mock-token-')) {
           localStorage.removeItem('authToken');
           setState({ user: null, isAuthenticated: false, isLoading: false });
         }
@@ -84,8 +98,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setState({ user: response.user, isAuthenticated: true, isLoading: false });
   };
 
-  const loginWithGoogle = async () => {
-    const response = await authService.loginWithGoogle();
+  const loginWithGoogle = async (opts?: { role?: 'Lecturer' | 'Admin' | 'Student' }) => {
+    const response = await authService.loginWithGoogle(opts);
     if (response.token) {
       localStorage.setItem('authToken', response.token);
       setState({ user: response.user, isAuthenticated: true, isLoading: false });
@@ -96,6 +110,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await authService.logout();
     localStorage.removeItem('authToken');
     localStorage.removeItem('devUser');
+    clearSelectedRole();
     setState({ user: null, isAuthenticated: false, isLoading: false });
   };
 
