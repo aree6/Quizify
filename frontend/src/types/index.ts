@@ -14,6 +14,7 @@ export interface AuthState {
 export interface LoginCredentials {
   email: string;
   password: string;
+  role?: 'Lecturer' | 'Admin' | 'Student';
 }
 
 export interface AuthResponse {
@@ -32,6 +33,23 @@ export interface CourseSummary {
   shareToken: string;
   shareUrl: string;
   createdAt: string;
+  generationSource?: 'RAG+LLM' | 'RAG-only' | 'Fallback';
+  contextChunksUsed?: number;
+}
+
+export interface Material {
+  id: string;
+  course_code: string;
+  topic: string | null;
+  file_name: string;
+  storage_path: string;
+  mime_type: string | null;
+  file_size: number;
+  chunk_count: number;
+  status: 'Processing' | 'Active' | 'Failed' | 'Deleted';
+  error_message: string | null;
+  uploaded_at: string;
+  updated_at: string;
 }
 
 export interface PublicQuestion {
