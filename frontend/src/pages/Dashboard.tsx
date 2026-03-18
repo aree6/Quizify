@@ -56,7 +56,11 @@ export function DashboardPage() {
       <div className="mt-8">
         <h3 className="text-lg font-semibold text-slate-900 mb-4">Recent Activity</h3>
         <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-100 text-center">
-          <p className="text-slate-500">No recent activity yet. Create your first mini-course!</p>
+          {user?.role === 'Student' ? (
+            <p className="text-slate-500">No quiz attempts yet. Check with your lecturer for available quizzes.</p>
+          ) : (
+            <p className="text-slate-500">No recent activity yet. Create your first mini-course!</p>
+          )}
         </div>
       </div>
     </div>
