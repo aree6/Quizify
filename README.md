@@ -19,10 +19,16 @@ This repository now includes a working end-to-end MVP with Supabase-based RAG:
 
 ## Model Defaults (affordable + good)
 
-- Embeddings: `text-embedding-3-small` (fast, low cost, 1536 dimensions)
-- Generation: `gpt-4o-mini` (strong quality/cost for structured quiz output)
+The backend now supports two providers:
 
-These defaults are implemented in `backend/src/lib/ai.js` and configurable via env.
+- `openai` (default when `OPENAI_API_KEY` exists)
+  - Embeddings: `text-embedding-3-small`
+  - Generation: `gpt-4o-mini`
+- `gemini` (set `AI_PROVIDER=gemini` and `GEMINI_API_KEY`)
+  - Embeddings: `text-embedding-004` (requested at 1536 output dimensions)
+  - Generation: `gemini-2.0-flash`
+
+Configured in `backend/src/lib/ai.js`.
 
 ## Setup
 
@@ -51,7 +57,9 @@ Fill `backend/.env`:
 
 - `SUPABASE_URL`
 - `SUPABASE_SERVICE_ROLE_KEY`
-- `OPENAI_API_KEY` (required for real embeddings + generation)
+- One provider key:
+  - `OPENAI_API_KEY` with `AI_PROVIDER=openai`, or
+  - `GEMINI_API_KEY` with `AI_PROVIDER=gemini`
 - `SUPABASE_STORAGE_BUCKET=course-materials`
 - optional: `EMBEDDING_MODEL`, `GENERATION_MODEL`, `PORT`, `CORS_ORIGIN`
 
@@ -86,19 +94,21 @@ npm run dev
 
 1. Login as Admin (dev mode)
 2. Go to Materials
-3. Upload a PDF/PPTX with a selected course code (e.g., `SE101`)
-4. Confirm status is `Active` and chunk count > 0
-5. Login as Lecturer
-6. Go to Create Course and use the same course code + related topics
-7. Generate mini-course and check generation info (RAG+LLM / RAG-only / Fallback)
-8. Open share link and submit quiz as student
-9. Verify submission in Analytics
+3. Search and select a course (e.g. `SECJ2203`)
+4. Choose material type (`course_info` or `slide`)
+5. Upload files or a whole folder of PDF/PPTX
+6. Confirm status is `Active` and chunk count > 0
+7. Login as Lecturer
+8. Go to Create Course and use the same course code + related topics
+9. Generate mini-course and check generation info (RAG+LLM / RAG-only / Fallback)
+10. Open share link and submit quiz as student
+11. Verify submission in Analytics
 
 ## API endpoints
 
 - `GET /health`
 - `GET /api/materials`
-- `POST /api/materials/upload` (multipart form-data: `file`, `courseCode`, optional `topic`)
+- `POST /api/materials/upload` (multipart form-data: `file`, `courseCode`, `materialType`, optional `chapter`, `topic`, `relativePath`)
 - `DELETE /api/materials/:id`
 - `POST /api/courses/generate`
 - `GET /api/courses`
@@ -108,6 +118,6 @@ npm run dev
 
 ## Notes
 
-- If `OPENAI_API_KEY` is missing, uploads still work and chunks are stored without embeddings.
+- If provider API key is missing, uploads still work and chunks are stored without embeddings.
 - In that mode, course generation falls back to non-vector retrieval and finally to built-in fallback content.
 - PPTX extraction is supported. Legacy binary `.ppt` is intentionally not supported in this MVP.
