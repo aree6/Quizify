@@ -1,67 +1,75 @@
-import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
-import { BookOpen, Users, FileText, BarChart3, GraduationCap } from 'lucide-react';
+import { BarChart3, BookOpen, FileQuestion, FileText, PlusCircle, Users } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+
+interface DashboardCard {
+  title: string;
+  desc: string;
+  path: string;
+  icon: React.ComponentType<{ className?: string }>;
+  cta: string;
+}
+
+const ADMIN_CARDS: DashboardCard[] = [
+  { title: 'Materials Library', desc: 'Manage course info and chapter slides.', path: '/materials', icon: FileText, cta: 'Open materials' },
+  { title: 'Create Course', desc: 'Generate mini-courses from indexed materials.', path: '/create-course', icon: PlusCircle, cta: 'Create now' },
+  { title: 'Analytics', desc: 'Review submissions and pass-rate trends.', path: '/analytics', icon: BarChart3, cta: 'View analytics' },
+  { title: 'My Courses', desc: 'Share links and monitor readiness.', path: '/my-courses', icon: BookOpen, cta: 'Manage courses' },
+];
+
+const LECTURER_CARDS: DashboardCard[] = [
+  { title: 'Materials Library', desc: 'Upload course info and chapter slide packs.', path: '/materials', icon: FileText, cta: 'Open materials' },
+  { title: 'Create Course', desc: 'Generate lessons and quizzes by topic.', path: '/create-course', icon: PlusCircle, cta: 'Create now' },
+  { title: 'My Courses', desc: 'Track generated courses and share URLs.', path: '/my-courses', icon: Users, cta: 'Manage courses' },
+  { title: 'Analytics', desc: 'Review student scores and pass rates.', path: '/analytics', icon: BarChart3, cta: 'View analytics' },
+];
+
+const STUDENT_CARDS: DashboardCard[] = [
+  { title: 'Take Quiz', desc: 'Open available quiz links and submit attempts.', path: '/quiz', icon: FileQuestion, cta: 'Start quiz' },
+];
+
+function cardSet(role?: 'Lecturer' | 'Admin' | 'Student') {
+  if (role === 'Admin') return ADMIN_CARDS;
+  if (role === 'Lecturer') return LECTURER_CARDS;
+  return STUDENT_CARDS;
+}
 
 export function DashboardPage() {
   const { user } = useAuth();
-
-  const adminCards = [
-    { icon: FileText, title: 'Materials', desc: 'Upload and manage course materials', path: '/materials', color: 'bg-blue-500' },
-  ];
-
-  const lecturerCards = [
-    { icon: BookOpen, title: 'Create Course', desc: 'Generate a new mini-course with quiz', path: '/create-course', color: 'bg-green-500' },
-    { icon: Users, title: 'My Courses', desc: 'View and manage your mini-courses', path: '/my-courses', color: 'bg-purple-500' },
-    { icon: BarChart3, title: 'Analytics', desc: 'View student quiz results', path: '/analytics', color: 'bg-orange-500' },
-  ];
-
-  const studentCards = [
-    { icon: GraduationCap, title: 'Available Quizzes', desc: 'View and attempt quizzes', path: '/quiz', color: 'bg-teal-500' },
-  ];
-
-  const getCards = () => {
-    if (user?.role === 'Admin') return [...adminCards, ...lecturerCards];
-    if (user?.role === 'Lecturer') return lecturerCards;
-    return studentCards;
-  };
+  const cards = cardSet(user?.role);
 
   return (
     <div>
       <div className="mb-8">
-        <h2 className="text-2xl font-bold text-slate-900">Welcome back, {user?.name}!</h2>
-        <p className="text-slate-500 mt-1">What would you like to do today?</p>
+        <h2 className="section-title">Welcome back, {user?.name}</h2>
+        <p className="section-subtitle mt-2">Your workspace is tailored for the {user?.role} role.</p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-        {getCards().map((card) => {
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
+        {cards.map((card) => {
           const Icon = card.icon;
           return (
-            <Link 
-              key={card.path} 
-              to={card.path}
-              className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100"
-            >
-              <div className={`w-12 h-12 ${card.color} rounded-xl flex items-center justify-center mb-4`}>
-                <Icon className="w-6 h-6 text-white" />
+            <div key={card.path} className="surface-card card-hover p-6">
+              <div className="w-12 h-12 rounded-full bg-[#efefef] flex items-center justify-center mb-4">
+                <Icon className="w-5 h-5 text-[#0e0f0c]" />
               </div>
-              <h3 className="text-lg font-semibold text-slate-900">
-                {card.title}
-              </h3>
-              <p className="text-slate-400 text-sm mt-1">{card.desc}</p>
-            </Link>
+              <h3 className="text-xl font-bold text-[#0e0f0c] mb-1">{card.title}</h3>
+              <p className="text-sm text-[#4b4b4b] mb-4">{card.desc}</p>
+              <Link to={card.path} className="pill-primary">
+                {card.cta}
+              </Link>
+            </div>
           );
         })}
       </div>
 
-      <div className="mt-8">
-        <h3 className="text-lg font-semibold text-slate-900 mb-4">Recent Activity</h3>
-        <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-100 text-center">
-          {user?.role === 'Student' ? (
-            <p className="text-slate-500">No quiz attempts yet. Check with your lecturer for available quizzes.</p>
-          ) : (
-            <p className="text-slate-500">No recent activity yet. Create your first mini-course!</p>
-          )}
-        </div>
+      <div className="mt-8 surface-card p-6">
+        <h3 className="text-lg font-bold text-[#0e0f0c] mb-2">Recent Activity</h3>
+        {user?.role === 'Student' ? (
+          <p className="text-sm text-[#4b4b4b]">No attempts yet. Ask your lecturer for the latest quiz link.</p>
+        ) : (
+          <p className="text-sm text-[#4b4b4b]">No activity yet. Start by uploading materials or creating a mini-course.</p>
+        )}
       </div>
     </div>
   );
