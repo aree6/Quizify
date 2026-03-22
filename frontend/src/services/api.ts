@@ -19,7 +19,8 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    throw new Error(data?.message || 'Request failed');
+    const details = [data?.message, data?.details, data?.hint].filter(Boolean).join(' | ');
+    throw new Error(details || 'Request failed');
   }
   return data as T;
 }
@@ -82,7 +83,38 @@ export const apiService = {
 
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
-      throw new Error(data?.message || 'Upload failed');
+      const details = [data?.message, data?.details, data?.hint].filter(Boolean).join(' | ');
+      throw new Error(details || 'Upload failed');
+    }
+
+    return data as { material: Material };
+  },
+
+  async uploadMaterialAdvanced(payload: {
+    file: File;
+    courseCode: string;
+    materialType: 'course_info' | 'slide';
+    chapter?: string;
+    topic?: string;
+    relativePath?: string;
+  }) {
+    const formData = new FormData();
+    formData.append('file', payload.file);
+    formData.append('courseCode', payload.courseCode);
+    formData.append('materialType', payload.materialType);
+    if (payload.chapter) formData.append('chapter', payload.chapter);
+    if (payload.topic) formData.append('topic', payload.topic);
+    if (payload.relativePath) formData.append('relativePath', payload.relativePath);
+
+    const response = await fetch(`${API_BASE_URL}/api/materials/upload`, {
+      method: 'POST',
+      body: formData,
+    });
+
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const details = [data?.message, data?.details, data?.hint].filter(Boolean).join(' | ');
+      throw new Error(details || 'Upload failed');
     }
 
     return data as { material: Material };

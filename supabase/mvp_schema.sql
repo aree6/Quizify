@@ -78,7 +78,10 @@ create index if not exists idx_material_chunks_embedding on public.material_chun
 create table if not exists public.materials (
   id uuid primary key default gen_random_uuid(),
   course_code text not null,
+  material_type text not null default 'slide' check (material_type in ('course_info', 'slide')),
+  chapter text,
   topic text,
+  relative_path text,
   file_name text not null,
   storage_path text not null unique,
   mime_type text,
@@ -92,6 +95,24 @@ create table if not exists public.materials (
 
 create index if not exists idx_materials_course_code on public.materials (course_code);
 create index if not exists idx_materials_uploaded_at on public.materials (uploaded_at desc);
+
+alter table public.materials add column if not exists material_type text not null default 'slide';
+alter table public.materials add column if not exists chapter text;
+alter table public.materials add column if not exists relative_path text;
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'materials_material_type_check'
+  ) then
+    alter table public.materials
+      add constraint materials_material_type_check
+      check (material_type in ('course_info', 'slide'));
+  end if;
+end;
+$$;
 
 alter table public.material_chunks
   add column if not exists material_id uuid;
