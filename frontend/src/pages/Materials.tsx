@@ -1,62 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Upload, FileText, FolderOpen, Trash2, X, CheckCircle, AlertCircle, Loader } from 'lucide-react';
+import { AlertCircle, CheckCircle, Loader, Search, Trash2, Upload, X } from 'lucide-react';
 import { apiService } from '../services/api';
+import { COURSE_OPTIONS, filterCoursesBySearch, findCourseByCode, type CourseOption } from '../constants/courses';
 import type { Material } from '../types';
 
-const COURSE_OPTIONS = [
-  { code: 'SECI1013', name: 'Discrete Structure' },
-  { code: 'SECJ1013', name: 'Programming Technique I' },
-  { code: 'SECR1013', name: 'Digital Logic' },
-  { code: 'SECP1513', name: 'Technology & Information System' },
-  { code: 'SECI1113', name: 'Computational Mathematics' },
-  { code: 'SECI1143', name: 'Probability & Statistical Data Analysis' },
-  { code: 'SECJ1023', name: 'Programming Technique II' },
-  { code: 'SECR1033', name: 'Computer Organisation and Architecture' },
-  { code: 'SECD2523', name: 'Database' },
-  { code: 'SECD2613', name: 'System Analysis and Design' },
-  { code: 'SECJ2013', name: 'Data Structure and Algorithm' },
-  { code: 'SECR2213', name: 'Network Communications' },
-  { code: 'SECV2113', name: 'Human Computer Interaction' },
-  { code: 'SECJ2203', name: 'Software Engineering' },
-  { code: 'SECV2223', name: 'Web Programming' },
-  { code: 'SECR2043', name: 'Operating Systems' },
-  { code: 'SECJ2154', name: 'Object Oriented Programming' },
-  { code: 'SECJ2253', name: 'Requirements Engineering & Software Modelling' },
-  { code: 'SECJ2363', name: 'Software Project Management' },
-  { code: 'SECJ3104', name: 'Applications Development' },
-  { code: 'SECJ3553', name: 'Artificial Intelligence' },
-  { code: 'SECJ3303', name: 'Internet Programming' },
-  { code: 'SECJ3323', name: 'Software Design & Architecture' },
-  { code: 'SECJ3603', name: 'Knowledge-Based & Expert Systems' },
-  { code: 'SECJ3032', name: 'Software Engineering Project I' },
-  { code: 'SECJ3203', name: 'Theory of Computer Science' },
-  { code: 'SECJ3343', name: 'Software Quality Assurance' },
-  { code: 'SECJ3563', name: 'Computational Intelligence' },
-  { code: 'SECJ3623', name: 'Mobile Application Programming' },
-  { code: 'SECJ3403', name: 'Special Topic in Software Engineering' },
-  { code: 'SECJ3483', name: 'Web Technology' },
-  { code: 'SECJ4118', name: 'Industrial Training (HW)' },
-  { code: 'SECJ4114', name: 'Industrial Training Report' },
-  { code: 'SECJ4134', name: 'Software Engineering Project II' },
-  { code: 'SECD3761', name: 'Technopreneurship Seminar' },
-  { code: 'UBSS1032', name: 'Introduction to Entrepreneurship' },
-  { code: 'SECJ4383', name: 'Software Construction' },
-  { code: 'SECJ4423', name: 'Real-Time Software Engineering' },
-  { code: 'SECJ4463', name: 'Agent-Oriented Software Engineering' },
-];
+type MaterialType = 'course_info' | 'slide';
 
-function extractCourseCode(value: string): string {
-  if (value.includes(' - ')) {
-    return value.split(' - ')[0];
-  }
-  return value;
+interface QueueItem {
+  id: string;
+  file: File;
+  relativePath?: string;
+  status: 'pending' | 'uploading' | 'success' | 'error';
+  error?: string;
 }
-
-const STATUS_CONFIG: Record<string, { icon: typeof CheckCircle; color: string; bg: string }> = {
-  Processing: { icon: Loader, color: 'text-amber-600', bg: 'bg-amber-100' },
-  Active: { icon: CheckCircle, color: 'text-green-600', bg: 'bg-green-100' },
-  Failed: { icon: AlertCircle, color: 'text-red-600', bg: 'bg-red-100' },
-};
 
 function formatBytes(bytes: number) {
   if (!bytes) return '0 B';
@@ -70,27 +26,111 @@ function formatBytes(bytes: number) {
   return `${value.toFixed(value >= 10 || idx === 0 ? 0 : 1)} ${units[idx]}`;
 }
 
-interface UploadFile extends File {
-  id: string;
-  status: 'pending' | 'uploading' | 'success' | 'error';
-  error?: string;
+function inferChapter(relativePath?: string) {
+  if (!relativePath) return '';
+  const parts = relativePath.split('/');
+  if (parts.length > 1) return parts[parts.length - 2];
+  return '';
+}
+
+function inferTopic(fileName: string) {
+  return fileName.replace(/\.(pdf|pptx)$/i, '').replace(/[_-]/g, ' ').trim();
+}
+
+function queueFromFiles(files: FileList | null): QueueItem[] {
+  if (!files) return [];
+  return Array.from(files)
+    .filter((file) => /\.(pdf|pptx)$/i.test(file.name))
+    .map((file) => {
+      const maybePath = (file as File & { webkitRelativePath?: string }).webkitRelativePath;
+      return {
+        id: `${file.name}-${file.lastModified}-${Math.random().toString(36).slice(2, 8)}`,
+        file,
+        relativePath: maybePath || undefined,
+        status: 'pending' as const,
+      };
+    });
+}
+
+function CourseSearchSelect({
+  selectedCourse,
+  onSelect,
+}: {
+  selectedCourse: CourseOption;
+  onSelect: (course: CourseOption) => void;
+}) {
+  const [query, setQuery] = useState(`${selectedCourse.code} - ${selectedCourse.name}`);
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    setQuery(`${selectedCourse.code} - ${selectedCourse.name}`);
+  }, [selectedCourse]);
+
+  const filtered = filterCoursesBySearch(query);
+
+  return (
+    <div className="relative w-full lg:w-[430px]">
+      <label className="block text-xs font-semibold text-[#4b4b4b] mb-1">Search course</label>
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#4b4b4b]" />
+        <input
+          value={query}
+          onChange={(event) => {
+            setQuery(event.target.value);
+            setOpen(true);
+          }}
+          onFocus={() => setOpen(true)}
+          onBlur={() => setTimeout(() => setOpen(false), 120)}
+          className="field pl-10"
+          placeholder="SECJ2203 or Software Engineering"
+        />
+      </div>
+
+      {open && (
+        <div className="absolute z-20 mt-1 w-full ring-card max-h-64 overflow-y-auto">
+          {filtered.length === 0 ? (
+            <div className="px-4 py-3 text-sm text-[#4b4b4b]">No matching course</div>
+          ) : (
+            filtered.map((course) => (
+              <button
+                key={course.code}
+                type="button"
+                onClick={() => {
+                  onSelect(course);
+                  setOpen(false);
+                }}
+                className="w-full text-left px-4 py-2.5 hover:bg-[#efefef]"
+              >
+                <p className="text-sm font-bold text-[#0e0f0c]">{course.code}</p>
+                <p className="text-xs text-[#4b4b4b]">{course.name}</p>
+              </button>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function MaterialsPage() {
   const [materials, setMaterials] = useState<Material[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [courseCode, setCourseCode] = useState('SECJ1013 - Programming Technique I');
+  const [selectedCourse, setSelectedCourse] = useState<CourseOption>(COURSE_OPTIONS[0]);
+  const [materialType, setMaterialType] = useState<MaterialType>('slide');
+  const [chapter, setChapter] = useState('');
+  const [queue, setQueue] = useState<QueueItem[]>([]);
+  const [uploading, setUploading] = useState(false);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [uploadQueue, setUploadQueue] = useState<UploadFile[]>([]);
-  const [uploadingCount, setUploadingCount] = useState(0);
+  const folderInputRef = useRef<HTMLInputElement>(null);
 
   const loadMaterials = async () => {
     try {
       setLoading(true);
       setError('');
       const response = await apiService.getMaterials();
-      setMaterials(response.materials);
+      setMaterials(response.materials.filter((item) => item.status !== 'Deleted'));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load materials');
     } finally {
@@ -102,95 +142,80 @@ export function MaterialsPage() {
     loadMaterials();
   }, []);
 
-  const activeMaterials = useMemo(
-    () => materials.filter((m) => m.status !== 'Deleted'),
+  const stats = useMemo(
+    () => ({
+      files: materials.length,
+      chunks: materials.reduce((sum, item) => sum + Number(item.chunk_count || 0), 0),
+      bytes: materials.reduce((sum, item) => sum + Number(item.file_size || 0), 0),
+    }),
     [materials],
   );
 
-  const materialsByCourse = useMemo(() => {
+  const groupedByCourse = useMemo(() => {
     const grouped: Record<string, Material[]> = {};
-    activeMaterials.forEach((m) => {
-      if (!grouped[m.course_code]) {
-        grouped[m.course_code] = [];
-      }
-      grouped[m.course_code].push(m);
+    materials.forEach((item) => {
+      if (!grouped[item.course_code]) grouped[item.course_code] = [];
+      grouped[item.course_code].push(item);
     });
     return grouped;
-  }, [activeMaterials]);
+  }, [materials]);
 
-  const totalChunks = useMemo(
-    () => activeMaterials.reduce((sum, item) => sum + Number(item.chunk_count || 0), 0),
-    [activeMaterials],
-  );
-  const totalStorage = useMemo(
-    () => activeMaterials.reduce((sum, item) => sum + Number(item.file_size || 0), 0),
-    [activeMaterials],
-  );
-
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    if (files.length === 0) return;
-
-    const queue: UploadFile[] = files.map((file) => ({
-      ...file,
-      id: `${file.name}-${file.lastModified}`,
-      status: 'pending' as const,
-    }));
-
-    setUploadQueue((prev) => [...prev, ...queue]);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+  const appendQueue = (items: QueueItem[]) => {
+    if (items.length === 0) {
+      setError('No supported files found. Upload PDF or PPTX.');
+      return;
     }
+    setQueue((prev) => [...prev, ...items]);
+  };
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    appendQueue(queueFromFiles(event.target.files));
+    event.target.value = '';
+  };
+
+  const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    appendQueue(queueFromFiles(event.dataTransfer.files));
   };
 
   const removeFromQueue = (id: string) => {
-    setUploadQueue((prev) => prev.filter((f) => f.id !== id));
+    setQueue((prev) => prev.filter((item) => item.id !== id));
   };
 
-  const processQueue = async () => {
-    const pending = uploadQueue.filter((f) => f.status === 'pending');
+  const uploadAll = async () => {
+    const pending = queue.filter((item) => item.status === 'pending');
     if (pending.length === 0) return;
 
-    setUploadingCount(pending.length);
+    setUploading(true);
+    setError('');
 
-    for (const file of pending) {
-      setUploadQueue((prev) =>
-        prev.map((f) => (f.id === file.id ? { ...f, status: 'uploading' as const } : f))
-      );
+    for (const item of pending) {
+      setQueue((prev) => prev.map((q) => (q.id === item.id ? { ...q, status: 'uploading' } : q)));
 
       try {
-        const actualCourseCode = extractCourseCode(courseCode);
-        await apiService.uploadMaterial({
-          file: file as File,
-          courseCode: actualCourseCode,
-          topic: file.name.replace(/\.(pdf|pptx)$/i, '').replace(/[_-]/g, ' '),
+        await apiService.uploadMaterialAdvanced({
+          file: item.file,
+          courseCode: selectedCourse.code,
+          materialType,
+          chapter: materialType === 'slide' ? chapter || inferChapter(item.relativePath) || undefined : undefined,
+          topic: inferTopic(item.file.name),
+          relativePath: item.relativePath,
         });
 
-        setUploadQueue((prev) =>
-          prev.map((f) => (f.id === file.id ? { ...f, status: 'success' as const } : f))
-        );
+        setQueue((prev) => prev.map((q) => (q.id === item.id ? { ...q, status: 'success' } : q)));
       } catch (err) {
-        setUploadQueue((prev) =>
-          prev.map((f) =>
-            f.id === file.id
-              ? { ...f, status: 'error' as const, error: err instanceof Error ? err.message : 'Upload failed' }
-              : f
-          )
+        setQueue((prev) =>
+          prev.map((q) =>
+            q.id === item.id
+              ? { ...q, status: 'error', error: err instanceof Error ? err.message : 'Upload failed' }
+              : q,
+          ),
         );
       }
     }
 
-    setUploadingCount(0);
+    setUploading(false);
     await loadMaterials();
-    setUploadQueue((prev) => prev.filter((f) => f.status === 'pending'));
-  };
-
-  const handleUploadClick = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleQueueUpload = async () => {
-    await processQueue();
   };
 
   const handleDelete = async (id: string) => {
@@ -202,217 +227,190 @@ export function MaterialsPage() {
     }
   };
 
-  const getStatusIcon = (status: string) => {
-    const config = STATUS_CONFIG[status] || STATUS_CONFIG.Active;
-    const Icon = config.icon;
-    return <Icon className={`w-4 h-4 ${config.color}`} />;
-  };
-
   return (
     <div>
       <div className="mb-8">
-        <h2 className="text-2xl font-bold text-slate-900">Course Materials</h2>
-        <p className="text-slate-500 mt-1">
-          Upload PDF/PPTX files for RAG. Students can quiz on any uploaded material.
-        </p>
+        <h2 className="section-title">Materials Library</h2>
+        <p className="section-subtitle mt-2">Organize files by course, type, chapter, and topic.</p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
-              <FolderOpen className="w-5 h-5 text-blue-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-slate-900">{activeMaterials.length}</p>
-              <p className="text-sm text-slate-500">Files</p>
-            </div>
-          </div>
+        <div className="top-stat">
+          <p className="text-xs text-[#4b4b4b]">Files</p>
+          <p className="text-3xl font-bold text-[#0e0f0c]">{stats.files}</p>
         </div>
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center">
-              <FileText className="w-5 h-5 text-green-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-slate-900">{totalChunks}</p>
-              <p className="text-sm text-slate-500">Chunks Indexed</p>
-            </div>
-          </div>
+        <div className="top-stat">
+          <p className="text-xs text-[#4b4b4b]">Indexed chunks</p>
+          <p className="text-3xl font-bold text-[#0e0f0c]">{stats.chunks}</p>
         </div>
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center">
-              <Upload className="w-5 h-5 text-amber-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-slate-900">{formatBytes(totalStorage)}</p>
-              <p className="text-sm text-slate-500">Storage Used</p>
-            </div>
-          </div>
+        <div className="top-stat">
+          <p className="text-xs text-[#4b4b4b]">Storage</p>
+          <p className="text-3xl font-bold text-[#0e0f0c]">{formatBytes(stats.bytes)}</p>
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 mb-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
-          <h3 className="text-lg font-semibold text-slate-900">Upload New Materials</h3>
-          <select
-            value={courseCode}
-            onChange={(e) => setCourseCode(e.target.value)}
-            className="px-4 py-2 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-          >
-            {COURSE_OPTIONS.map((c) => (
-              <option key={c.code} value={c.code}>
-                {c.code} - {c.name}
-              </option>
-            ))}
-          </select>
+      <div className="surface-card p-6 mb-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+          <CourseSearchSelect selectedCourse={selectedCourse} onSelect={setSelectedCourse} />
+
+          <div>
+            <label className="block text-xs font-semibold text-[#4b4b4b] mb-1">Material type</label>
+            <select value={materialType} onChange={(event) => setMaterialType(event.target.value as MaterialType)} className="field">
+              <option value="slide">Slides / chapter files</option>
+              <option value="course_info">Course information</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-[#4b4b4b] mb-1">Chapter (optional)</label>
+            <input className="field" value={chapter} onChange={(event) => setChapter(event.target.value)} placeholder="Chapter 1" />
+          </div>
         </div>
 
-        <div
-          onClick={handleUploadClick}
-          className="border-2 border-dashed border-slate-200 rounded-xl p-8 text-center cursor-pointer hover:border-blue-400 transition-colors mb-4"
-        >
-          <Upload className="w-10 h-10 text-slate-400 mx-auto mb-2" />
-          <p className="text-slate-600 font-medium">
-            Drop files here or click to browse
-          </p>
-          <p className="text-slate-400 text-sm mt-1">
-            Select multiple files at once — PDF or PPTX
-          </p>
+        <div onDragOver={(event) => event.preventDefault()} onDrop={handleDrop} className="ring-card p-8 text-center mb-4">
+          <Upload className="w-8 h-8 mx-auto text-[#4b4b4b] mb-2" />
+          <p className="text-sm font-semibold text-[#0e0f0c]">Drop files/folders or use picker</p>
+          <p className="text-xs text-[#4b4b4b] mt-1">Supports PDF and PPTX, including folder upload.</p>
+          <div className="flex flex-wrap gap-2 justify-center mt-4">
+            <button type="button" onClick={() => fileInputRef.current?.click()} className="pill-secondary">
+              Select files
+            </button>
+            <button type="button" onClick={() => folderInputRef.current?.click()} className="pill-secondary">
+              Select folder
+            </button>
+          </div>
         </div>
 
         <input
           ref={fileInputRef}
           type="file"
-          accept=".pdf,.pptx,application/pdf,application/vnd.openxmlformats-officedocument.presentationml.presentation"
           multiple
+          accept=".pdf,.pptx,application/pdf,application/vnd.openxmlformats-officedocument.presentationml.presentation"
           onChange={handleFileSelect}
           className="hidden"
         />
 
-        {uploadQueue.length > 0 && (
-          <div className="space-y-2 mb-4">
-            <p className="text-sm font-medium text-slate-700">
-              {uploadQueue.length} file(s) selected for {courseCode}
-            </p>
-            <div className="max-h-48 overflow-y-auto space-y-2">
-              {uploadQueue.map((file) => (
-                <div
-                  key={file.id}
-                  className="flex items-center justify-between p-3 bg-slate-50 rounded-lg"
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    {file.status === 'uploading' ? (
-                      <Loader className="w-4 h-4 text-blue-600 animate-spin flex-shrink-0" />
-                    ) : file.status === 'success' ? (
-                      <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
-                    ) : file.status === 'error' ? (
-                      <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0" />
-                    ) : (
-                      <FileText className="w-4 h-4 text-slate-400 flex-shrink-0" />
-                    )}
-                    <span className="text-sm text-slate-700 truncate">{file.name}</span>
+        <input
+          ref={folderInputRef}
+          type="file"
+          multiple
+          onChange={handleFileSelect}
+          className="hidden"
+          {...({ webkitdirectory: '', directory: '' } as Record<string, string>)}
+        />
+
+        {queue.length > 0 && (
+          <div>
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+              <p className="text-sm text-[#4b4b4b]">{queue.length} file(s) queued for {selectedCourse.code}</p>
+              <button
+                type="button"
+                onClick={uploadAll}
+                disabled={uploading || queue.every((item) => item.status !== 'pending')}
+                className="pill-primary"
+              >
+                {uploading ? 'Uploading...' : 'Upload and Index'}
+              </button>
+            </div>
+
+            <div className="space-y-2 max-h-56 overflow-y-auto">
+              {queue.map((item) => (
+                <div key={item.id} className="ring-card p-3 flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-[#0e0f0c] truncate">{item.file.name}</p>
+                    {item.relativePath && <p className="text-xs text-[#4b4b4b] truncate">{item.relativePath}</p>}
+                    {item.error && <p className="text-xs text-[#d03238] mt-1">{item.error}</p>}
                   </div>
                   <div className="flex items-center gap-2">
-                    {file.error && (
-                      <span className="text-xs text-red-600 hidden sm:inline">{file.error}</span>
+                    {item.status === 'uploading' && <Loader className="w-4 h-4 text-[#4b4b4b] animate-spin" />}
+                    {item.status === 'success' && <CheckCircle className="w-4 h-4 text-[#054d28]" />}
+                    {item.status === 'error' && <AlertCircle className="w-4 h-4 text-[#d03238]" />}
+                    {item.status === 'pending' && (
+                      <button type="button" onClick={() => removeFromQueue(item.id)} className="p-1 text-[#4b4b4b]">
+                        <X className="w-4 h-4" />
+                      </button>
                     )}
-                    <button
-                      onClick={() => removeFromQueue(file.id)}
-                      disabled={file.status === 'uploading'}
-                      className="p-1 text-slate-400 hover:text-red-600 disabled:opacity-50"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
                   </div>
                 </div>
               ))}
             </div>
-            <button
-              onClick={handleQueueUpload}
-              disabled={uploadingCount > 0 || uploadQueue.every((f) => f.status !== 'pending')}
-              className="px-4 py-2.5 rounded-xl font-medium bg-blue-600 text-white disabled:opacity-50"
-            >
-              {uploadingCount > 0 ? `Uploading ${uploadingCount}...` : 'Upload All'}
-            </button>
           </div>
         )}
 
-        {error && <div className="mt-4 p-3 rounded-xl bg-red-50 text-red-700 text-sm">{error}</div>}
+        {error && <div className="mt-4 p-3 rounded-[8px] bg-[#ffe5e7] text-[#d03238] text-sm">{error}</div>}
       </div>
 
-      <div className="space-y-6">
-        {loading ? (
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 text-center text-slate-500">
-            Loading materials...
-          </div>
-        ) : Object.keys(materialsByCourse).length === 0 ? (
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 text-center text-slate-500">
-            No materials uploaded yet. Upload your first file above!
-          </div>
-        ) : (
-          Object.entries(materialsByCourse)
+      {loading ? (
+        <div className="surface-card p-6 text-sm text-[#4b4b4b]">Loading materials...</div>
+      ) : Object.keys(groupedByCourse).length === 0 ? (
+        <div className="surface-card p-6 text-sm text-[#4b4b4b]">No materials uploaded yet.</div>
+      ) : (
+        <div className="space-y-6">
+          {Object.entries(groupedByCourse)
             .sort(([a], [b]) => a.localeCompare(b))
-            .map(([course, courseMaterials]) => (
-              <div key={course} className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-                <div className="px-6 py-4 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
-                  <div>
-                    <h3 className="text-lg font-semibold text-slate-900">{course}</h3>
-                    <p className="text-sm text-slate-500">
-                      {courseMaterials.length} file(s) • {formatBytes(courseMaterials.reduce((s, m) => s + Number(m.file_size), 0))} total
-                    </p>
+            .map(([courseCode, items]) => {
+              const course = findCourseByCode(courseCode);
+              const infoItems = items.filter((item) => item.material_type === 'course_info');
+              const slideItems = items.filter((item) => item.material_type === 'slide');
+
+              return (
+                <div key={courseCode} className="surface-card overflow-hidden">
+                  <div className="px-6 py-4 border-b border-[#efefef]">
+                    <h3 className="text-lg font-bold text-[#0e0f0c]">{courseCode}</h3>
+                    <p className="text-sm text-[#4b4b4b]">{course?.name || 'Unknown course'} • {items.length} files</p>
+                  </div>
+
+                  <div className="p-4 grid grid-cols-1 xl:grid-cols-2 gap-4">
+                    <div className="ring-card p-4">
+                      <p className="text-sm font-bold text-[#0e0f0c] mb-2">Course Information ({infoItems.length})</p>
+                      {infoItems.length === 0 ? (
+                        <p className="text-xs text-[#4b4b4b]">No course information uploaded.</p>
+                      ) : (
+                        <div className="space-y-2">
+                          {infoItems.map((item) => (
+                            <div key={item.id} className="flex items-center justify-between gap-3 p-3 border border-[#efefef] rounded-[8px]">
+                              <div>
+                                <p className="text-sm font-semibold text-[#0e0f0c]">{item.file_name}</p>
+                                <p className="text-xs text-[#4b4b4b]">{formatBytes(item.file_size)} • {item.chunk_count} chunks</p>
+                              </div>
+                              <button type="button" onClick={() => handleDelete(item.id)} className="pill-secondary !px-3 !py-2">
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="ring-card p-4">
+                      <p className="text-sm font-bold text-[#0e0f0c] mb-2">Slides and Chapters ({slideItems.length})</p>
+                      {slideItems.length === 0 ? (
+                        <p className="text-xs text-[#4b4b4b]">No chapter slides uploaded.</p>
+                      ) : (
+                        <div className="space-y-2">
+                          {slideItems.map((item) => (
+                            <div key={item.id} className="flex items-center justify-between gap-3 p-3 border border-[#efefef] rounded-[8px]">
+                              <div>
+                                <p className="text-sm font-semibold text-[#0e0f0c]">{item.file_name}</p>
+                                <p className="text-xs text-[#4b4b4b]">
+                                  {item.chapter ? `${item.chapter} • ` : ''}
+                                  {item.topic || 'No topic'} • {formatBytes(item.file_size)} • {item.chunk_count} chunks
+                                </p>
+                              </div>
+                              <button type="button" onClick={() => handleDelete(item.id)} className="pill-secondary !px-3 !py-2">
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
-
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-slate-50 border-b border-slate-100">
-                      <tr>
-                        <th className="text-left px-6 py-3 text-sm font-semibold text-slate-600">File</th>
-                        <th className="text-left px-6 py-3 text-sm font-semibold text-slate-600">Topic</th>
-                        <th className="text-left px-6 py-3 text-sm font-semibold text-slate-600">Size</th>
-                        <th className="text-left px-6 py-3 text-sm font-semibold text-slate-600">Chunks</th>
-                        <th className="text-left px-6 py-3 text-sm font-semibold text-slate-600">Status</th>
-                        <th className="text-left px-6 py-3 text-sm font-semibold text-slate-600">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {courseMaterials.map((material) => (
-                        <tr key={material.id}>
-                          <td className="px-6 py-3">
-                            <div className="flex items-center gap-2">
-                              <FileText className="w-4 h-4 text-slate-400" />
-                              <span className="text-sm font-medium text-slate-900">{material.file_name}</span>
-                            </div>
-                          </td>
-                          <td className="px-6 py-3 text-sm text-slate-600">{material.topic || '-'}</td>
-                          <td className="px-6 py-3 text-sm text-slate-600">{formatBytes(material.file_size)}</td>
-                          <td className="px-6 py-3 text-sm text-slate-600">{material.chunk_count}</td>
-                          <td className="px-6 py-3">
-                            <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium ${STATUS_CONFIG[material.status]?.bg || 'bg-slate-100'} ${STATUS_CONFIG[material.status]?.color || 'text-slate-600'}`}>
-                              {getStatusIcon(material.status)}
-                              {material.status}
-                            </span>
-                          </td>
-                          <td className="px-6 py-3">
-                            <button
-                              onClick={() => handleDelete(material.id)}
-                              className="p-2 text-slate-400 hover:text-red-600 transition-colors"
-                              title="Delete"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            ))
-        )}
-      </div>
+              );
+            })}
+        </div>
+      )}
     </div>
   );
 }
