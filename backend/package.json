@@ -4,19 +4,32 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "node --watch src/server.js",
-    "start": "node src/server.js"
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@langchain/openai": "^0.6.0",
     "@langchain/textsplitters": "^0.1.0",
+    "@supabase/supabase-js": "^2.57.4",
+    "axios": "^1.15.0",
     "cors": "^2.8.5",
     "dotenv": "^16.6.1",
     "express": "^4.21.2",
     "jszip": "^3.10.1",
     "multer": "^2.0.2",
     "openai": "^5.23.0",
-    "pdf-parse": "^1.1.1",
-    "@supabase/supabase-js": "^2.57.4"
+    "pdf-parse": "^1.1.1"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/jszip": "^3.4.0",
+    "@types/multer": "^2.1.0",
+    "@types/node": "^25.6.0",
+    "@types/pdf-parse": "^1.1.5",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.3"
   }
 }
