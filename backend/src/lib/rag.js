@@ -61,7 +61,7 @@ function toVectorString(embedding) {
 export async function ingestMaterial({
   materialId,
   courseCode,
-  topic,
+  chapter,
   fileName,
   mimeType,
   storagePath,
@@ -86,7 +86,7 @@ export async function ingestMaterial({
     material_id: materialId,
     course_code: courseCode,
     source_file: fileName,
-    topic: topic || null,
+    chapter: chapter || null,
     chunk_index: index,
     chunk_text: chunk,
     embedding: embeddings ? toVectorString(embeddings[index]) : null,
