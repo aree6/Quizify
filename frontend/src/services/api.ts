@@ -1,93 +1,105 @@
 import type {
   CourseAnalytics,
+  CoursePreview,
   CourseSummary,
   Material,
   PublicCourse,
   QuizSubmissionResult,
 } from '../types';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-
-async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    headers: {
-      'Content-Type': 'application/json',
-      ...(options?.headers || {}),
-    },
-    ...options,
-  });
-
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    const details = [data?.message, data?.details, data?.hint].filter(Boolean).join(' | ');
-    throw new Error(details || 'Request failed');
-  }
-  return data as T;
-}
+import { API_BASE_URL, http } from './http';
 
 export const apiService = {
-  async generateCourse(payload: {
-    title: string;
+  async getAvailableCourses() {
+    const { data } = await http.get<{ courses: Array<{ code: string; name: string }> }>(
+      '/api/courses/available',
+    );
+    return data;
+  },
+
+  async getCourseTopics(courseCode: string) {
+    const { data } = await http.get<{
+      chapters: Array<{ chapter: string; topics: string[] }>;
+      source: 'ai' | 'stored' | 'fallback' | 'empty';
+    }>(`/api/courses/${encodeURIComponent(courseCode)}/topics`);
+    return data;
+  },
+
+  async previewCourse(payload: {
     courseCode: string;
     topics: string[];
     questionCount: number;
-    passPercentage: number;
-    lecturerName?: string;
-    expiresAt?: string | null;
   }) {
-    return request<{ course: CourseSummary }>('/api/courses/generate', {
-      method: 'POST',
-      body: JSON.stringify(payload),
-    });
+    const { data } = await http.post<{ preview: CoursePreview }>('/api/courses/preview', payload);
+    return data;
+  },
+
+  async confirmCourse(payload: {
+    title: string;
+    courseCode: string;
+    topics: string[];
+    lesson: string;
+    questions: Array<{ prompt: string; options: string[]; correct: number }>;
+    lecturerName?: string;
+  }) {
+    const { data } = await http.post<{ course: CourseSummary }>('/api/courses/confirm', payload);
+    return data;
+  },
+
+  async reindexCourseOutline(courseCode: string) {
+    const { data } = await http.post<{
+      chapters: Array<{ chapter: string; topics: string[] }>;
+      source: 'ai';
+    }>(`/api/courses/${encodeURIComponent(courseCode)}/reindex-outline`);
+    return data;
   },
 
   async getCourses() {
-    return request<{ courses: CourseSummary[] }>('/api/courses');
+    const { data } = await http.get<{ courses: CourseSummary[] }>('/api/courses');
+    return data;
   },
 
   async getPublicCourse(token: string) {
-    return request<{ course: PublicCourse }>(`/api/public/course/${encodeURIComponent(token)}`);
+    const { data } = await http.get<{ course: PublicCourse }>(
+      `/api/public/course/${encodeURIComponent(token)}`,
+    );
+    return data;
   },
 
   async submitQuiz(
     token: string,
     payload: { studentName: string; answers: Array<{ questionId: string; selectedOptionIndex: number }> },
   ) {
-    return request<QuizSubmissionResult>(`/api/public/course/${encodeURIComponent(token)}/submit`, {
-      method: 'POST',
-      body: JSON.stringify(payload),
-    });
+    const { data } = await http.post<QuizSubmissionResult>(
+      `/api/public/course/${encodeURIComponent(token)}/submit`,
+      payload,
+    );
+    return data;
   },
 
   async getAnalytics(courseId: string) {
-    return request<CourseAnalytics>(`/api/analytics/${encodeURIComponent(courseId)}`);
+    const { data } = await http.get<CourseAnalytics>(
+      `/api/analytics/${encodeURIComponent(courseId)}`,
+    );
+    return data;
   },
 
   async getMaterials(courseCode?: string) {
-    const query = courseCode ? `?courseCode=${encodeURIComponent(courseCode)}` : '';
-    return request<{ materials: Material[] }>(`/api/materials${query}`);
+    const { data } = await http.get<{ materials: Material[] }>('/api/materials', {
+      params: courseCode ? { courseCode } : undefined,
+    });
+    return data;
   },
 
   async uploadMaterial(payload: { file: File; courseCode: string; topic?: string }) {
     const formData = new FormData();
     formData.append('file', payload.file);
     formData.append('courseCode', payload.courseCode);
-    if (payload.topic) {
-      formData.append('topic', payload.topic);
-    }
+    if (payload.topic) formData.append('topic', payload.topic);
 
-    const response = await fetch(`${API_BASE_URL}/api/materials/upload`, {
-      method: 'POST',
-      body: formData,
+    const { data } = await http.post<{ material: Material }>('/api/materials/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
     });
-
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      const details = [data?.message, data?.details, data?.hint].filter(Boolean).join(' | ');
-      throw new Error(details || 'Upload failed');
-    }
-
-    return data as { material: Material };
+    return data;
   },
 
   async uploadMaterialAdvanced(payload: {
@@ -110,49 +122,43 @@ export const apiService = {
     if (payload.onDuplicate) formData.append('onDuplicate', payload.onDuplicate);
     if (payload.relativePath) formData.append('relativePath', payload.relativePath);
 
-    const response = await fetch(`${API_BASE_URL}/api/materials/upload`, {
-      method: 'POST',
-      body: formData,
+    const { data } = await http.post<{ material: Material }>('/api/materials/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
     });
-
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      const details = [data?.message, data?.details, data?.hint].filter(Boolean).join(' | ');
-      throw new Error(details || 'Upload failed');
-    }
-
-    return data as { material: Material };
+    return data;
   },
 
   async deleteMaterial(materialId: string) {
-    return request<{ success: boolean }>(`/api/materials/${encodeURIComponent(materialId)}`, {
-      method: 'DELETE',
-    });
+    const { data } = await http.delete<{ success: boolean }>(
+      `/api/materials/${encodeURIComponent(materialId)}`,
+    );
+    return data;
   },
 
   async deleteCourseMaterials(courseCode: string) {
-    return request<{ success: boolean; deleted: number }>(`/api/materials/course/${encodeURIComponent(courseCode)}`, {
-      method: 'DELETE',
-    });
+    const { data } = await http.delete<{ success: boolean; deleted: number }>(
+      `/api/materials/course/${encodeURIComponent(courseCode)}`,
+    );
+    return data;
   },
 
   async deleteChapterMaterials(courseCode: string, chapter: string) {
-    return request<{ success: boolean; deleted: number }>(
-      `/api/materials/course/${encodeURIComponent(courseCode)}/chapter?chapter=${encodeURIComponent(chapter)}`,
-      {
-        method: 'DELETE',
-      },
+    const { data } = await http.delete<{ success: boolean; deleted: number }>(
+      `/api/materials/course/${encodeURIComponent(courseCode)}/chapter`,
+      { params: { chapter } },
     );
+    return data;
   },
 
   async updateMaterial(
     materialId: string,
     payload: { fileName?: string; materialType?: 'course_info' | 'slide'; chapter?: string; topic?: string },
   ) {
-    return request<{ material: Material; warning?: string }>(`/api/materials/${encodeURIComponent(materialId)}`, {
-      method: 'PATCH',
-      body: JSON.stringify(payload),
-    });
+    const { data } = await http.patch<{ material: Material; warning?: string }>(
+      `/api/materials/${encodeURIComponent(materialId)}`,
+      payload,
+    );
+    return data;
   },
 };
 
