@@ -1,19 +1,39 @@
-import { useMemo, useState } from 'react';
-import { Search } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+import { Search, ChevronDown, ChevronRight, Loader2, ArrowLeft, Check, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { apiService } from '../services/api';
-import { COURSE_OPTIONS, filterCoursesBySearch, type CourseOption } from '../constants/courses';
+import type { CoursePreview } from '../types';
 
+interface AvailableCourse {
+  code: string;
+  name: string;
+}
+
+interface ChapterData {
+  chapter: string;
+  topics: string[];
+}
+
+/* ── Course picker: only shows courses that have indexed materials ── */
 function CoursePicker({
+  courses,
   value,
   onChange,
+  loading,
 }: {
-  value: CourseOption;
-  onChange: (course: CourseOption) => void;
+  courses: AvailableCourse[];
+  value: AvailableCourse | null;
+  onChange: (course: AvailableCourse) => void;
+  loading: boolean;
 }) {
-  const [query, setQuery] = useState(`${value.code} - ${value.name}`);
+  const [query, setQuery] = useState(value ? `${value.code} - ${value.name}` : '');
   const [open, setOpen] = useState(false);
-  const filtered = filterCoursesBySearch(query);
+
+  const filtered = courses.filter((c) => {
+    const q = query.toLowerCase().trim();
+    if (!q) return true;
+    return c.code.toLowerCase().includes(q) || c.name.toLowerCase().includes(q);
+  });
 
   return (
     <div className="relative">
@@ -24,33 +44,28 @@ function CoursePicker({
           className="field pl-10"
           value={query}
           onFocus={() => setOpen(true)}
-          onChange={(event) => {
-            setQuery(event.target.value);
-            setOpen(true);
-          }}
-          onBlur={() => setTimeout(() => setOpen(false), 120)}
-          placeholder="Search by code or course name"
+          onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
+          onBlur={() => setTimeout(() => setOpen(false), 150)}
+          placeholder={loading ? 'Loading courses…' : 'Search available courses'}
+          disabled={loading}
         />
       </div>
-
       {open && (
         <div className="absolute z-20 w-full mt-1 bg-white ring-card max-h-64 overflow-y-auto">
           {filtered.length === 0 ? (
-            <div className="p-3 text-sm text-[#4b4b4b]">No matching course.</div>
+            <div className="p-3 text-sm text-[#4b4b4b]">
+              {courses.length === 0 ? 'No courses with indexed materials.' : 'No matching course.'}
+            </div>
           ) : (
-            filtered.map((course) => (
+            filtered.map((c) => (
               <button
-                key={course.code}
+                key={c.code}
                 type="button"
-                onClick={() => {
-                  onChange(course);
-                  setQuery(`${course.code} - ${course.name}`);
-                  setOpen(false);
-                }}
+                onClick={() => { onChange(c); setQuery(`${c.code} - ${c.name}`); setOpen(false); }}
                 className="w-full text-left px-4 py-2.5 hover:bg-[#efefef]"
               >
-                <p className="text-sm font-semibold text-[#0e0f0c]">{course.code}</p>
-                <p className="text-xs text-[#4b4b4b]">{course.name}</p>
+                <p className="text-sm font-semibold text-[#0e0f0c]">{c.code}</p>
+                <p className="text-xs text-[#4b4b4b]">{c.name}</p>
               </button>
             ))
           )}
@@ -60,123 +75,400 @@ function CoursePicker({
   );
 }
 
+/* ── Chapter accordion with selectable subtopics ── */
+function TopicSelector({
+  chapters,
+  selectedTopics,
+  onToggle,
+  loading,
+}: {
+  chapters: ChapterData[];
+  selectedTopics: Set<string>;
+  onToggle: (topic: string) => void;
+  loading: boolean;
+}) {
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+
+  const toggleChapter = (chapter: string) => {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(chapter)) next.delete(chapter);
+      else next.add(chapter);
+      return next;
+    });
+  };
+
+  const toggleAllInChapter = (chapter: ChapterData) => {
+    const allSelected = chapter.topics.every((t) => selectedTopics.has(t));
+    chapter.topics.forEach((t) => {
+      if (allSelected && selectedTopics.has(t)) onToggle(t);
+      if (!allSelected && !selectedTopics.has(t)) onToggle(t);
+    });
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center gap-2 py-6 text-sm text-[#4b4b4b]">
+        <Loader2 className="w-4 h-4 animate-spin" />
+        Extracting chapters and topics from course materials…
+      </div>
+    );
+  }
+
+  if (chapters.length === 0) {
+    return (
+      <div className="py-4 text-sm text-[#4b4b4b]">
+        No chapters found. Select a course with indexed materials first.
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      {chapters.map((ch) => {
+        const isOpen = expanded.has(ch.chapter);
+        const selectedCount = ch.topics.filter((t) => selectedTopics.has(t)).length;
+        const allSelected = selectedCount === ch.topics.length;
+
+        return (
+          <div key={ch.chapter} className="border border-[#e2e2e2] rounded-lg overflow-hidden">
+            <div className="flex items-center gap-3 px-4 py-3 bg-[#fafafa] cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={allSelected && ch.topics.length > 0}
+                onChange={() => toggleAllInChapter(ch)}
+                className="w-4 h-4 accent-[#9fe870] cursor-pointer"
+              />
+              <button
+                type="button"
+                className="flex items-center gap-2 flex-1 text-left"
+                onClick={() => toggleChapter(ch.chapter)}
+              >
+                {isOpen
+                  ? <ChevronDown className="w-4 h-4 text-[#4b4b4b]" />
+                  : <ChevronRight className="w-4 h-4 text-[#4b4b4b]" />}
+                <span className="text-sm font-semibold text-[#0e0f0c]">{ch.chapter}</span>
+                {selectedCount > 0 && (
+                  <span className="ml-auto text-xs text-[#4b4b4b]">
+                    {selectedCount}/{ch.topics.length}
+                  </span>
+                )}
+              </button>
+            </div>
+            {isOpen && (
+              <div className="px-4 py-2 space-y-1 bg-white">
+                {ch.topics.map((topic) => (
+                  <label
+                    key={topic}
+                    className="flex items-center gap-3 py-1.5 px-2 rounded hover:bg-[#f5f5f5] cursor-pointer"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedTopics.has(topic)}
+                      onChange={() => onToggle(topic)}
+                      className="w-4 h-4 accent-[#9fe870] cursor-pointer"
+                    />
+                    <span className="text-sm text-[#0e0f0c]">{topic}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ── Preview panel: shows generated lesson + quiz before confirming ── */
+function PreviewPanel({
+  preview,
+  onConfirm,
+  onBack,
+  confirming,
+}: {
+  preview: CoursePreview;
+  onConfirm: () => void;
+  onBack: () => void;
+  confirming: boolean;
+}) {
+  const optionLabels = ['A', 'B', 'C', 'D'];
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center gap-3">
+        <button type="button" onClick={onBack} className="pill-secondary flex items-center gap-1.5">
+          <ArrowLeft className="w-4 h-4" /> Back
+        </button>
+        <div className="flex-1">
+          <h3 className="text-lg font-bold text-[#0e0f0c]">{preview.title}</h3>
+          <p className="text-xs text-[#4b4b4b]">
+            {preview.generationSource} · {preview.contextChunksUsed} chunks · {preview.questionCount} questions
+          </p>
+        </div>
+      </div>
+
+      {/* Lesson content */}
+      <div className="surface-card p-6">
+        <h4 className="text-sm font-semibold text-[#0e0f0c] mb-3">Lesson Content</h4>
+        <div className="text-sm text-[#4b4b4b] leading-relaxed whitespace-pre-wrap">
+          {preview.lesson}
+        </div>
+      </div>
+
+      {/* Quiz questions */}
+      <div className="surface-card p-6">
+        <h4 className="text-sm font-semibold text-[#0e0f0c] mb-4">Quiz Questions</h4>
+        <div className="space-y-5">
+          {preview.questions.map((q, idx) => (
+            <div key={idx} className="border border-[#e2e2e2] rounded-lg p-4">
+              <p className="text-sm font-medium text-[#0e0f0c] mb-2">
+                {idx + 1}. {q.prompt}
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {q.options.map((opt, oi) => (
+                  <div
+                    key={oi}
+                    className={`text-sm px-3 py-2 rounded-md ${
+                      oi === q.correct
+                        ? 'bg-[#e2f6d5] text-[#054d28] font-medium'
+                        : 'bg-[#fafafa] text-[#4b4b4b]'
+                    }`}
+                  >
+                    <span className="font-semibold mr-1.5">{optionLabels[oi]}.</span>
+                    {opt}
+                    {oi === q.correct && <Check className="inline w-3.5 h-3.5 ml-1" />}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Confirm / Back actions */}
+      <div className="flex items-center gap-3">
+        <button type="button" onClick={onBack} className="pill-secondary" disabled={confirming}>
+          <X className="w-4 h-4 mr-1.5 inline" /> Discard
+        </button>
+        <button type="button" onClick={onConfirm} className="pill-primary" disabled={confirming}>
+          {confirming ? 'Saving…' : 'Confirm & Create Course'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ── Main page ── */
 export function CreateCoursePage() {
   const { user } = useAuth();
 
-  const [title, setTitle] = useState('Week 5 - SDLC Quiz');
-  const [course, setCourse] = useState<CourseOption>(COURSE_OPTIONS[0]);
-  const [topicsInput, setTopicsInput] = useState('SDLC, Requirements');
-  const [questionCount, setQuestionCount] = useState(5);
-  const [passPercentage, setPassPercentage] = useState(70);
-  const [expiresAt, setExpiresAt] = useState('');
-  const [loading, setLoading] = useState(false);
+  // Available courses (those with indexed data)
+  const [availableCourses, setAvailableCourses] = useState<AvailableCourse[]>([]);
+  const [coursesLoading, setCoursesLoading] = useState(true);
+
+  // Selected course + chapter/topic data
+  const [selectedCourse, setSelectedCourse] = useState<AvailableCourse | null>(null);
+  const [chapters, setChapters] = useState<ChapterData[]>([]);
+  const [topicsLoading, setTopicsLoading] = useState(false);
+  const [selectedTopics, setSelectedTopics] = useState<Set<string>>(new Set());
+
+  // Form
+  const [questionCount, setQuestionCount] = useState(15);
+
+  // Preview state
+  const [preview, setPreview] = useState<CoursePreview | null>(null);
+  const [generating, setGenerating] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+
+  // Result
   const [error, setError] = useState('');
   const [createdLink, setCreatedLink] = useState('');
-  const [generationInfo, setGenerationInfo] = useState('');
 
-  const topics = useMemo(
-    () => topicsInput.split(',').map((item) => item.trim()).filter(Boolean),
-    [topicsInput],
-  );
+  // Fetch available courses on mount
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await apiService.getAvailableCourses();
+        if (!cancelled) setAvailableCourses(res.courses);
+      } catch {
+        if (!cancelled) setError('Failed to load available courses.');
+      } finally {
+        if (!cancelled) setCoursesLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
-  const onSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
-    setError('');
+  const onCourseChange = useCallback(async (course: AvailableCourse) => {
+    setSelectedCourse(course);
+    setChapters([]);
+    setSelectedTopics(new Set());
+    setPreview(null);
     setCreatedLink('');
-    setGenerationInfo('');
-
-    if (topics.length === 0) {
-      setError('Please enter at least one topic.');
-      return;
-    }
+    setTopicsLoading(true);
+    setError('');
 
     try {
-      setLoading(true);
-      const response = await apiService.generateCourse({
-        title,
-        courseCode: course.code,
-        topics,
-        questionCount,
-        passPercentage,
-        lecturerName: user?.name || 'Lecturer',
-        expiresAt: expiresAt || null,
-      });
-
-      setCreatedLink(`${window.location.origin}${response.course.shareUrl}`);
-      if (response.course.generationSource) {
-        setGenerationInfo(`${response.course.generationSource} • ${response.course.contextChunksUsed || 0} chunks`);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create mini-course.');
+      const res = await apiService.getCourseTopics(course.code);
+      setChapters(res.chapters);
+    } catch {
+      setError('Failed to extract topics for this course.');
     } finally {
-      setLoading(false);
+      setTopicsLoading(false);
+    }
+  }, []);
+
+  const toggleTopic = useCallback((topic: string) => {
+    setSelectedTopics((prev) => {
+      const next = new Set(prev);
+      if (next.has(topic)) next.delete(topic);
+      else next.add(topic);
+      return next;
+    });
+  }, []);
+
+  // Step 1: Generate preview (no DB writes)
+  const onGeneratePreview = async () => {
+    if (!selectedCourse || selectedTopics.size === 0) return;
+    setError('');
+    setPreview(null);
+    setCreatedLink('');
+    setGenerating(true);
+
+    try {
+      const res = await apiService.previewCourse({
+        courseCode: selectedCourse.code,
+        topics: [...selectedTopics],
+        questionCount,
+      });
+      setPreview(res.preview);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to generate preview.');
+    } finally {
+      setGenerating(false);
     }
   };
+
+  // Step 2: Confirm and save to DB
+  const onConfirm = async () => {
+    if (!preview) return;
+    setError('');
+    setConfirming(true);
+
+    try {
+      const res = await apiService.confirmCourse({
+        title: preview.title,
+        courseCode: preview.courseCode,
+        topics: preview.topics,
+        lesson: preview.lesson,
+        questions: preview.questions,
+        lecturerName: user?.name || 'Lecturer',
+      });
+      setCreatedLink(`${window.location.origin}${res.course.shareUrl}`);
+      setPreview(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save course.');
+    } finally {
+      setConfirming(false);
+    }
+  };
+
+  // Show preview panel when we have one
+  if (preview) {
+    return (
+      <div>
+        <div className="mb-8">
+          <h2 className="section-title">Preview Mini-Course</h2>
+          <p className="section-subtitle mt-2">Review the generated content before publishing.</p>
+        </div>
+        {error && <div className="p-3 rounded-[8px] bg-[#ffe5e7] text-[#d03238] text-sm mb-4">{error}</div>}
+        <PreviewPanel
+          preview={preview}
+          onConfirm={onConfirm}
+          onBack={() => setPreview(null)}
+          confirming={confirming}
+        />
+      </div>
+    );
+  }
 
   return (
     <div>
       <div className="mb-8">
         <h2 className="section-title">Create Mini-Course</h2>
-        <p className="section-subtitle mt-2">Generate lesson and quiz from indexed RAG context.</p>
+        <p className="section-subtitle mt-2">Select topics from indexed course materials to generate a lesson and quiz.</p>
       </div>
 
-      <form onSubmit={onSubmit} className="surface-card p-6 sm:p-8 space-y-5">
-        <div>
-          <label className="block text-sm font-semibold text-[#0e0f0c] mb-2">Mini-course title</label>
-          <input value={title} onChange={(event) => setTitle(event.target.value)} className="field" required />
-        </div>
-
+      <div className="surface-card p-6 sm:p-8 space-y-6">
+        {/* Course + Question count */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <CoursePicker value={course} onChange={setCourse} />
-
+          <CoursePicker
+            courses={availableCourses}
+            value={selectedCourse}
+            onChange={onCourseChange}
+            loading={coursesLoading}
+          />
           <div>
             <label className="block text-sm font-semibold text-[#0e0f0c] mb-2">Question count</label>
-            <select className="field" value={questionCount} onChange={(event) => setQuestionCount(Number(event.target.value))}>
+            <select
+              className="field"
+              value={questionCount}
+              onChange={(e) => setQuestionCount(Number(e.target.value))}
+            >
               <option value={5}>5</option>
               <option value={10}>10</option>
               <option value={15}>15</option>
+              <option value={20}>20</option>
             </select>
           </div>
         </div>
 
+        {/* Topics — chapter accordion */}
         <div>
-          <label className="block text-sm font-semibold text-[#0e0f0c] mb-2">Topics (comma-separated)</label>
-          <input className="field" value={topicsInput} onChange={(event) => setTopicsInput(event.target.value)} required />
+          <label className="block text-sm font-semibold text-[#0e0f0c] mb-2">
+            Topics
+            {selectedTopics.size > 0 && (
+              <span className="ml-2 font-normal text-[#4b4b4b]">({selectedTopics.size} selected)</span>
+            )}
+          </label>
+          <TopicSelector
+            chapters={chapters}
+            selectedTopics={selectedTopics}
+            onToggle={toggleTopic}
+            loading={topicsLoading}
+          />
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-semibold text-[#0e0f0c] mb-2">Pass percentage</label>
-            <input
-              className="field"
-              type="number"
-              min={1}
-              max={100}
-              value={passPercentage}
-              onChange={(event) => setPassPercentage(Number(event.target.value))}
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold text-[#0e0f0c] mb-2">Link expiry (optional)</label>
-            <input className="field" type="datetime-local" value={expiresAt} onChange={(event) => setExpiresAt(event.target.value)} />
-          </div>
-        </div>
-
+        {/* Error */}
         {error && <div className="p-3 rounded-[8px] bg-[#ffe5e7] text-[#d03238] text-sm">{error}</div>}
 
+        {/* Success (after confirm) */}
         {createdLink && (
           <div className="p-4 rounded-[8px] bg-[#e2f6d5] text-[#054d28] text-sm">
-            <p className="font-semibold mb-1">Mini-course created.</p>
+            <p className="font-semibold mb-1">Mini-course created and published.</p>
             <p className="break-all">{createdLink}</p>
-            {generationInfo && <p className="text-xs mt-1">{generationInfo}</p>}
           </div>
         )}
 
-        <button type="submit" disabled={loading} className="pill-primary">
-          {loading ? 'Generating...' : 'Generate Mini-Course'}
+        {/* Generate Preview button */}
+        <button
+          type="button"
+          onClick={onGeneratePreview}
+          disabled={generating || !selectedCourse || selectedTopics.size === 0}
+          className="pill-primary disabled:opacity-50"
+        >
+          {generating ? (
+            <span className="flex items-center gap-2">
+              <Loader2 className="w-4 h-4 animate-spin" /> Generating Preview…
+            </span>
+          ) : (
+            'Generate Mini-Course'
+          )}
         </button>
-      </form>
+      </div>
     </div>
   );
 }
