@@ -1,5 +1,11 @@
-export const COURSE_OPTIONS = [
+export interface CourseOption {
+  code: string;
+  name: string;
+}
+
+export const COURSE_OPTIONS: readonly CourseOption[] = [
   { code: 'SECI1013', name: 'Discrete Structure' },
+  { code: 'SCSI1013', name: 'Discrete Structure' },
   { code: 'SECJ1013', name: 'Programming Technique I' },
   { code: 'SECR1013', name: 'Digital Logic' },
   { code: 'SECP1513', name: 'Technology & Information System' },
@@ -40,11 +46,12 @@ export const COURSE_OPTIONS = [
   { code: 'SECJ4463', name: 'Agent-Oriented Software Engineering' },
 ];
 
-export function findCourseByCode(code) {
-  return COURSE_OPTIONS.find((course) => course.code === code);
+export function findCourseByCode(code: string): CourseOption | undefined {
+  const upper = code.toUpperCase();
+  return COURSE_OPTIONS.find((course) => course.code.toUpperCase() === upper);
 }
 
-export function getCourseDisplayName(code) {
+export function getCourseDisplayName(code: string): string {
   const course = findCourseByCode(code);
   if (!course) return code;
   return `${course.name} (${code})`;
