@@ -1,17 +1,23 @@
 /**
  * Course outline persistence — stores/reads structured chapter+topic JSON
- * in Supabase Storage so no schema migration is needed.
+ * inside the course-info folder in Supabase Storage, keeping it
+ * alongside the source course-info files for consistent structure.
  */
 import { supabase } from '../lib/supabase.js';
 import { env } from '../config/env.js';
-import { extractCourseTopics } from './ai.service.js';
-import type { ChapterOutline, CourseOutline } from '../types/index.js';
+import { findCourseByCode } from '../constants/courses.js';
+import { extractCourseProfile } from './ai.service.js';
+import { sanitizeSegment } from './materials.service.js';
+import type { CourseOutline } from '../types/index.js';
 
 const BUCKET = env.supabase.storageBucket;
-const OUTLINE_PREFIX = '_outlines';
 
+/** Build the outline path inside the course-info folder for a given course code. */
 function outlinePath(courseCode: string): string {
-  return `${OUTLINE_PREFIX}/${courseCode.toUpperCase()}.json`;
+  const course = findCourseByCode(courseCode);
+  const courseName = course?.name ?? 'unknown-course';
+  const safeCourse = sanitizeSegment(`${courseName}-${courseCode}`, 'course');
+  return `${safeCourse}/course-info/outline.json`;
 }
 
 export async function getStoredOutline(courseCode: string): Promise<CourseOutline | null> {
@@ -20,15 +26,26 @@ export async function getStoredOutline(courseCode: string): Promise<CourseOutlin
 
   try {
     const text = await data.text();
-    const parsed = JSON.parse(text) as CourseOutline;
-    return Array.isArray(parsed.chapters) ? parsed : null;
+    const parsed = JSON.parse(text) as Partial<CourseOutline>;
+    if (!Array.isArray(parsed.chapters)) return null;
+
+    // Backfill defaults for older outlines that only had chapters
+    return {
+      synopsis: typeof parsed.synopsis === 'string' ? parsed.synopsis : '',
+      learningOutcomes: Array.isArray(parsed.learningOutcomes) ? parsed.learningOutcomes : [],
+      chapters: parsed.chapters,
+      updatedAt: parsed.updatedAt,
+    };
   } catch {
     return null;
   }
 }
 
-export async function saveOutline(courseCode: string, chapters: ChapterOutline[]): Promise<boolean> {
-  const body = JSON.stringify({ chapters, updatedAt: new Date().toISOString() } satisfies CourseOutline);
+export async function saveOutline(
+  courseCode: string,
+  profile: Omit<CourseOutline, 'updatedAt'>,
+): Promise<boolean> {
+  const body = JSON.stringify({ ...profile, updatedAt: new Date().toISOString() } satisfies CourseOutline);
 
   const { error } = await supabase.storage
     .from(BUCKET)
@@ -41,13 +58,13 @@ export async function saveOutline(courseCode: string, chapters: ChapterOutline[]
 export async function extractAndSaveOutline(
   courseCode: string,
   materialText: string,
-): Promise<ChapterOutline[] | null> {
-  const chapters = await extractCourseTopics(materialText);
-  if (!chapters || chapters.length === 0) {
+): Promise<CourseOutline | null> {
+  const profile = await extractCourseProfile(materialText);
+  if (!profile || profile.chapters.length === 0) {
     console.warn(`[outlines] AI extraction returned no chapters for ${courseCode}`);
     return null;
   }
 
-  await saveOutline(courseCode, chapters);
-  return chapters;
+  await saveOutline(courseCode, profile);
+  return { ...profile, updatedAt: new Date().toISOString() };
 }

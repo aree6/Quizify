@@ -105,18 +105,34 @@ function sanitizeGeneratedQuiz(raw: RawQuiz | null, questionCount: number): Gene
   return { lesson, questions };
 }
 
-function buildLessonPrompt(p: { title: string; topics: string[]; context: string; questionCount: number }): string {
-  return [
+function buildLessonPrompt(p: {
+  title: string;
+  topics: string[];
+  context: string;
+  questionCount: number;
+  synopsis?: string;
+  learningOutcomes?: string[];
+}): string {
+  const parts = [
     'You are an expert university course assistant.',
     'Generate concise mini-course lesson content and a multiple-choice quiz from the provided context.',
+    'The lesson content should be formatted in Markdown (use headings, bold, bullet lists) for readability.',
     'Return valid JSON only with this exact schema:',
     '{"lesson": string, "questions": [{"prompt": string, "options": [string,string,string,string], "correctOptionIndex": number}] }',
     `Question count required: ${p.questionCount}`,
     `Course title: ${p.title}`,
     `Topics: ${p.topics.join(', ')}`,
-    'Context:',
-    p.context,
-  ].join('\n\n');
+  ];
+
+  if (p.synopsis) {
+    parts.push(`Course synopsis: ${p.synopsis}`);
+  }
+  if (p.learningOutcomes && p.learningOutcomes.length > 0) {
+    parts.push(`Course learning outcomes:\n- ${p.learningOutcomes.join('\n- ')}`);
+  }
+
+  parts.push('Context (extracted from course materials):', p.context);
+  return parts.join('\n\n');
 }
 
 async function generateJsonGemini(prompt: string, temperature: number): Promise<unknown | null> {
@@ -164,6 +180,8 @@ export async function generateLessonAndQuiz(payload: {
   topics: string[];
   context: string;
   questionCount: number;
+  synopsis?: string;
+  learningOutcomes?: string[];
 }): Promise<GeneratedContent | null> {
   const prompt = buildLessonPrompt(payload);
   const system = 'You generate reliable educational content and valid JSON. Use only the supplied context; do not invent facts.';
@@ -178,25 +196,42 @@ export async function generateLessonAndQuiz(payload: {
 
 /* ─── Course outline extraction ─── */
 
+export interface ExtractedCourseProfile {
+  synopsis: string;
+  learningOutcomes: string[];
+  chapters: ChapterOutline[];
+}
+
 function buildOutlinePrompt(courseText: string): string {
   return [
     'You are a course outline extraction assistant.',
-    'From the following course material text, extract the chapter structure AS IT APPEARS in the document.',
+    'Extract a structured course profile from the following course outline document.',
     'Return valid JSON only with this exact schema:',
-    '{ "chapters": [ { "chapter": "Chapter 1: <title>", "topics": ["Topic A", "Topic B"] } ] }',
+    '{',
+    '  "synopsis": "<one short paragraph summarizing what the course is about>",',
+    '  "learningOutcomes": ["<CLO 1>", "<CLO 2>", ...],',
+    '  "chapters": [ { "chapter": "Chapter 1: <title>", "topics": ["Topic A", "Topic B"] } ]',
+    '}',
+    '',
     'Rules:',
-    '- Preserve the original chapter numbering and titles from the course outline (e.g., "CHAPTER 1: SET THEORY").',
-    '- Group subtopics under their ORIGINAL chapter headings as shown in the document.',
-    '- Do NOT split or reorganize chapters - keep them as defined in the course outline.',
-    '- Subtopics should be specific concepts listed under each chapter.',
-    '- Return at least 1 chapter with at least 1 topic.',
+    '- synopsis: Use the "Course Synopsis" or "Course Description" section. Keep it concise (2–4 sentences).',
+    '- learningOutcomes: Extract each Course Learning Outcome (CLO) as a separate string. Drop the "CLO1:" prefix but keep the statement.',
+    '- chapters: Keep original chapter numbering (e.g., "Chapter 1: Introduction to Data Structures").',
+    '- chapters: Merge combined chapters as-is (e.g., "Chapter 3 & 4: Recursion and Algorithm Efficiency").',
+    '- topics: Only actual academic subtopics. IGNORE and DO NOT include: labs, lab tests, quizzes, assignments,',
+    '  midterms, finals, mini-projects, presentations, tutorials, or any assessment/administrative items.',
+    '- Clean chapter titles: strip parenthetical references to labs/quizzes/assignments',
+    '  (e.g., "Chapter 5: Sorting (Lab 2, Assignment 1)" → "Chapter 5: Sorting").',
+    '- Fix PDF encoding artifacts: the text may contain a double-quote where "ti" should be (e.g., "Introduc\\"on" → "Introduction")',
+    '  and a digit 9 where "ffi" should be (e.g., "E9ciency" → "Efficiency"). Restore original spelling using context.',
+    '- Return at least 1 chapter with at least 1 topic. Synopsis and learningOutcomes may be empty strings/arrays if not found.',
     '',
     'Course material:',
     courseText,
   ].join('\n');
 }
 
-export async function extractCourseTopics(courseText: string): Promise<ChapterOutline[] | null> {
+export async function extractCourseProfile(courseText: string): Promise<ExtractedCourseProfile | null> {
   if (!courseText || !isAiConfigured()) return null;
 
   const prompt = buildOutlinePrompt(courseText);
@@ -205,15 +240,39 @@ export async function extractCourseTopics(courseText: string): Promise<ChapterOu
       ? await generateJsonGemini(prompt, 0.2)
       : await generateJsonOpenAI(prompt, 0.2, 'You extract structured course outlines from raw text. Return valid JSON only.');
 
-  const parsed = raw as { chapters?: Array<{ chapter?: string; topics?: string[] }> } | null;
+  const parsed = raw as {
+    synopsis?: string;
+    learningOutcomes?: string[];
+    chapters?: Array<{ chapter?: string; topics?: string[] }>;
+  } | null;
   if (!parsed || !Array.isArray(parsed.chapters)) return null;
 
-  return parsed.chapters
+  // Filter administrative items that may still leak through (defense-in-depth after AI filter)
+  const NON_CONTENT = /\b(lab|lab\s*test|quiz|assignment|midterm|final|mini[-\s]?project|presentation|tutorial)\b/i;
+
+  const chapters = parsed.chapters
     .filter((ch): ch is { chapter: string; topics: string[] } =>
       Boolean(ch.chapter && Array.isArray(ch.topics) && ch.topics.length > 0),
     )
     .map((ch) => ({
       chapter: ch.chapter.trim(),
-      topics: ch.topics.map((t) => String(t).trim()).filter(Boolean),
-    }));
+      topics: ch.topics
+        .map((t) => String(t).trim())
+        .filter((t) => t && !NON_CONTENT.test(t)),
+    }))
+    .filter((ch) => ch.topics.length > 0);
+
+  return {
+    synopsis: typeof parsed.synopsis === 'string' ? parsed.synopsis.trim() : '',
+    learningOutcomes: Array.isArray(parsed.learningOutcomes)
+      ? parsed.learningOutcomes.map((o) => String(o).trim()).filter(Boolean)
+      : [],
+    chapters,
+  };
+}
+
+/** Backwards-compatible wrapper returning only chapters. */
+export async function extractCourseTopics(courseText: string): Promise<ChapterOutline[] | null> {
+  const profile = await extractCourseProfile(courseText);
+  return profile ? profile.chapters : null;
 }
