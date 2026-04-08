@@ -72,7 +72,7 @@ export async function uploadMaterial(req: Request, res: Response): Promise<void>
       throw new HttpError(409, 'Duplicate material exists', {
         details:
           materialType === 'course_info'
-            ? `Course information already exists for ${courseCode}`
+            ? `Course information already exists for ${courseCode}${chapter ? ` • ${chapter}` : ''}`
             : `Material already exists for ${courseCode} • ${chapter} • ${normalizedChapterItemLabel}`,
         hint: 'Choose Replace to overwrite existing material, or Skip to keep existing one.',
       });
@@ -143,8 +143,7 @@ export async function patchMaterial(req: Request, res: Response): Promise<void> 
   const material = await getMaterialById(id);
 
   const nextType: MaterialType = requestedType ?? (material.material_type || 'slide');
-  const nextChapter =
-    nextType === 'slide' ? (requestedChapter === undefined ? material.chapter : requestedChapter || null) : null;
+  const nextChapter = requestedChapter === undefined ? material.chapter : requestedChapter || null;
   const nextChapterItemLabel =
     nextType === 'slide'
       ? requestedChapterItemLabel === undefined

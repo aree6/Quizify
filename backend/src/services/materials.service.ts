@@ -69,7 +69,8 @@ export function buildStoragePath(params: {
   const safeName = sanitizeFileName(params.fileName);
 
   if (safeType === 'course_info') {
-    return `${safeCourse}/course-info/${Date.now()}-${safeName}`;
+    const chapterSegment = sanitizeSegment(params.chapter ?? 'general');
+    return `${safeCourse}/course-info/${chapterSegment}/${Date.now()}-${safeName}`;
   }
 
   const chapterSegment = sanitizeSegment(params.chapter ?? 'unassigned-chapter');
@@ -152,6 +153,7 @@ export async function findExistingMaterialForUpload(params: {
     .neq('status', 'Deleted');
 
   if (params.materialType === 'course_info') {
+    if (params.chapter) query = query.eq('chapter', params.chapter);
     query = query.limit(1);
   } else {
     query = query.eq('chapter', params.chapter).eq('chapter_item_label', params.chapterItemLabel).limit(1);
