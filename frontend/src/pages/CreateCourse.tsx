@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import ReactMarkdown from 'react-markdown';
 import { Search, ChevronDown, ChevronRight, Loader2, ArrowLeft, Check, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { apiService } from '../services/api';
@@ -212,8 +213,8 @@ function PreviewPanel({
       {/* Lesson content */}
       <div className="surface-card p-6">
         <h4 className="text-sm font-semibold text-[#0e0f0c] mb-3">Lesson Content</h4>
-        <div className="text-sm text-[#4b4b4b] leading-relaxed whitespace-pre-wrap">
-          {preview.lesson}
+        <div className="markdown-content text-sm text-[#4b4b4b] leading-relaxed">
+          <ReactMarkdown>{preview.lesson}</ReactMarkdown>
         </div>
       </div>
 

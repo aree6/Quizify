@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import ReactMarkdown from 'react-markdown';
 import { useSearchParams } from 'react-router-dom';
 import { apiService } from '../services/api';
 import type { PublicCourse, QuizSubmissionResult } from '../types';
@@ -86,7 +87,9 @@ export function QuizPage() {
       <div className="max-w-3xl mx-auto">
         <div className="surface-card p-6 sm:p-8 mb-5">
           <h1 className="text-2xl sm:text-3xl font-bold text-[#0e0f0c]">{course.title}</h1>
-          <p className="text-sm text-[#4b4b4b] mt-3 leading-relaxed">{course.lessonContent}</p>
+          <div className="markdown-content text-sm text-[#4b4b4b] mt-3 leading-relaxed">
+            <ReactMarkdown>{course.lessonContent}</ReactMarkdown>
+          </div>
 
           <div className="mt-5 flex flex-wrap items-center gap-2">
             <span className="chip">Pass mark: {course.passPercentage}%</span>
