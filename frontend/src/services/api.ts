@@ -19,6 +19,8 @@ export const apiService = {
   async getCourseTopics(courseCode: string) {
     const { data } = await http.get<{
       chapters: Array<{ chapter: string; topics: string[] }>;
+      synopsis?: string;
+      learningOutcomes?: string[];
       source: 'ai' | 'stored' | 'fallback' | 'empty';
     }>(`/api/courses/${encodeURIComponent(courseCode)}/topics`);
     return data;
