@@ -1,0 +1,228 @@
+.create-course-page .page-header {
+  margin-bottom: 1.5rem;
+}
+
+.create-course-page .page-header h2 {
+  font-size: 1.75rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin-bottom: 0.5rem;
+}
+
+.create-course-page .page-header p {
+  color: #64748b;
+  font-size: 1rem;
+}
+
+/* Steps Indicator */
+.steps-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 2.5rem;
+  padding: 1.5rem;
+  background: white;
+  border-radius: 0.75rem;
+  border: 1px solid #e2e8f0;
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.step-num {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background: #e2e8f0;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.step.active .step-num {
+  background: #2563eb;
+  color: white;
+}
+
+.step-label {
+  font-size: 0.875rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.step.active .step-label {
+  color: #1e293b;
+}
+
+.step-line {
+  width: 4rem;
+  height: 2px;
+  background: #e2e8f0;
+  margin: 0 1rem;
+}
+
+/* Step Content */
+.step-content {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+  padding: 2rem;
+}
+
+.step-panel h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin-bottom: 0.5rem;
+}
+
+.step-desc {
+  color: #64748b;
+  font-size: 0.9375rem;
+  margin-bottom: 1.5rem;
+}
+
+/* Course Options */
+.course-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.course-option {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.25rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 0.75rem;
+  background: white;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.course-option:hover {
+  border-color: #60a5fa;
+  background: #f8fafc;
+}
+
+.course-icon {
+  font-size: 1.5rem;
+}
+
+.course-name {
+  font-weight: 500;
+  color: #1e293b;
+}
+
+/* Topic List */
+.topic-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin: 1.5rem 0;
+}
+
+.topic-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.topic-item:hover {
+  background: #f8fafc;
+}
+
+.topic-item input {
+  width: 1.25rem;
+  height: 1.25rem;
+  accent-color: #2563eb;
+}
+
+.topic-name {
+  font-size: 0.9375rem;
+  color: #1e293b;
+}
+
+/* Config Form */
+.config-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  margin: 1.5rem 0;
+}
+
+.config-form .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.config-form label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #374151;
+}
+
+.config-form input[type="text"],
+.config-form textarea,
+.config-form select {
+  padding: 0.75rem 1rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  font-size: 0.9375rem;
+  transition: all 0.2s;
+}
+
+.config-form input:focus,
+.config-form textarea:focus,
+.config-form select:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.checkbox-group {
+  display: flex;
+  gap: 1.5rem;
+}
+
+.checkbox-group label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 400;
+}
+
+.checkbox-group input {
+  width: 1rem;
+  height: 1rem;
+  accent-color: #2563eb;
+}
+
+/* Step Actions */
+.step-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #e2e8f0;
+}
+
+.step-actions .btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
