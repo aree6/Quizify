@@ -58,5 +58,7 @@ export function generateFallbackContent(params: {
   const key = detectTopic(params.title, params.topics);
   const bank = TOPIC_BANK[key] ?? TOPIC_BANK.sdlc!;
   const selected = shuffleArray(bank.questions).slice(0, params.questionCount);
-  return { lesson: bank.lesson, questions: selected };
+  // Fallback content is synthetic (no RAG grounding) — return an empty sources array
+  // so the UI still renders and downstream code doesn't need special cases.
+  return { lesson: bank.lesson, questions: selected, sources: [] };
 }
