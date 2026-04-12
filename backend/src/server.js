@@ -1,19 +1,191 @@
 import 'dotenv/config';
 import cors from 'cors';
 import express from 'express';
+import multer from 'multer';
 import { supabase } from './lib/supabase.js';
 import { generateFallbackContent } from './data/fallbackContent.js';
 import { normalizePassPercentage, randomToken, toSlug } from './lib/utils.js';
+import { generateLessonAndQuiz, isAiConfigured, embeddingModel, generationModel } from './lib/ai.js';
+import { ingestMaterial, retrieveRelevantChunks } from './lib/rag.js';
 
 const app = express();
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024 } });
 const port = process.env.PORT || 3001;
 const defaultPassPercentage = normalizePassPercentage(process.env.DEFAULT_PASS_PERCENTAGE, 70);
+const storageBucket = process.env.SUPABASE_STORAGE_BUCKET || 'course-materials';
 
 app.use(cors({ origin: process.env.CORS_ORIGIN || '*' }));
 app.use(express.json());
 
 app.get('/health', (_req, res) => {
-  res.json({ ok: true, service: 'quizify-backend' });
+  res.json({
+    ok: true,
+    service: 'quizify-backend',
+    rag: {
+      aiConfigured: isAiConfigured(),
+      embeddingModel,
+      generationModel,
+      storageBucket,
+    },
+  });
+});
+
+app.get('/api/materials', async (req, res) => {
+  const courseCode = typeof req.query.courseCode === 'string' ? req.query.courseCode : null;
+
+  let query = supabase
+    .from('materials')
+    .select('id, course_code, topic, file_name, storage_path, mime_type, file_size, chunk_count, status, error_message, uploaded_at, updated_at')
+    .neq('status', 'Deleted')
+    .order('uploaded_at', { ascending: false });
+
+  if (courseCode) {
+    query = query.eq('course_code', courseCode);
+  }
+
+  const { data, error } = await query;
+  if (error) {
+    return res.status(500).json({ message: 'Failed to fetch materials' });
+  }
+
+  return res.json({ materials: data || [] });
+});
+
+app.post('/api/materials/upload', upload.single('file'), async (req, res) => {
+  const file = req.file;
+  const courseCode = typeof req.body.courseCode === 'string' ? req.body.courseCode.trim().toUpperCase() : '';
+  const topic = typeof req.body.topic === 'string' ? req.body.topic.trim() : null;
+
+  if (!courseCode) {
+    return res.status(400).json({ message: 'courseCode is required' });
+  }
+
+  if (!file) {
+    return res.status(400).json({ message: 'File is required' });
+  }
+
+  const supportedMimeTypes = [
+    'application/pdf',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  ];
+  const lowerName = file.originalname.toLowerCase();
+  const isSupportedName = lowerName.endsWith('.pdf') || lowerName.endsWith('.pptx');
+  if (!supportedMimeTypes.includes(file.mimetype) && !isSupportedName) {
+    return res.status(400).json({ message: 'Only PDF and PPTX files are supported for RAG' });
+  }
+
+  const safeName = file.originalname.replace(/[^a-zA-Z0-9_.-]/g, '_');
+  const storagePath = `${courseCode}/${Date.now()}-${safeName}`;
+
+  const { data: existingMaterial } = await supabase
+    .from('materials')
+    .select('id, storage_path, status')
+    .eq('course_code', courseCode)
+    .eq('file_name', file.originalname)
+    .neq('status', 'Deleted')
+    .maybeSingle();
+
+  if (existingMaterial) {
+    await supabase.storage.from(storageBucket).remove([existingMaterial.storage_path]);
+    await supabase.from('material_chunks').delete().eq('material_id', existingMaterial.id);
+    await supabase
+      .from('materials')
+      .update({ status: 'Deleted', updated_at: new Date().toISOString() })
+      .eq('id', existingMaterial.id);
+  }
+
+  const { data: material, error: insertMaterialError } = await supabase
+    .from('materials')
+    .insert({
+      course_code: courseCode,
+      topic,
+      file_name: file.originalname,
+      storage_path: storagePath,
+      mime_type: file.mimetype,
+      file_size: file.size,
+      status: 'Processing',
+    })
+    .select('id, course_code, topic, file_name, storage_path, mime_type, file_size, chunk_count, status, uploaded_at')
+    .single();
+
+  if (insertMaterialError || !material) {
+    return res.status(500).json({ message: 'Failed to register material' });
+  }
+
+  const { error: storageError } = await supabase.storage
+    .from(storageBucket)
+    .upload(storagePath, file.buffer, { contentType: file.mimetype, upsert: true });
+
+  if (storageError) {
+    await supabase
+      .from('materials')
+      .update({ status: 'Failed', error_message: 'Storage upload failed', updated_at: new Date().toISOString() })
+      .eq('id', material.id);
+    return res.status(500).json({ message: 'Failed to upload file to storage' });
+  }
+
+  try {
+    const ingestResult = await ingestMaterial({
+      materialId: material.id,
+      courseCode,
+      topic,
+      fileName: file.originalname,
+      mimeType: file.mimetype,
+      storagePath,
+      buffer: file.buffer,
+    });
+
+    return res.status(201).json({
+      material: {
+        ...material,
+        status: 'Active',
+        chunk_count: ingestResult.chunkCount,
+      },
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'RAG processing failed';
+    await supabase
+      .from('materials')
+      .update({
+        status: 'Failed',
+        error_message: message,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', material.id);
+
+    return res.status(500).json({ message });
+  }
+});
+
+app.delete('/api/materials/:id', async (req, res) => {
+  const { id } = req.params;
+  const { data: material, error } = await supabase
+    .from('materials')
+    .select('id, storage_path, status')
+    .eq('id', id)
+    .single();
+
+  if (error || !material) {
+    return res.status(404).json({ message: 'Material not found' });
+  }
+
+  const { error: storageDeleteError } = await supabase.storage.from(storageBucket).remove([material.storage_path]);
+  if (storageDeleteError) {
+    return res.status(500).json({ message: 'Failed to delete file from storage' });
+  }
+
+  await supabase.from('material_chunks').delete().eq('material_id', id);
+
+  const { error: updateError } = await supabase
+    .from('materials')
+    .update({ status: 'Deleted', updated_at: new Date().toISOString() })
+    .eq('id', id);
+
+  if (updateError) {
+    return res.status(500).json({ message: 'Failed to update material status' });
+  }
+
+  return res.json({ success: true });
 });
 
 app.get('/api/public/course/:token', async (req, res) => {
@@ -186,15 +358,45 @@ app.post('/api/courses/generate', async (req, res) => {
     return res.status(400).json({ message: 'Course code is required' });
   }
 
+  const normalizedCourseCode = courseCode.trim().toUpperCase();
+  const normalizedTopics = Array.isArray(topics) ? topics.map((t) => String(t).trim()).filter(Boolean) : [];
   const sanitizedQuestionCount = Math.min(15, Math.max(5, Number(questionCount) || 5));
   const normalizedPass = normalizePassPercentage(passPercentage, defaultPassPercentage);
-  const content = generateFallbackContent({
-    title,
-    topics: Array.isArray(topics) ? topics : [],
-    questionCount: sanitizedQuestionCount,
+
+  const contextChunks = await retrieveRelevantChunks({
+    courseCode: normalizedCourseCode,
+    topics: normalizedTopics,
+    limit: 12,
   });
 
-  let shareToken = `${toSlug(courseCode)}-${randomToken(8)}`;
+  const contextText = contextChunks.join('\n\n');
+  let content = null;
+
+  if (contextChunks.length > 0 && isAiConfigured()) {
+    content = await generateLessonAndQuiz({
+      title,
+      topics: normalizedTopics,
+      context: contextText,
+      questionCount: sanitizedQuestionCount,
+    });
+  }
+
+  if (!content) {
+    content = generateFallbackContent({
+      title,
+      topics: normalizedTopics,
+      questionCount: sanitizedQuestionCount,
+    });
+  } else if (content.questions.length < sanitizedQuestionCount) {
+    const fallbackSupplement = generateFallbackContent({
+      title,
+      topics: normalizedTopics,
+      questionCount: sanitizedQuestionCount,
+    });
+    content.questions = [...content.questions, ...fallbackSupplement.questions].slice(0, sanitizedQuestionCount);
+  }
+
+  let shareToken = `${toSlug(normalizedCourseCode)}-${randomToken(8)}`;
   for (let i = 0; i < 3; i += 1) {
     const { data: exists } = await supabase
       .from('mini_courses')
@@ -202,15 +404,17 @@ app.post('/api/courses/generate', async (req, res) => {
       .eq('share_token', shareToken)
       .maybeSingle();
     if (!exists) break;
-    shareToken = `${toSlug(courseCode)}-${randomToken(8)}`;
+    shareToken = `${toSlug(normalizedCourseCode)}-${randomToken(8)}`;
   }
+
+  const sourceType = contextChunks.length > 0 ? (isAiConfigured() ? 'RAG+LLM' : 'RAG-only') : 'Fallback';
 
   const { data: miniCourse, error: courseError } = await supabase
     .from('mini_courses')
     .insert({
       title,
-      course_code: courseCode,
-      topics,
+      course_code: normalizedCourseCode,
+      topics: normalizedTopics,
       lesson_content: content.lesson,
       status: 'Ready',
       share_token: shareToken,
@@ -265,6 +469,8 @@ app.post('/api/courses/generate', async (req, res) => {
       createdAt: miniCourse.created_at,
       passPercentage: miniCourse.pass_percentage,
       expiresAt: miniCourse.expires_at,
+      generationSource: sourceType,
+      contextChunksUsed: contextChunks.length,
     },
   });
 });

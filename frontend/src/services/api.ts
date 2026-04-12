@@ -1,6 +1,7 @@
 import type {
   CourseAnalytics,
   CourseSummary,
+  Material,
   PublicCourse,
   QuizSubmissionResult,
 } from '../types';
@@ -59,6 +60,38 @@ export const apiService = {
 
   async getAnalytics(courseId: string) {
     return request<CourseAnalytics>(`/api/analytics/${encodeURIComponent(courseId)}`);
+  },
+
+  async getMaterials(courseCode?: string) {
+    const query = courseCode ? `?courseCode=${encodeURIComponent(courseCode)}` : '';
+    return request<{ materials: Material[] }>(`/api/materials${query}`);
+  },
+
+  async uploadMaterial(payload: { file: File; courseCode: string; topic?: string }) {
+    const formData = new FormData();
+    formData.append('file', payload.file);
+    formData.append('courseCode', payload.courseCode);
+    if (payload.topic) {
+      formData.append('topic', payload.topic);
+    }
+
+    const response = await fetch(`${API_BASE_URL}/api/materials/upload`, {
+      method: 'POST',
+      body: formData,
+    });
+
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(data?.message || 'Upload failed');
+    }
+
+    return data as { material: Material };
+  },
+
+  async deleteMaterial(materialId: string) {
+    return request<{ success: boolean }>(`/api/materials/${encodeURIComponent(materialId)}`, {
+      method: 'DELETE',
+    });
   },
 };
 
