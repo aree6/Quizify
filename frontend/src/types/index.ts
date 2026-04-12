@@ -54,6 +54,51 @@ export interface Material {
   updated_at: string;
 }
 
+/**
+ * One retrieved chunk surfaced as a citation. `index` is the 1-based marker
+ * emitted in the lesson as `[S1]`, `[S2]`, etc.
+ */
+export interface SourceCitation {
+  index: number;
+  chunkId: string;
+  sourceFile: string;
+  chapter: string | null;
+  chunkIndex: number;
+  similarity: number;
+  snippet: string;
+  /** Full chunk text shown in the source modal when a `[S#]` marker is clicked. */
+  text: string;
+}
+
+export interface TopicCoverage {
+  topic: string;
+  chunkCount: number;
+}
+
+/* ─── Pedagogically-grounded generation options (mirrors backend types) ────── */
+
+export type BloomLevel = 'understand' | 'apply' | 'analyze' | 'evaluate';
+export type SoloLevel =
+  | 'unistructural'
+  | 'multistructural'
+  | 'relational'
+  | 'extended_abstract';
+export type LessonLength = 'concise' | 'standard' | 'detailed';
+
+export interface GenerationOptions {
+  bloomLevel: BloomLevel;
+  soloLevel: SoloLevel;
+  lengthLevel: LessonLength;
+  customInstructions?: string;
+}
+
+export const DEFAULT_GENERATION_OPTIONS: GenerationOptions = {
+  bloomLevel: 'understand',
+  soloLevel: 'multistructural',
+  lengthLevel: 'standard',
+  customInstructions: '',
+};
+
 export interface CoursePreview {
   title: string;
   courseCode: string;
@@ -64,6 +109,8 @@ export interface CoursePreview {
   questionCount: number;
   generationSource: string;
   contextChunksUsed: number;
+  sources: SourceCitation[];
+  topicCoverage: TopicCoverage[];
 }
 
 export interface PublicQuestion {
@@ -76,6 +123,7 @@ export interface PublicCourse {
   id: string;
   title: string;
   lessonContent: string;
+  sources: SourceCitation[];
   quizTitle: string;
   passPercentage: number;
   questions: PublicQuestion[];
