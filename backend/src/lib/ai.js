@@ -1,26 +1,27 @@
 import OpenAI from 'openai';
 
-export const embeddingModel = process.env.EMBEDDING_MODEL || 'text-embedding-3-small';
-export const generationModel = process.env.GENERATION_MODEL || 'gpt-4o-mini';
-
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
-const client = OPENAI_API_KEY
-  ? new OpenAI({
-      apiKey: OPENAI_API_KEY,
-    })
-  : null;
+export const aiProvider = process.env.AI_PROVIDER || (OPENAI_API_KEY ? 'openai' : GEMINI_API_KEY ? 'gemini' : 'none');
+
+export const embeddingModel =
+  process.env.EMBEDDING_MODEL || (aiProvider === 'gemini' ? 'text-embedding-004' : 'text-embedding-3-small');
+export const generationModel =
+  process.env.GENERATION_MODEL || (aiProvider === 'gemini' ? 'gemini-2.0-flash' : 'gpt-4o-mini');
+
+const openaiClient = OPENAI_API_KEY ? new OpenAI({ apiKey: OPENAI_API_KEY }) : null;
 
 export function isAiConfigured() {
-  return Boolean(client);
+  if (aiProvider === 'openai') return Boolean(openaiClient);
+  if (aiProvider === 'gemini') return Boolean(GEMINI_API_KEY);
+  return false;
 }
 
-export async function embedTexts(texts) {
-  if (!client) {
-    return null;
-  }
+async function embedTextsOpenAI(texts) {
+  if (!openaiClient) return null;
 
-  const response = await client.embeddings.create({
+  const response = await openaiClient.embeddings.create({
     model: embeddingModel,
     input: texts,
   });
@@ -28,10 +29,58 @@ export async function embedTexts(texts) {
   return response.data.map((item) => item.embedding);
 }
 
-function sanitizeGeneratedQuiz(payload, questionCount) {
-  if (!payload || typeof payload !== 'object') {
+async function embedTextGemini(text) {
+  if (!GEMINI_API_KEY) return null;
+
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${embeddingModel}:embedContent?key=${GEMINI_API_KEY}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        content: { parts: [{ text }] },
+        outputDimensionality: 1536,
+      }),
+    },
+  );
+
+  if (!response.ok) {
     return null;
   }
+
+  const data = await response.json();
+  return data?.embedding?.values || null;
+}
+
+async function embedTextsGemini(texts) {
+  if (!GEMINI_API_KEY) return null;
+  const embeddings = [];
+
+  for (const text of texts) {
+    const embedding = await embedTextGemini(text);
+    if (!embedding) return null;
+    embeddings.push(embedding);
+  }
+
+  return embeddings;
+}
+
+export async function embedTexts(texts) {
+  if (!Array.isArray(texts) || texts.length === 0) return null;
+
+  if (aiProvider === 'gemini') {
+    return embedTextsGemini(texts);
+  }
+
+  if (aiProvider === 'openai') {
+    return embedTextsOpenAI(texts);
+  }
+
+  return null;
+}
+
+function sanitizeGeneratedQuiz(payload, questionCount) {
+  if (!payload || typeof payload !== 'object') return null;
 
   const lesson = typeof payload.lesson === 'string' ? payload.lesson.trim() : '';
   const questions = Array.isArray(payload.questions) ? payload.questions : [];
@@ -48,33 +97,22 @@ function sanitizeGeneratedQuiz(payload, questionCount) {
         return null;
       }
 
-      const normalizedCorrect = Math.max(0, Math.min(options.length - 1, correctOptionIndex));
-
       return {
         prompt,
         options: options.slice(0, 4),
-        correct: normalizedCorrect,
+        correct: Math.max(0, Math.min(options.length - 1, correctOptionIndex)),
       };
     })
     .filter(Boolean)
     .slice(0, questionCount);
 
-  if (!lesson || cleanedQuestions.length === 0) {
-    return null;
-  }
+  if (!lesson || cleanedQuestions.length === 0) return null;
 
-  return {
-    lesson,
-    questions: cleanedQuestions,
-  };
+  return { lesson, questions: cleanedQuestions };
 }
 
-export async function generateLessonAndQuiz({ title, topics, context, questionCount }) {
-  if (!client) {
-    return null;
-  }
-
-  const prompt = [
+function buildPrompt({ title, topics, context, questionCount }) {
+  return [
     'You are an expert university course assistant.',
     'Generate concise mini-course lesson content and a multiple-choice quiz from the provided context.',
     'Return valid JSON only with this exact schema:',
@@ -85,8 +123,12 @@ export async function generateLessonAndQuiz({ title, topics, context, questionCo
     'Context:',
     context,
   ].join('\n\n');
+}
 
-  const completion = await client.chat.completions.create({
+async function generateWithOpenAI(payload) {
+  if (!openaiClient) return null;
+
+  const completion = await openaiClient.chat.completions.create({
     model: generationModel,
     temperature: 0.3,
     response_format: { type: 'json_object' },
@@ -96,19 +138,58 @@ export async function generateLessonAndQuiz({ title, topics, context, questionCo
         content:
           'You generate reliable educational content and valid JSON. Use only the supplied context; do not invent facts.',
       },
-      { role: 'user', content: prompt },
+      { role: 'user', content: buildPrompt(payload) },
     ],
   });
 
   const raw = completion.choices?.[0]?.message?.content;
   if (!raw) return null;
 
-  let parsed;
   try {
-    parsed = JSON.parse(raw);
+    return JSON.parse(raw);
   } catch {
     return null;
   }
+}
 
-  return sanitizeGeneratedQuiz(parsed, questionCount);
+async function generateWithGemini(payload) {
+  if (!GEMINI_API_KEY) return null;
+
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${generationModel}:generateContent?key=${GEMINI_API_KEY}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: buildPrompt(payload) }] }],
+        generationConfig: {
+          responseMimeType: 'application/json',
+          temperature: 0.3,
+        },
+      }),
+    },
+  );
+
+  if (!response.ok) return null;
+  const data = await response.json();
+  const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!rawText) return null;
+
+  try {
+    return JSON.parse(rawText);
+  } catch {
+    return null;
+  }
+}
+
+export async function generateLessonAndQuiz(payload) {
+  let parsed = null;
+
+  if (aiProvider === 'gemini') {
+    parsed = await generateWithGemini(payload);
+  } else if (aiProvider === 'openai') {
+    parsed = await generateWithOpenAI(payload);
+  }
+
+  return sanitizeGeneratedQuiz(parsed, payload.questionCount);
 }

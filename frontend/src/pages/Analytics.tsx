@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
+import type { CourseAnalytics, CourseSummary } from '../types';
 import { apiService } from '../services/api';
-import type { CourseSummary, CourseAnalytics } from '../types';
 
 export function AnalyticsPage() {
   const [courses, setCourses] = useState<CourseSummary[]>([]);
@@ -11,60 +11,54 @@ export function AnalyticsPage() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const loadCourses = async () => {
+    const load = async () => {
       try {
         setLoadingCourses(true);
         const response = await apiService.getCourses();
         setCourses(response.courses);
-        if (response.courses.length > 0) {
-          setSelectedCourseId(response.courses[0].id);
-        }
+        if (response.courses.length > 0) setSelectedCourseId(response.courses[0].id);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load courses');
       } finally {
         setLoadingCourses(false);
       }
     };
-    loadCourses();
+    load();
   }, []);
 
   useEffect(() => {
     if (!selectedCourseId) return;
-    const loadAnalytics = async () => {
+    const load = async () => {
       try {
         setLoadingAnalytics(true);
-        const response = await apiService.getAnalytics(selectedCourseId);
-        setAnalytics(response);
+        const result = await apiService.getAnalytics(selectedCourseId);
+        setAnalytics(result);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load analytics');
       } finally {
         setLoadingAnalytics(false);
       }
     };
-    loadAnalytics();
+    load();
   }, [selectedCourseId]);
 
   return (
     <div>
       <div className="mb-8">
-        <h2 className="text-2xl font-bold text-slate-900">Analytics</h2>
-        <p className="text-slate-500 mt-1">View student submissions and course performance.</p>
+        <h2 className="section-title">Analytics</h2>
+        <p className="section-subtitle mt-2">Review submissions, pass rates, and scoring patterns.</p>
       </div>
 
       {loadingCourses ? (
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 text-slate-500">Loading courses...</div>
+        <div className="surface-card p-6 text-sm text-[#4b4b4b]">Loading courses...</div>
       ) : courses.length === 0 ? (
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 text-slate-500">No courses yet.</div>
+        <div className="surface-card p-6 text-sm text-[#4b4b4b]">No courses generated yet.</div>
       ) : (
-        <div className="mb-6">
-          <label className="block text-sm font-medium text-slate-700 mb-2">Select course</label>
-          <select
-            value={selectedCourseId}
-            onChange={(e) => setSelectedCourseId(e.target.value)}
-            className="w-full sm:w-[420px] px-4 py-3 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-          >
+        <div className="mb-6 max-w-xl">
+          <label className="block text-sm font-semibold text-[#0e0f0c] mb-2">Select course</label>
+          <select className="field" value={selectedCourseId} onChange={(event) => setSelectedCourseId(event.target.value)}>
             {courses.map((course) => (
-              <option value={course.id} key={course.id}>
+              <option key={course.id} value={course.id}>
                 {course.title} ({course.courseCode})
               </option>
             ))}
@@ -72,59 +66,53 @@ export function AnalyticsPage() {
         </div>
       )}
 
-      {error && <div className="mb-6 p-3 rounded-xl bg-red-50 text-red-700 text-sm">{error}</div>}
+      {error && <div className="mb-4 p-3 rounded-[8px] bg-[#ffe5e7] text-[#d03238] text-sm">{error}</div>}
 
       {loadingAnalytics ? (
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 text-slate-500">Loading analytics...</div>
+        <div className="surface-card p-6 text-sm text-[#4b4b4b]">Loading analytics...</div>
       ) : analytics ? (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-            <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
-              <p className="text-sm text-slate-500">Total submissions</p>
-              <p className="text-3xl font-bold text-slate-900">{analytics.totalSubmissions}</p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+            <div className="top-stat">
+              <p className="text-xs text-[#4b4b4b]">Total submissions</p>
+              <p className="text-3xl font-bold text-[#0e0f0c]">{analytics.totalSubmissions}</p>
             </div>
-            <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
-              <p className="text-sm text-slate-500">Average score</p>
-              <p className="text-3xl font-bold text-slate-900">{analytics.averageScore}%</p>
+            <div className="top-stat">
+              <p className="text-xs text-[#4b4b4b]">Average score</p>
+              <p className="text-3xl font-bold text-[#0e0f0c]">{analytics.averageScore}%</p>
             </div>
-            <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
-              <p className="text-sm text-slate-500">Pass rate</p>
-              <p className="text-3xl font-bold text-slate-900">{analytics.passRate}%</p>
+            <div className="top-stat">
+              <p className="text-xs text-[#4b4b4b]">Pass rate</p>
+              <p className="text-3xl font-bold text-[#0e0f0c]">{analytics.passRate}%</p>
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-            {analytics.submissions.length === 0 ? (
-              <div className="p-6 text-slate-500">No submissions yet for this course.</div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-slate-50 border-b border-slate-100">
-                    <tr>
-                      <th className="text-left px-6 py-4 text-sm font-semibold text-slate-600">Student</th>
-                      <th className="text-left px-6 py-4 text-sm font-semibold text-slate-600">Score</th>
-                      <th className="text-left px-6 py-4 text-sm font-semibold text-slate-600">Percentage</th>
-                      <th className="text-left px-6 py-4 text-sm font-semibold text-slate-600">Submitted</th>
+          {analytics.submissions.length === 0 ? (
+            <div className="surface-card p-6 text-sm text-[#4b4b4b]">No submissions yet for this course.</div>
+          ) : (
+            <div className="surface-card overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-[#efefef]">
+                    <th className="text-left px-5 py-3 text-xs font-bold text-[#4b4b4b]">Student</th>
+                    <th className="text-left px-5 py-3 text-xs font-bold text-[#4b4b4b]">Score</th>
+                    <th className="text-left px-5 py-3 text-xs font-bold text-[#4b4b4b]">Percentage</th>
+                    <th className="text-left px-5 py-3 text-xs font-bold text-[#4b4b4b]">Submitted</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {analytics.submissions.map((submission) => (
+                    <tr key={submission.id} className="border-b border-[#efefef] last:border-b-0">
+                      <td className="px-5 py-3 text-sm font-semibold text-[#0e0f0c]">{submission.studentName}</td>
+                      <td className="px-5 py-3 text-sm text-[#4b4b4b]">{submission.score}/{submission.total}</td>
+                      <td className="px-5 py-3 text-sm text-[#4b4b4b]">{submission.percentage}%</td>
+                      <td className="px-5 py-3 text-sm text-[#4b4b4b]">{new Date(submission.submittedAt).toLocaleString()}</td>
                     </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {analytics.submissions.map((submission) => (
-                      <tr key={submission.id}>
-                        <td className="px-6 py-4 text-slate-900 font-medium">{submission.studentName}</td>
-                        <td className="px-6 py-4 text-slate-600">
-                          {submission.score}/{submission.total}
-                        </td>
-                        <td className="px-6 py-4 text-slate-600">{submission.percentage}%</td>
-                        <td className="px-6 py-4 text-slate-500">
-                          {new Date(submission.submittedAt).toLocaleString()}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </>
       ) : null}
     </div>

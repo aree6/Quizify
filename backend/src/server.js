@@ -5,7 +5,7 @@ import multer from 'multer';
 import { supabase } from './lib/supabase.js';
 import { generateFallbackContent } from './data/fallbackContent.js';
 import { normalizePassPercentage, randomToken, toSlug } from './lib/utils.js';
-import { generateLessonAndQuiz, isAiConfigured, embeddingModel, generationModel } from './lib/ai.js';
+import { generateLessonAndQuiz, isAiConfigured, embeddingModel, generationModel, aiProvider } from './lib/ai.js';
 import { ingestMaterial, retrieveRelevantChunks } from './lib/rag.js';
 
 const app = express();
@@ -23,6 +23,7 @@ app.get('/health', (_req, res) => {
     service: 'quizify-backend',
     rag: {
       aiConfigured: isAiConfigured(),
+      aiProvider,
       embeddingModel,
       generationModel,
       storageBucket,
@@ -35,7 +36,7 @@ app.get('/api/materials', async (req, res) => {
 
   let query = supabase
     .from('materials')
-    .select('id, course_code, topic, file_name, storage_path, mime_type, file_size, chunk_count, status, error_message, uploaded_at, updated_at')
+    .select('id, course_code, material_type, chapter, topic, relative_path, file_name, storage_path, mime_type, file_size, chunk_count, status, error_message, uploaded_at, updated_at')
     .neq('status', 'Deleted')
     .order('uploaded_at', { ascending: false });
 
@@ -54,7 +55,10 @@ app.get('/api/materials', async (req, res) => {
 app.post('/api/materials/upload', upload.single('file'), async (req, res) => {
   const file = req.file;
   const courseCode = typeof req.body.courseCode === 'string' ? req.body.courseCode.trim().toUpperCase() : '';
+  const materialType = req.body.materialType === 'course_info' ? 'course_info' : 'slide';
+  const chapter = typeof req.body.chapter === 'string' ? req.body.chapter.trim() || null : null;
   const topic = typeof req.body.topic === 'string' ? req.body.topic.trim() : null;
+  const relativePath = typeof req.body.relativePath === 'string' ? req.body.relativePath.trim() || null : null;
 
   if (!courseCode) {
     return res.status(400).json({ message: 'courseCode is required' });
@@ -75,15 +79,29 @@ app.post('/api/materials/upload', upload.single('file'), async (req, res) => {
   }
 
   const safeName = file.originalname.replace(/[^a-zA-Z0-9_.-]/g, '_');
-  const storagePath = `${courseCode}/${Date.now()}-${safeName}`;
+  const safeRelativePath = relativePath
+    ? relativePath
+        .split('/')
+        .map((part) => part.replace(/[^a-zA-Z0-9_.-]/g, '_'))
+        .join('/')
+    : safeName;
+  const storagePath = `${courseCode}/${materialType}/${Date.now()}-${safeRelativePath}`;
 
-  const { data: existingMaterial } = await supabase
+  let existingQuery = supabase
     .from('materials')
     .select('id, storage_path, status')
     .eq('course_code', courseCode)
+    .eq('material_type', materialType)
     .eq('file_name', file.originalname)
-    .neq('status', 'Deleted')
-    .maybeSingle();
+    .neq('status', 'Deleted');
+
+  if (relativePath) {
+    existingQuery = existingQuery.eq('relative_path', relativePath);
+  } else {
+    existingQuery = existingQuery.is('relative_path', null);
+  }
+
+  const { data: existingMaterial } = await existingQuery.maybeSingle();
 
   if (existingMaterial) {
     await supabase.storage.from(storageBucket).remove([existingMaterial.storage_path]);
@@ -98,18 +116,25 @@ app.post('/api/materials/upload', upload.single('file'), async (req, res) => {
     .from('materials')
     .insert({
       course_code: courseCode,
+      material_type: materialType,
+      chapter,
       topic,
+      relative_path: relativePath,
       file_name: file.originalname,
       storage_path: storagePath,
       mime_type: file.mimetype,
       file_size: file.size,
       status: 'Processing',
     })
-    .select('id, course_code, topic, file_name, storage_path, mime_type, file_size, chunk_count, status, uploaded_at')
+    .select('id, course_code, material_type, chapter, topic, relative_path, file_name, storage_path, mime_type, file_size, chunk_count, status, uploaded_at')
     .single();
 
   if (insertMaterialError || !material) {
-    return res.status(500).json({ message: 'Failed to register material' });
+    return res.status(500).json({
+      message: 'Failed to register material',
+      details: insertMaterialError?.message || 'Unknown database error',
+      hint: 'Ensure materials table has material_type/chapter/relative_path columns and storage bucket exists',
+    });
   }
 
   const { error: storageError } = await supabase.storage
@@ -121,7 +146,7 @@ app.post('/api/materials/upload', upload.single('file'), async (req, res) => {
       .from('materials')
       .update({ status: 'Failed', error_message: 'Storage upload failed', updated_at: new Date().toISOString() })
       .eq('id', material.id);
-    return res.status(500).json({ message: 'Failed to upload file to storage' });
+    return res.status(500).json({ message: 'Failed to upload file to storage', details: storageError.message });
   }
 
   try {

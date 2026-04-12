@@ -1,43 +1,189 @@
 @import "tailwindcss";
 
+:root {
+  --near-black: #0e0f0c;
+  --pure-white: #ffffff;
+  --lime: #9fe870;
+  --dark-green: #163300;
+  --chip-gray: #efefef;
+  --body-gray: #4b4b4b;
+  --muted-gray: #afafaf;
+  --hover-gray: #e2e2e2;
+  --light-mint: #e2f6d5;
+  --positive: #054d28;
+  --danger: #d03238;
+  --warning: #ffd11a;
+  --shadow-standard: rgba(14, 15, 12, 0.12) 0px 4px 16px 0px;
+  --shadow-elevated: rgba(14, 15, 12, 0.16) 0px 2px 8px 0px;
+  --card-ring: rgba(14, 15, 12, 0.12) 0px 0px 0px 1px;
+}
+
+* {
+  font-family: Inter, system-ui, "Helvetica Neue", Arial, sans-serif;
+  font-feature-settings: "calt";
+}
+
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--pure-white);
+  color: var(--near-black);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .pulse-hover {
+    transition: transform 150ms ease, background-color 150ms ease, color 150ms ease, border-color 150ms ease;
+  }
+
+  .pulse-hover:hover {
+    transform: scale(1.05);
+  }
+
+  .pulse-hover:active {
+    transform: scale(0.95);
+  }
+
+  .card-hover {
+    transition: transform 150ms ease, box-shadow 150ms ease;
+  }
+
+  .card-hover:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-elevated);
+  }
 }
 
 @layer components {
-  .btn-primary {
-    @apply px-5 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors;
+  .app-shell {
+    @apply min-h-screen;
+    background: var(--pure-white);
   }
-  
-  .btn-secondary {
-    @apply px-4 py-2 bg-white text-slate-600 border border-slate-200 rounded-md hover:bg-slate-50 transition-colors;
+
+  .section-title {
+    @apply text-[2rem] sm:text-[2.5rem] font-bold;
+    color: var(--near-black);
+    line-height: 1.1;
+    font-weight: 700;
   }
-  
-  .card {
-    @apply bg-white rounded-xl p-6 border border-slate-200 shadow-sm hover:border-blue-400 hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer;
+
+  .section-subtitle {
+    @apply text-sm sm:text-base;
+    color: var(--body-gray);
   }
-  
-  .stat-card {
-    @apply bg-white rounded-xl p-5 border border-slate-200;
+
+  .display-title {
+    font-size: clamp(2.25rem, 10vw, 6rem);
+    font-weight: 900;
+    line-height: 0.85;
+    color: var(--near-black);
   }
-  
+
+  .surface-card {
+    @apply bg-white;
+    border-radius: 12px;
+    box-shadow: var(--shadow-standard);
+  }
+
+  .ring-card {
+    @apply bg-white;
+    border-radius: 12px;
+    box-shadow: var(--card-ring);
+  }
+
+  .pill-primary {
+    @apply inline-flex items-center justify-center px-5 py-2.5 text-sm font-semibold;
+    border-radius: 999px;
+    background: var(--lime);
+    color: var(--dark-green);
+    transition: transform 150ms ease, background-color 150ms ease, color 150ms ease;
+  }
+
+  .pill-dark {
+    @apply inline-flex items-center justify-center px-5 py-2.5 text-sm font-semibold;
+    border-radius: 999px;
+    background: var(--near-black);
+    color: var(--pure-white);
+    transition: transform 150ms ease, background-color 150ms ease, color 150ms ease;
+  }
+
+  .pill-secondary {
+    @apply inline-flex items-center justify-center px-5 py-2.5 text-sm font-semibold;
+    border-radius: 999px;
+    background: var(--chip-gray);
+    color: var(--near-black);
+    transition: transform 150ms ease, background-color 150ms ease, color 150ms ease;
+  }
+
+  .chip {
+    @apply inline-flex items-center px-4 py-2 text-sm font-medium;
+    border-radius: 999px;
+    background: var(--chip-gray);
+    color: var(--near-black);
+  }
+
+  .chip-active {
+    @apply inline-flex items-center px-4 py-2 text-sm font-medium;
+    border-radius: 999px;
+    background: var(--near-black);
+    color: var(--pure-white);
+  }
+
+  .field {
+    @apply w-full px-4 py-3 text-sm;
+    border: 1px solid var(--near-black);
+    border-radius: 8px;
+    background: var(--pure-white);
+    color: var(--near-black);
+  }
+
+  .field:focus {
+    outline: none;
+    border-color: var(--lime);
+    box-shadow: 0 0 0 2px rgba(159, 232, 112, 0.3);
+  }
+
+  .top-stat {
+    @apply p-6;
+    border-radius: 12px;
+    background: var(--pure-white);
+    box-shadow: var(--card-ring);
+  }
+
   .status-badge {
-    @apply px-3 py-1 rounded-full text-xs font-medium;
+    @apply inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold;
+    border-radius: 999px;
   }
-  
-  .status-ready {
-    @apply bg-green-100 text-green-700;
+
+  .status-active {
+    background: var(--light-mint);
+    color: var(--positive);
   }
-  
-  .status-shared {
-    @apply bg-blue-100 text-blue-700;
+
+  .status-processing {
+    background: #fff5c3;
+    color: #7a5b00;
   }
-  
-  .status-generating {
-    @apply bg-yellow-100 text-yellow-700;
+
+  .status-failed {
+    background: #ffe5e7;
+    color: var(--danger);
   }
-  
-  .input-field {
-    @apply w-full px-4 py-3 border-2 border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all;
+
+  .loading-screen {
+    @apply min-h-screen flex items-center justify-center;
+    color: var(--body-gray);
+    background: var(--pure-white);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .pill-primary:hover,
+  .pill-dark:hover,
+  .pill-secondary:hover {
+    transform: scale(1.05);
+  }
+
+  .pill-primary:active,
+  .pill-dark:active,
+  .pill-secondary:active {
+    transform: scale(0.95);
   }
 }

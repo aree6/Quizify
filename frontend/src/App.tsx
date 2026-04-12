@@ -8,12 +8,13 @@ import { MyCoursesPage } from './pages/MyCourses';
 import { AnalyticsPage } from './pages/Analytics';
 import { QuizPage } from './pages/Quiz';
 import { Layout } from './components/common/Layout';
+import { RequireRole } from './components/auth/RequireRole';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
   
   if (isLoading) {
-    return <div className="loading">Loading...</div>;
+    return <div className="loading-screen">Loading...</div>;
   }
   
   return isAuthenticated ? <>{children}</> : <Navigate to="/login" />;
@@ -23,7 +24,7 @@ function AppRoutes() {
   const { isAuthenticated, isLoading } = useAuth();
   
   if (isLoading) {
-    return <div className="loading">Loading...</div>;
+    return <div className="loading-screen">Loading...</div>;
   }
   
   return (
@@ -36,9 +37,11 @@ function AppRoutes() {
         path="/dashboard"
         element={
           <ProtectedRoute>
-            <Layout>
-              <DashboardPage />
-            </Layout>
+            <RequireRole roles={['Lecturer', 'Admin', 'Student']} fallback={<Navigate to="/login" />}>
+              <Layout>
+                <DashboardPage />
+              </Layout>
+            </RequireRole>
           </ProtectedRoute>
         }
       />
@@ -46,9 +49,11 @@ function AppRoutes() {
         path="/materials"
         element={
           <ProtectedRoute>
-            <Layout>
-              <MaterialsPage />
-            </Layout>
+            <RequireRole roles={['Lecturer', 'Admin']} fallback={<Navigate to="/dashboard" />}>
+              <Layout>
+                <MaterialsPage />
+              </Layout>
+            </RequireRole>
           </ProtectedRoute>
         }
       />
@@ -56,9 +61,11 @@ function AppRoutes() {
         path="/create-course"
         element={
           <ProtectedRoute>
-            <Layout>
-              <CreateCoursePage />
-            </Layout>
+            <RequireRole roles={['Lecturer', 'Admin']} fallback={<Navigate to="/dashboard" />}>
+              <Layout>
+                <CreateCoursePage />
+              </Layout>
+            </RequireRole>
           </ProtectedRoute>
         }
       />
@@ -66,9 +73,11 @@ function AppRoutes() {
         path="/my-courses"
         element={
           <ProtectedRoute>
-            <Layout>
-              <MyCoursesPage />
-            </Layout>
+            <RequireRole roles={['Lecturer', 'Admin']} fallback={<Navigate to="/dashboard" />}>
+              <Layout>
+                <MyCoursesPage />
+              </Layout>
+            </RequireRole>
           </ProtectedRoute>
         }
       />
@@ -76,9 +85,11 @@ function AppRoutes() {
         path="/analytics"
         element={
           <ProtectedRoute>
-            <Layout>
-              <AnalyticsPage />
-            </Layout>
+            <RequireRole roles={['Lecturer', 'Admin']} fallback={<Navigate to="/dashboard" />}>
+              <Layout>
+                <AnalyticsPage />
+              </Layout>
+            </RequireRole>
           </ProtectedRoute>
         }
       />
