@@ -6,6 +6,7 @@ import { MaterialsPage } from './pages/Materials';
 import { CreateCoursePage } from './pages/CreateCourse';
 import { MyCoursesPage } from './pages/MyCourses';
 import { AnalyticsPage } from './pages/Analytics';
+import { QuizPage } from './pages/Quiz';
 import { Layout } from './components/common/Layout';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -81,6 +82,7 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
+      <Route path="/quiz" element={<QuizPage />} />
       <Route path="*" element={<Navigate to="/dashboard" />} />
     </Routes>
   );
