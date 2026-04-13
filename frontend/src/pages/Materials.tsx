@@ -507,7 +507,7 @@ export function MaterialsPage() {
                     return (
                       <div key={courseCode} className="surface-card p-4">
                         {/* Course header */}
-                        <div className="flex items-center justify-between gap-3 mb-3">
+                        <div className="flex items-center justify-between gap-3 mb-2 mt-2">
                           <button type="button" className="inline-flex items-center gap-2 min-w-0 flex-1" onClick={() => toggleUploadCourse(courseKey)}>
                             {courseCollapsed ? <ChevronRight className="w-4 h-4 flex-shrink-0" /> : <ChevronDown className="w-4 h-4 flex-shrink-0" />}
                             <p className="text-sm font-semibold text-[#0e0f0c] truncate">{getCourseDisplay(courseCode)}</p>
@@ -520,7 +520,7 @@ export function MaterialsPage() {
 
                         {editingCourseCode === courseCode && (
                           <select
-                            className="field !py-1.5 text-xs mb-3"
+                            className="field !py-1.5 border border-gray-300 text-xs mb-3"
                             value={courseCode}
                             onChange={(event) => {
                               setQueue((prev) => prev.map((item) => (item.courseCode === courseCode ? { ...item, courseCode: event.target.value } : item)));
@@ -556,7 +556,7 @@ export function MaterialsPage() {
                                         {sortedItems.map((item) => {
                                           const chapterValue = item.materialType === 'course_info' ? 'CI' : item.chapterLabel || 'Chapter 1';
                                           return (
-                                            <div key={item.id} className="bg-white border border-[#e2e2e2] rounded-md p-3">
+                                            <div key={item.id} className="bg-white rounded-md p-3">
                                               <div className="flex items-start justify-between gap-2 mb-2">
                                                 <div className="min-w-0 flex-1">
                                                   <p
@@ -593,12 +593,12 @@ export function MaterialsPage() {
                                                       updateQueueItem(item.id, { materialType: 'slide', chapterLabel: value });
                                                     }
                                                   }}
-                                                  className="field !py-1.5 text-xs"
+                                                  className="field !py-1.5 border border-gray-300 text-xs"
                                                 >
                                                   {chapterMenuOptions.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
                                                 </select>
                                                 <input
-                                                  className="field !py-1.5 text-xs"
+                                                  className="field !py-1.5 border border-gray-300 text-xs"
                                                   value={item.chapterItemLabel}
                                                   onChange={(event) => updateQueueItem(item.id, { chapterItemLabel: event.target.value })}
                                                   placeholder={item.materialType === 'course_info' ? '—' : '1.0'}
