@@ -3,13 +3,25 @@ import { env } from '../config/env.js';
 import { HttpError } from '../middleware/error-handler.js';
 import { randomToken, toSlug } from '../lib/utils.js';
 import { findCourseByCode } from '../constants/courses.js';
-import { retrieveRelevantChunks } from './rag.service.js';
+import { retrievePerTopic } from './rag.service.js';
 import { getStoredOutline } from './outlines.service.js';
 import { generateLessonAndQuiz, isAiConfigured } from './ai.service.js';
 
-import type { GeneratedContent, GeneratedQuestion } from '../types/index.js';
+import type {
+  GeneratedContent,
+  GeneratedQuestion,
+  GenerationOptions,
+  SourceCitation,
+} from '../types/index.js';
+import { DEFAULT_GENERATION_OPTIONS } from '../types/index.js';
 
 const ONE_MONTH_MS = 30 * 24 * 60 * 60 * 1000;
+
+/** Per-topic chunk counts surfaced to the UI so lecturers can see coverage depth. */
+export interface TopicCoverage {
+  topic: string;
+  chunkCount: number;
+}
 
 export interface CoursePreviewResult {
   title: string;
@@ -21,6 +33,8 @@ export interface CoursePreviewResult {
   questionCount: number;
   generationSource: 'RAG+LLM' | 'RAG-only';
   contextChunksUsed: number;
+  sources: SourceCitation[];
+  topicCoverage: TopicCoverage[];
 }
 
 export interface AvailableCourse {
@@ -47,10 +61,14 @@ export async function generateCoursePreview(params: {
   courseCode: string;
   topics: string[];
   questionCount: number;
+  /** Partial is accepted — missing fields fall back to DEFAULT_GENERATION_OPTIONS. */
+  options?: Partial<GenerationOptions>;
 }): Promise<CoursePreviewResult> {
   const courseCode = params.courseCode.trim().toUpperCase();
   const topics = params.topics.map((t) => t.trim()).filter(Boolean);
   const questionCount = Math.min(30, Math.max(5, params.questionCount));
+  // Merge with defaults so partial/missing payloads still get a valid shape.
+  const options: GenerationOptions = { ...DEFAULT_GENERATION_OPTIONS, ...(params.options ?? {}) };
 
   if (topics.length === 0) throw new HttpError(400, 'At least one topic is required');
 
@@ -58,11 +76,16 @@ export async function generateCoursePreview(params: {
   const courseName = courseEntry?.name ?? courseCode;
   const autoTitle = `${courseName} — ${topics.slice(0, 3).join(', ')}`;
 
-  const { chunks: contextChunks, matchCount } = await retrieveRelevantChunks({ courseCode, topics, limit: 20 });
-  const contextText = contextChunks.join('\n\n');
+  // Per-topic RAG retrieval gives each topic its own breadth of coverage and
+  // assigns stable 1-based [S#] indexes shared across the lesson + citations.
+  const { topicContexts, sources } = await retrievePerTopic({
+    courseCode,
+    topics,
+    perTopicLimit: 15,
+    minSimilarity: 0.25,
+  });
 
-  // No relevant context found — the selected topics have no indexed material
-  if (matchCount === 0 || contextChunks.length === 0) {
+  if (sources.length === 0) {
     throw new HttpError(
       404,
       `No indexed content found for the selected topics in ${courseCode}. The course materials for these topics may have been removed or not yet uploaded.`,
@@ -77,11 +100,15 @@ export async function generateCoursePreview(params: {
 
   let content: GeneratedContent | null = null;
   if (isAiConfigured()) {
+    // Stacked generation: stage 1 builds the lesson from per-topic RAG context,
+    // stage 2 builds the quiz from that lesson. See ai.service.ts.
     content = await generateLessonAndQuiz({
       title: autoTitle,
       topics,
-      context: contextText,
+      topicContexts,
+      sources,
       questionCount,
+      options,
       synopsis: profile?.synopsis,
       learningOutcomes: profile?.learningOutcomes,
     });
@@ -94,7 +121,10 @@ export async function generateCoursePreview(params: {
     );
   }
 
-  // Use only RAG-grounded questions — no fallback padding
+  const topicCoverage: TopicCoverage[] = topicContexts.map((t) => ({
+    topic: t.topic,
+    chunkCount: t.chunks.length,
+  }));
 
   return {
     title: autoTitle,
@@ -105,7 +135,9 @@ export async function generateCoursePreview(params: {
     questions: content.questions,
     questionCount: content.questions.length,
     generationSource,
-    contextChunksUsed: contextChunks.length,
+    contextChunksUsed: sources.length,
+    sources: content.sources,
+    topicCoverage,
   };
 }
 
@@ -125,6 +157,7 @@ export async function confirmAndSaveCourse(params: {
   topics: string[];
   lesson: string;
   questions: GeneratedQuestion[];
+  sources: SourceCitation[];
   lecturerName: string;
 }): Promise<{
   id: string;
@@ -150,6 +183,7 @@ export async function confirmAndSaveCourse(params: {
       course_code: courseCode,
       topics,
       lesson_content: params.lesson,
+      sources: params.sources,
       status: 'Ready',
       share_token: shareToken,
       pass_percentage: passPercentage,
