@@ -7,12 +7,173 @@ import { generateFallbackContent } from './data/fallbackContent.js';
 import { normalizePassPercentage, randomToken, toSlug } from './lib/utils.js';
 import { generateLessonAndQuiz, isAiConfigured, embeddingModel, generationModel, aiProvider } from './lib/ai.js';
 import { ingestMaterial, retrieveRelevantChunks } from './lib/rag.js';
+import { getCourseDisplayName, findCourseByCode } from './constants/courses.js';
 
 const app = express();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024 } });
 const port = process.env.PORT || 3001;
 const defaultPassPercentage = normalizePassPercentage(process.env.DEFAULT_PASS_PERCENTAGE, 70);
 const storageBucket = process.env.SUPABASE_STORAGE_BUCKET || 'course-materials';
+const materialSelectProfile =
+  'id, course_code, material_type, chapter, chapter_item_label, file_name, storage_path, mime_type, file_size, chunk_count, status, error_message, uploaded_at, updated_at';
+
+function isRlsViolation(error) {
+  const message = String(error?.message || '').toLowerCase();
+  return message.includes('row-level security policy') || message.includes('new row violates row-level security');
+}
+
+function materialsWriteHint(error) {
+  if (isRlsViolation(error)) {
+    return 'RLS blocked write on materials. Use Supabase service_role key (not publishable/anon key) in backend env and keep bucket policy for service_role.';
+  }
+  return 'Database write failed. Check that materials table has all required columns.';
+}
+
+function withMaterialDefaults(row) {
+  return {
+    chapter_item_label: null,
+    error_message: null,
+    updated_at: row?.uploaded_at || new Date().toISOString(),
+    ...row,
+  };
+}
+
+function sanitizeSegment(value, fallback = 'uncategorized') {
+  const normalized = String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_.-]+/g, '-')
+    .replace(/-+/g, '-');
+  return normalized || fallback;
+}
+
+function sanitizeFileName(fileName) {
+  const cleaned = String(fileName || '')
+    .trim()
+    .replace(/[/\\]/g, '-')
+    .replace(/[^a-zA-Z0-9_. -]/g, '_');
+  return cleaned || 'material';
+}
+
+function ensureSupportedExtension(fileName, originalName) {
+  const normalized = String(fileName || '').trim();
+  if (!normalized) return originalName;
+  if (/\.(pdf|pptx)$/i.test(normalized)) return normalized;
+  const extension = originalName.match(/\.(pdf|pptx)$/i)?.[0] || '';
+  return `${normalized}${extension}`;
+}
+
+function buildStoragePath({ courseCode, materialType, chapter, fileName, chapterItemLabel }) {
+  const course = findCourseByCode(courseCode);
+  const courseName = course ? course.name : 'unknown-course';
+  const safeCourse = sanitizeSegment(`${courseName}-${courseCode}`, 'course');
+  const safeType = sanitizeSegment(materialType, 'slide');
+
+  if (safeType === 'course_info') {
+    const safeName = sanitizeFileName(fileName);
+    return `${safeCourse}/course-info/${Date.now()}-${safeName}`;
+  }
+
+  const chapterSegment = sanitizeSegment(chapter || 'unassigned-chapter');
+  const itemSegment = safeType === 'slide' && chapterItemLabel ? sanitizeSegment(chapterItemLabel, 'item') : null;
+  const safeName = sanitizeFileName(fileName);
+
+  if (itemSegment) {
+    return `${safeCourse}/${safeType}/${chapterSegment}/${itemSegment}/${Date.now()}-${safeName}`;
+  }
+  return `${safeCourse}/${safeType}/${chapterSegment}/${Date.now()}-${safeName}`;
+}
+
+async function selectMaterials({ courseCode, id, includeDeleted = false } = {}) {
+  let query = supabase.from('materials').select(materialSelectProfile);
+
+  if (id) {
+    query = query.eq('id', id).limit(1);
+  }
+
+  if (courseCode) {
+    query = query.eq('course_code', courseCode);
+  }
+
+  if (!includeDeleted) {
+    query = query.neq('status', 'Deleted');
+  }
+
+  query = query.order('uploaded_at', { ascending: false });
+
+  const { data, error } = await query;
+  if (error) {
+    return { data: null, error };
+  }
+
+  return { data: (data || []).map(withMaterialDefaults), error: null };
+}
+
+async function getMaterialById(id) {
+  const { data, error } = await selectMaterials({ id, includeDeleted: true });
+  if (error) return { material: null, error };
+  return { material: data?.[0] || null, error: null };
+}
+
+async function insertMaterial(payload) {
+  const { data, error } = await supabase.from('materials').insert(payload).select('id').single();
+  if (error) return { id: null, error };
+  return { id: data?.id, error: null };
+}
+
+async function updateMaterial(id, payload) {
+  const { error } = await supabase.from('materials').update(payload).eq('id', id);
+  if (error) return { error };
+  return { error: null };
+}
+
+async function findExistingMaterialForUpload({ courseCode, materialType, chapter, chapterItemLabel }) {
+  let query = supabase
+    .from('materials')
+    .select('id, course_code, material_type, chapter, chapter_item_label, file_name, storage_path, status')
+    .eq('course_code', courseCode)
+    .eq('material_type', materialType)
+    .neq('status', 'Deleted');
+
+  if (materialType === 'course_info') {
+    query = query.limit(1);
+  } else {
+    query = query
+      .eq('chapter', chapter)
+      .eq('chapter_item_label', chapterItemLabel)
+      .limit(1);
+  }
+
+  const { data, error } = await query.maybeSingle();
+  if (error) return { existing: null, error };
+  return { existing: data || null, error: null };
+}
+
+async function softReplaceMaterial(existingMaterial) {
+  await supabase.storage.from(storageBucket).remove([existingMaterial.storage_path]);
+  await supabase.from('material_chunks').delete().eq('material_id', existingMaterial.id);
+  await supabase
+    .from('materials')
+    .update({ status: 'Deleted', updated_at: new Date().toISOString() })
+    .eq('id', existingMaterial.id);
+}
+
+async function deleteMaterials(materials) {
+  if (!Array.isArray(materials) || materials.length === 0) return;
+
+  const ids = materials.map((item) => item.id);
+  const paths = materials.map((item) => item.storage_path).filter(Boolean);
+
+  if (paths.length > 0) {
+    await supabase.storage.from(storageBucket).remove(paths);
+  }
+
+  await supabase.from('material_chunks').delete().in('material_id', ids);
+  await supabase
+    .from('materials')
+    .update({ status: 'Deleted', updated_at: new Date().toISOString() })
+    .in('id', ids);
+}
 
 app.use(cors({ origin: process.env.CORS_ORIGIN || '*' }));
 app.use(express.json());
@@ -34,17 +195,7 @@ app.get('/health', (_req, res) => {
 app.get('/api/materials', async (req, res) => {
   const courseCode = typeof req.query.courseCode === 'string' ? req.query.courseCode : null;
 
-  let query = supabase
-    .from('materials')
-    .select('id, course_code, material_type, chapter, topic, relative_path, file_name, storage_path, mime_type, file_size, chunk_count, status, error_message, uploaded_at, updated_at')
-    .neq('status', 'Deleted')
-    .order('uploaded_at', { ascending: false });
-
-  if (courseCode) {
-    query = query.eq('course_code', courseCode);
-  }
-
-  const { data, error } = await query;
+  const { data, error } = await selectMaterials({ courseCode });
   if (error) {
     return res.status(500).json({ message: 'Failed to fetch materials' });
   }
@@ -57,8 +208,9 @@ app.post('/api/materials/upload', upload.single('file'), async (req, res) => {
   const courseCode = typeof req.body.courseCode === 'string' ? req.body.courseCode.trim().toUpperCase() : '';
   const materialType = req.body.materialType === 'course_info' ? 'course_info' : 'slide';
   const chapter = typeof req.body.chapter === 'string' ? req.body.chapter.trim() || null : null;
-  const topic = typeof req.body.topic === 'string' ? req.body.topic.trim() : null;
-  const relativePath = typeof req.body.relativePath === 'string' ? req.body.relativePath.trim() || null : null;
+  const requestedFileName = typeof req.body.fileName === 'string' ? req.body.fileName.trim() : '';
+  const chapterItemLabel = typeof req.body.chapterItemLabel === 'string' ? req.body.chapterItemLabel.trim() : '';
+  const onDuplicate = req.body.onDuplicate === 'replace' ? 'replace' : 'error';
 
   if (!courseCode) {
     return res.status(400).json({ message: 'courseCode is required' });
@@ -66,6 +218,10 @@ app.post('/api/materials/upload', upload.single('file'), async (req, res) => {
 
   if (!file) {
     return res.status(400).json({ message: 'File is required' });
+  }
+
+  if (materialType === 'slide' && !chapter) {
+    return res.status(400).json({ message: 'chapter is required for slide material' });
   }
 
   const supportedMimeTypes = [
@@ -78,62 +234,73 @@ app.post('/api/materials/upload', upload.single('file'), async (req, res) => {
     return res.status(400).json({ message: 'Only PDF and PPTX files are supported for RAG' });
   }
 
-  const safeName = file.originalname.replace(/[^a-zA-Z0-9_.-]/g, '_');
-  const safeRelativePath = relativePath
-    ? relativePath
-        .split('/')
-        .map((part) => part.replace(/[^a-zA-Z0-9_.-]/g, '_'))
-        .join('/')
-    : safeName;
-  const storagePath = `${courseCode}/${materialType}/${Date.now()}-${safeRelativePath}`;
+  const normalizedFileName = ensureSupportedExtension(requestedFileName, file.originalname);
+  const normalizedChapterItemLabel = materialType === 'slide' ? chapterItemLabel || '1.0' : null;
+  const storagePath = buildStoragePath({
+    courseCode,
+    materialType,
+    chapter,
+    fileName: normalizedFileName,
+    chapterItemLabel: normalizedChapterItemLabel,
+  });
 
-  let existingQuery = supabase
-    .from('materials')
-    .select('id, storage_path, status')
-    .eq('course_code', courseCode)
-    .eq('material_type', materialType)
-    .eq('file_name', file.originalname)
-    .neq('status', 'Deleted');
+  const { existing: existingMaterial, error: existingLookupError } = await findExistingMaterialForUpload({
+    courseCode,
+    materialType,
+    chapter,
+    chapterItemLabel: normalizedChapterItemLabel,
+  });
 
-  if (relativePath) {
-    existingQuery = existingQuery.eq('relative_path', relativePath);
-  } else {
-    existingQuery = existingQuery.is('relative_path', null);
+  if (existingLookupError) {
+    return res.status(500).json({ message: 'Failed to validate duplicate material', details: existingLookupError.message });
   }
-
-  const { data: existingMaterial } = await existingQuery.maybeSingle();
 
   if (existingMaterial) {
-    await supabase.storage.from(storageBucket).remove([existingMaterial.storage_path]);
-    await supabase.from('material_chunks').delete().eq('material_id', existingMaterial.id);
-    await supabase
-      .from('materials')
-      .update({ status: 'Deleted', updated_at: new Date().toISOString() })
-      .eq('id', existingMaterial.id);
+    if (onDuplicate !== 'replace') {
+      return res.status(409).json({
+        message: 'Duplicate material exists',
+        details:
+          materialType === 'course_info'
+            ? `Course information already exists for ${courseCode}`
+            : `Material already exists for ${courseCode} • ${chapter} • ${normalizedChapterItemLabel}`,
+        duplicate: {
+          id: existingMaterial.id,
+          file_name: existingMaterial.file_name,
+          chapter: existingMaterial.chapter,
+          chapter_item_label: existingMaterial.chapter_item_label,
+        },
+        hint: 'Choose Replace to overwrite existing material, or Skip to keep existing one.',
+      });
+    }
+
+    await softReplaceMaterial(existingMaterial);
   }
 
-  const { data: material, error: insertMaterialError } = await supabase
-    .from('materials')
-    .insert({
-      course_code: courseCode,
-      material_type: materialType,
-      chapter,
-      topic,
-      relative_path: relativePath,
-      file_name: file.originalname,
-      storage_path: storagePath,
-      mime_type: file.mimetype,
-      file_size: file.size,
-      status: 'Processing',
-    })
-    .select('id, course_code, material_type, chapter, topic, relative_path, file_name, storage_path, mime_type, file_size, chunk_count, status, uploaded_at')
-    .single();
+  const { id: materialId, error: insertMaterialError } = await insertMaterial({
+    course_code: courseCode,
+    material_type: materialType,
+    chapter,
+    chapter_item_label: normalizedChapterItemLabel,
+    file_name: normalizedFileName,
+    storage_path: storagePath,
+    mime_type: file.mimetype,
+    file_size: file.size,
+    status: 'Processing',
+  });
 
-  if (insertMaterialError || !material) {
+  if (insertMaterialError || !materialId) {
     return res.status(500).json({
       message: 'Failed to register material',
       details: insertMaterialError?.message || 'Unknown database error',
-      hint: 'Ensure materials table has material_type/chapter/relative_path columns and storage bucket exists',
+      hint: materialsWriteHint(insertMaterialError),
+    });
+  }
+
+  const { material, error: materialReadError } = await getMaterialById(materialId);
+  if (materialReadError || !material) {
+    return res.status(500).json({
+      message: 'Material registered but could not be read back',
+      details: materialReadError?.message || 'Unknown database error',
     });
   }
 
@@ -145,16 +312,16 @@ app.post('/api/materials/upload', upload.single('file'), async (req, res) => {
     await supabase
       .from('materials')
       .update({ status: 'Failed', error_message: 'Storage upload failed', updated_at: new Date().toISOString() })
-      .eq('id', material.id);
+      .eq('id', materialId);
     return res.status(500).json({ message: 'Failed to upload file to storage', details: storageError.message });
   }
 
   try {
     const ingestResult = await ingestMaterial({
-      materialId: material.id,
+      materialId,
       courseCode,
-      topic,
-      fileName: file.originalname,
+      chapter,
+      fileName: normalizedFileName,
       mimeType: file.mimetype,
       storagePath,
       buffer: file.buffer,
@@ -176,10 +343,84 @@ app.post('/api/materials/upload', upload.single('file'), async (req, res) => {
         error_message: message,
         updated_at: new Date().toISOString(),
       })
-      .eq('id', material.id);
+      .eq('id', materialId);
 
     return res.status(500).json({ message });
   }
+});
+
+app.patch('/api/materials/:id', async (req, res) => {
+  const { id } = req.params;
+  const requestedFileName = typeof req.body.fileName === 'string' ? req.body.fileName.trim() : undefined;
+  const requestedType = req.body.materialType === 'course_info' || req.body.materialType === 'slide' ? req.body.materialType : undefined;
+  const requestedChapter = typeof req.body.chapter === 'string' ? req.body.chapter.trim() : undefined;
+  const requestedChapterItemLabel = typeof req.body.chapterItemLabel === 'string' ? req.body.chapterItemLabel.trim() : undefined;
+
+  const { material, error: readError } = await getMaterialById(id);
+  if (readError || !material) {
+    return res.status(404).json({ message: 'Material not found' });
+  }
+
+  const nextType = requestedType || material.material_type || 'slide';
+  const nextChapter = nextType === 'slide' ? (requestedChapter === undefined ? material.chapter : requestedChapter || null) : null;
+  const nextChapterItemLabel = nextType === 'slide' ? (requestedChapterItemLabel === undefined ? material.chapter_item_label : requestedChapterItemLabel || null) : null;
+  const nextFileName = requestedFileName ? ensureSupportedExtension(requestedFileName, material.file_name) : material.file_name;
+
+  const shouldMoveFile =
+    nextType !== material.material_type ||
+    (nextChapter || null) !== (material.chapter || null) ||
+    (nextChapterItemLabel || null) !== (material.chapter_item_label || null) ||
+    nextFileName !== material.file_name;
+
+  const nextStoragePath = shouldMoveFile
+    ? buildStoragePath({
+        courseCode: material.course_code,
+        materialType: nextType,
+        chapter: nextChapter,
+        fileName: nextFileName,
+        chapterItemLabel: nextChapterItemLabel,
+      })
+    : material.storage_path;
+
+  if (shouldMoveFile && material.storage_path !== nextStoragePath) {
+    const { error: moveError } = await supabase.storage.from(storageBucket).move(material.storage_path, nextStoragePath);
+    if (moveError) {
+      return res.status(500).json({ message: 'Failed to reorganize material in storage', details: moveError.message });
+    }
+  }
+
+  const updates = {
+    file_name: nextFileName,
+    material_type: nextType,
+    chapter: nextChapter,
+    chapter_item_label: nextChapterItemLabel,
+    storage_path: nextStoragePath,
+    updated_at: new Date().toISOString(),
+  };
+
+  const { error: updateError } = await updateMaterial(id, updates);
+  if (updateError) {
+    return res.status(500).json({
+      message: 'Failed to update material metadata',
+      details: updateError.message,
+      hint: materialsWriteHint(updateError),
+    });
+  }
+
+  await supabase
+    .from('material_chunks')
+    .update({
+      source_file: nextFileName,
+      chapter: nextChapter,
+    })
+    .eq('material_id', id);
+
+  const { material: updatedMaterial, error: updatedReadError } = await getMaterialById(id);
+  if (updatedReadError || !updatedMaterial) {
+    return res.status(500).json({ message: 'Material metadata saved but could not be read back' });
+  }
+
+  return res.json({ material: updatedMaterial });
 });
 
 app.delete('/api/materials/:id', async (req, res) => {
@@ -207,10 +448,52 @@ app.delete('/api/materials/:id', async (req, res) => {
     .eq('id', id);
 
   if (updateError) {
-    return res.status(500).json({ message: 'Failed to update material status' });
+    return res.status(500).json({ message: 'Failed to update material status', hint: materialsWriteHint(updateError) });
   }
 
   return res.json({ success: true });
+});
+
+app.delete('/api/materials/course/:courseCode', async (req, res) => {
+  const courseCode = String(req.params.courseCode || '').trim().toUpperCase();
+  if (!courseCode) {
+    return res.status(400).json({ message: 'courseCode is required' });
+  }
+
+  const { data, error } = await supabase
+    .from('materials')
+    .select('id, storage_path')
+    .eq('course_code', courseCode)
+    .neq('status', 'Deleted');
+
+  if (error) {
+    return res.status(500).json({ message: 'Failed to fetch course materials', details: error.message });
+  }
+
+  await deleteMaterials(data || []);
+  return res.json({ success: true, deleted: (data || []).length });
+});
+
+app.delete('/api/materials/course/:courseCode/chapter', async (req, res) => {
+  const courseCode = String(req.params.courseCode || '').trim().toUpperCase();
+  const chapter = typeof req.query.chapter === 'string' ? req.query.chapter.trim() : '';
+  if (!courseCode || !chapter) {
+    return res.status(400).json({ message: 'courseCode and chapter are required' });
+  }
+
+  const { data, error } = await supabase
+    .from('materials')
+    .select('id, storage_path')
+    .eq('course_code', courseCode)
+    .eq('chapter', chapter)
+    .neq('status', 'Deleted');
+
+  if (error) {
+    return res.status(500).json({ message: 'Failed to fetch chapter materials', details: error.message });
+  }
+
+  await deleteMaterials(data || []);
+  return res.json({ success: true, deleted: (data || []).length });
 });
 
 app.get('/api/public/course/:token', async (req, res) => {

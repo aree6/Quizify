@@ -42,9 +42,8 @@ export interface Material {
   course_code: string;
   material_type: 'course_info' | 'slide';
   chapter: string | null;
-  topic: string | null;
+  chapter_item_label: string | null;
   file_name: string;
-  relative_path: string | null;
   storage_path: string;
   mime_type: string | null;
   file_size: number;

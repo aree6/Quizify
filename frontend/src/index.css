@@ -28,27 +28,26 @@ body {
   color: var(--near-black);
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .pulse-hover {
-    transition: transform 150ms ease, background-color 150ms ease, color 150ms ease, border-color 150ms ease;
-  }
+button,
+[role="button"] {
+  cursor: pointer;
+}
 
-  .pulse-hover:hover {
-    transform: scale(1.05);
-  }
+.pulse-hover {
+  cursor: pointer;
+  transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease, opacity 150ms ease;
+}
 
-  .pulse-hover:active {
-    transform: scale(0.95);
-  }
+.pulse-hover:hover {
+  opacity: 0.95;
+}
 
-  .card-hover {
-    transition: transform 150ms ease, box-shadow 150ms ease;
-  }
+.card-hover {
+  transition: box-shadow 150ms ease, border-color 150ms ease, background-color 150ms ease;
+}
 
-  .card-hover:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-elevated);
-  }
+.card-hover:hover {
+  box-shadow: var(--shadow-elevated);
 }
 
 @layer components {
@@ -93,7 +92,9 @@ body {
     border-radius: 999px;
     background: var(--lime);
     color: var(--dark-green);
-    transition: transform 150ms ease, background-color 150ms ease, color 150ms ease;
+    border: 1px solid transparent;
+    transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease, opacity 150ms ease;
+    cursor: pointer;
   }
 
   .pill-dark {
@@ -101,7 +102,9 @@ body {
     border-radius: 999px;
     background: var(--near-black);
     color: var(--pure-white);
-    transition: transform 150ms ease, background-color 150ms ease, color 150ms ease;
+    border: 1px solid transparent;
+    transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease, opacity 150ms ease;
+    cursor: pointer;
   }
 
   .pill-secondary {
@@ -109,7 +112,9 @@ body {
     border-radius: 999px;
     background: var(--chip-gray);
     color: var(--near-black);
-    transition: transform 150ms ease, background-color 150ms ease, color 150ms ease;
+    border: 1px solid transparent;
+    transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease, opacity 150ms ease;
+    cursor: pointer;
   }
 
   .chip {
@@ -117,6 +122,9 @@ body {
     border-radius: 999px;
     background: var(--chip-gray);
     color: var(--near-black);
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: background-color 150ms ease, color 150ms ease, opacity 150ms ease;
   }
 
   .chip-active {
@@ -124,6 +132,8 @@ body {
     border-radius: 999px;
     background: var(--near-black);
     color: var(--pure-white);
+    border: 1px solid var(--near-black);
+    cursor: pointer;
   }
 
   .field {
@@ -174,16 +184,22 @@ body {
   }
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .pill-primary:hover,
-  .pill-dark:hover,
-  .pill-secondary:hover {
-    transform: scale(1.05);
-  }
+.pill-primary:hover,
+.pill-dark:hover,
+.pill-secondary:hover,
+.chip:hover {
+  opacity: 1;
+}
 
-  .pill-primary:active,
-  .pill-dark:active,
-  .pill-secondary:active {
-    transform: scale(0.95);
-  }
+.pill-primary:hover {
+  border-color: var(--near-black);
+}
+
+.pill-dark:hover {
+  border-color: var(--lime);
+}
+
+.pill-secondary:hover,
+.chip:hover {
+  border-color: var(--near-black);
 }

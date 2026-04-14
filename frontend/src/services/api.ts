@@ -95,7 +95,9 @@ export const apiService = {
     courseCode: string;
     materialType: 'course_info' | 'slide';
     chapter?: string;
-    topic?: string;
+    fileName?: string;
+    chapterItemLabel?: string;
+    onDuplicate?: 'error' | 'replace';
     relativePath?: string;
   }) {
     const formData = new FormData();
@@ -103,7 +105,9 @@ export const apiService = {
     formData.append('courseCode', payload.courseCode);
     formData.append('materialType', payload.materialType);
     if (payload.chapter) formData.append('chapter', payload.chapter);
-    if (payload.topic) formData.append('topic', payload.topic);
+    if (payload.fileName) formData.append('fileName', payload.fileName);
+    if (payload.chapterItemLabel) formData.append('chapterItemLabel', payload.chapterItemLabel);
+    if (payload.onDuplicate) formData.append('onDuplicate', payload.onDuplicate);
     if (payload.relativePath) formData.append('relativePath', payload.relativePath);
 
     const response = await fetch(`${API_BASE_URL}/api/materials/upload`, {
@@ -123,6 +127,31 @@ export const apiService = {
   async deleteMaterial(materialId: string) {
     return request<{ success: boolean }>(`/api/materials/${encodeURIComponent(materialId)}`, {
       method: 'DELETE',
+    });
+  },
+
+  async deleteCourseMaterials(courseCode: string) {
+    return request<{ success: boolean; deleted: number }>(`/api/materials/course/${encodeURIComponent(courseCode)}`, {
+      method: 'DELETE',
+    });
+  },
+
+  async deleteChapterMaterials(courseCode: string, chapter: string) {
+    return request<{ success: boolean; deleted: number }>(
+      `/api/materials/course/${encodeURIComponent(courseCode)}/chapter?chapter=${encodeURIComponent(chapter)}`,
+      {
+        method: 'DELETE',
+      },
+    );
+  },
+
+  async updateMaterial(
+    materialId: string,
+    payload: { fileName?: string; materialType?: 'course_info' | 'slide'; chapter?: string; topic?: string },
+  ) {
+    return request<{ material: Material; warning?: string }>(`/api/materials/${encodeURIComponent(materialId)}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
     });
   },
 };
