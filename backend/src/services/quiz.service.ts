@@ -1,6 +1,7 @@
 import { supabase } from '../lib/supabase.js';
 import { env } from '../config/env.js';
 import { HttpError } from '../middleware/error-handler.js';
+import type { SourceCitation } from '../types/index.js';
 
 interface StoredQuestion {
   id: string;
@@ -17,6 +18,7 @@ interface StoredCourse {
   id: string;
   title: string;
   lesson_content: string;
+  sources: SourceCitation[] | null;
   status: string;
   expires_at: string | null;
   pass_percentage: number | null;
@@ -44,6 +46,7 @@ export async function getPublicCourse(token: string) {
       id,
       title,
       lesson_content,
+      sources,
       status,
       expires_at,
       pass_percentage,
@@ -75,6 +78,7 @@ export async function getPublicCourse(token: string) {
     id: course.id,
     title: course.title,
     lessonContent: course.lesson_content,
+    sources: Array.isArray(course.sources) ? course.sources : [],
     quizTitle: quiz?.title ?? `${course.title} Quiz`,
     passPercentage: course.pass_percentage ?? env.defaultPassPercentage,
     questions,
