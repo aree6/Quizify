@@ -86,6 +86,7 @@ CREATE TABLE public.mini_courses (
     course_code text NOT NULL,
     topics text[] NOT NULL DEFAULT '{}',
     lesson_content text NOT NULL,
+    sources jsonb NOT NULL DEFAULT '[]'::jsonb,
     status text NOT NULL DEFAULT 'Ready' CHECK (status IN ('Generating', 'Ready', 'Shared')),
     share_token text UNIQUE NOT NULL,
     pass_percentage integer NOT NULL DEFAULT 70 CHECK (pass_percentage BETWEEN 1 AND 100),
@@ -329,5 +330,11 @@ SELECT
 FROM information_schema.columns
 WHERE table_name = 'material_chunks' AND table_schema = 'public'
 ORDER BY ordinal_position;
+
+-- =============================================================================
+-- IDEMPOTENT MIGRATIONS (safe on existing deployments)
+-- =============================================================================
+ALTER TABLE public.mini_courses
+    ADD COLUMN IF NOT EXISTS sources jsonb NOT NULL DEFAULT '[]'::jsonb;
 
 SELECT 'Schema setup complete!' as status;
