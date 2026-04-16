@@ -142,3 +142,5 @@ vite.config.ts.timestamp-*
 /.agents/
 opencode.json
 skills-lock.json
+logbook.md
+progress1.md
