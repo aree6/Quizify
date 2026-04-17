@@ -16,7 +16,13 @@ import { DEFAULT_GENERATION_OPTIONS } from '../types/index.js';
 
 const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta';
 
+const DEEPSEEK_BASE = 'https://api.deepseek.com';
+
 const openai: OpenAI | null = env.ai.openaiKey ? new OpenAI({ apiKey: env.ai.openaiKey }) : null;
+
+const deepseek: OpenAI | null = env.ai.deepseekKey
+  ? new OpenAI({ apiKey: env.ai.deepseekKey, baseURL: DEEPSEEK_BASE })
+  : null;
 
 const gemini: AxiosInstance = axios.create({
   baseURL: GEMINI_BASE,
@@ -26,6 +32,7 @@ const gemini: AxiosInstance = axios.create({
 export function isAiConfigured(): boolean {
   if (env.ai.provider === 'openai') return Boolean(openai);
   if (env.ai.provider === 'gemini') return Boolean(env.ai.geminiKey);
+  if (env.ai.provider === 'deepseek') return Boolean(deepseek);
   return false;
 }
 
@@ -67,7 +74,7 @@ export async function embedTexts(texts: readonly string[]): Promise<number[][] |
 
   if (env.ai.provider === 'openai') return embedOpenAI(texts);
 
-  if (env.ai.provider === 'gemini') {
+  if (env.ai.provider === 'gemini' || env.ai.provider === 'deepseek') {
     const results: number[][] = [];
     for (const text of texts) {
       const vec = await embedGemini(text);
@@ -434,6 +441,40 @@ async function generateJsonOpenAI(
   }
 }
 
+async function generateJsonDeepSeek(
+  prompt: string,
+  temperature: number,
+  maxOutputTokens: number,
+  system?: string,
+): Promise<unknown | null> {
+  if (!deepseek) return null;
+  try {
+    const completion = await deepseek.chat.completions.create({
+      model: env.ai.generationModel,
+      temperature,
+      max_tokens: maxOutputTokens,
+      response_format: { type: 'json_object' },
+      messages: [
+        { role: 'system', content: system ?? 'Return valid JSON only.' },
+        { role: 'user', content: prompt },
+      ],
+      ...(env.ai.thinkingEnabled
+        ? { thinking: { type: 'enabled' as const }, reasoning_effort: env.ai.reasoningEffort }
+        : { thinking: { type: 'disabled' as const } }),
+    } as any);
+    const raw = completion.choices[0]?.message?.content;
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return null;
+    }
+  } catch (err) {
+    console.error(`[ai] DeepSeek generate failed:`, (err as Error).message);
+    return null;
+  }
+}
+
 /**
  * Generous output budget so multi-topic lessons (8+ subsections + citations)
  * complete without silent truncation. 2.5 Flash supports up to 65,536 tokens.
@@ -458,7 +499,9 @@ export async function generateLesson(payload: {
   const raw =
     env.ai.provider === 'gemini'
       ? await generateJsonGemini(prompt, 0.3, LESSON_MAX_OUTPUT_TOKENS)
-      : await generateJsonOpenAI(prompt, 0.3, LESSON_MAX_OUTPUT_TOKENS, LESSON_SYSTEM_PROMPT);
+      : env.ai.provider === 'deepseek'
+        ? await generateJsonDeepSeek(prompt, 0.3, LESSON_MAX_OUTPUT_TOKENS, LESSON_SYSTEM_PROMPT)
+        : await generateJsonOpenAI(prompt, 0.3, LESSON_MAX_OUTPUT_TOKENS, LESSON_SYSTEM_PROMPT);
   return sanitizeLesson(raw);
 }
 
@@ -477,7 +520,9 @@ export async function generateQuiz(payload: {
   const raw =
     env.ai.provider === 'gemini'
       ? await generateJsonGemini(prompt, 0.2, QUIZ_MAX_OUTPUT_TOKENS)
-      : await generateJsonOpenAI(prompt, 0.2, QUIZ_MAX_OUTPUT_TOKENS, QUIZ_SYSTEM_PROMPT);
+      : env.ai.provider === 'deepseek'
+        ? await generateJsonDeepSeek(prompt, 0.2, QUIZ_MAX_OUTPUT_TOKENS, QUIZ_SYSTEM_PROMPT)
+        : await generateJsonOpenAI(prompt, 0.2, QUIZ_MAX_OUTPUT_TOKENS, QUIZ_SYSTEM_PROMPT);
   return sanitizeQuestions(raw, payload.questionCount);
 }
 
@@ -569,7 +614,14 @@ export async function extractCourseProfile(courseText: string): Promise<Extracte
   const raw =
     env.ai.provider === 'gemini'
       ? await generateJsonGemini(prompt, 0.2, OUTLINE_MAX_OUTPUT_TOKENS)
-      : await generateJsonOpenAI(
+      : env.ai.provider === 'deepseek'
+        ? await generateJsonDeepSeek(
+            prompt,
+            0.2,
+            OUTLINE_MAX_OUTPUT_TOKENS,
+            'You extract structured course outlines from raw text. Return valid JSON only.',
+          )
+        : await generateJsonOpenAI(
           prompt,
           0.2,
           OUTLINE_MAX_OUTPUT_TOKENS,

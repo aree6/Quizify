@@ -30,19 +30,23 @@ export const env = {
 
   ai: {
     provider: (process.env.AI_PROVIDER ??
-      (process.env.OPENAI_API_KEY ? 'openai' : process.env.GEMINI_API_KEY ? 'gemini' : 'none')) as
+      (process.env.DEEPSEEK_API_KEY ? 'deepseek' : process.env.OPENAI_API_KEY ? 'openai' : process.env.GEMINI_API_KEY ? 'gemini' : 'none')) as
       | 'openai'
       | 'gemini'
+      | 'deepseek'
       | 'none',
     openaiKey: process.env.OPENAI_API_KEY ?? '',
     geminiKey: process.env.GEMINI_API_KEY ?? '',
+    deepseekKey: process.env.DEEPSEEK_API_KEY ?? '',
     embeddingModel: optional(
       'EMBEDDING_MODEL',
-      process.env.AI_PROVIDER === 'gemini' ? 'gemini-embedding-001' : 'text-embedding-3-small',
+      process.env.AI_PROVIDER === 'gemini' || process.env.AI_PROVIDER === 'deepseek' ? 'gemini-embedding-001' : 'text-embedding-3-small',
     ),
     generationModel: optional(
       'GENERATION_MODEL',
-      process.env.AI_PROVIDER === 'gemini' ? 'gemini-2.5-flash' : 'gpt-4o-mini',
+      process.env.AI_PROVIDER === 'gemini' ? 'gemini-2.5-flash' : process.env.AI_PROVIDER === 'deepseek' ? 'deepseek-v4-flash' : 'gpt-4o-mini',
     ),
+    thinkingEnabled: process.env.THINKING_ENABLED !== 'false',
+    reasoningEffort: optional('REASONING_EFFORT', 'medium'),
   },
 } as const;
