@@ -26,7 +26,7 @@ const deepseek: OpenAI | null = env.ai.deepseekKey
 
 const gemini: AxiosInstance = axios.create({
   baseURL: GEMINI_BASE,
-  timeout: 60_000,
+  timeout: 180_000,
 });
 
 export function isAiConfigured(): boolean {
@@ -118,18 +118,19 @@ const LESSON_SYSTEM_PROMPT = [
 ].join(' ');
 
 const QUIZ_SYSTEM_PROMPT = [
-  'You are an assessment designer informed by the SOLO Taxonomy and ICAP Framework.',
-  'Read the generated lesson and create high-quality MCQs that test understanding',
-  '(not rote recall). Each question must have exactly 4 options with one correct answer',
-  'and three plausible distractors derived from common misconceptions present in the lesson.',
-  'Do NOT introduce facts that are not in the lesson. Keep prompts concise and unambiguous.',
-  'Strip any `[S#]` markers from question text and options.',
-  'Honor the `LECTURER DIRECTIVES` block: it specifies SOLO complexity level and any',
-  'lecturer-written overrides. Directives take priority over style defaults but NEVER',
-  'permit fabricating facts outside the lesson.',
-  'Return valid JSON only with this exact schema:',
-  '{ "questions": [{ "prompt": string, "options": [string,string,string,string], "correctOptionIndex": number }] }',
-].join(' ');
+  'You are an assessment designer. Read the lesson and create MCQs.',
+  'Each question has exactly 4 options (1 correct, 3 distractors).',
+  'Distractors must reflect common misconceptions from the lesson.',
+  'Do NOT invent facts outside the lesson. Strip [S#] markers.',
+  'Return valid JSON with this exact shape:',
+  '{"questions":[{"prompt":"...","options":["a","b","c","d"],"correctOptionIndex":0,"explanations":["why a","why b","why c","why d"],"metadata":{"topic":"...","subtopic":"...","bloomLevel":"understand","soloLevel":"multistructural"}}]}',
+  'RULES:',
+  '- explanations: 1-2 sentences per option. Correct=why right. Distractors=why wrong/misconception.',
+  '- metadata.bloomLevel: one of the ENABLED Bloom levels.',
+  '- metadata.soloLevel: one of the ENABLED SOLO levels.',
+  '- metadata.topic: pick from the Topics covered list.',
+  '- Distribute questions across ENABLED Bloom and SOLO levels.',
+].join('\n');
 
 /* ─── Pedagogy → prompt directives ───────────────────────────────────────────
  *
@@ -139,6 +140,9 @@ const QUIZ_SYSTEM_PROMPT = [
  */
 
 const BLOOM_DIRECTIVES: Record<BloomLevel, string> = {
+  remember:
+    'Target Bloom level = REMEMBER. Learners should recall facts, terminology, and basic ' +
+    'concepts. Favor direct recall, recognition, and identification of key information.',
   understand:
     'Target Bloom level = UNDERSTAND. Learners should be able to explain and summarize ' +
     'each concept in their own words. Favor clear definitions, intuition, and paraphrased ' +
@@ -155,6 +159,10 @@ const BLOOM_DIRECTIVES: Record<BloomLevel, string> = {
     'Target Bloom level = EVALUATE. Learners should justify choices and critique approaches. ' +
     'Emphasize criteria-based reasoning, edge cases, and cost/benefit analysis. Every major ' +
     'claim should be paired with an explicit rationale or justification from the sources.',
+  create:
+    'Target Bloom level = CREATE. Learners should design, construct, or formulate new ' +
+    'solutions. Emphasize synthesis of multiple concepts into novel approaches, design decisions, ' +
+    'and creative problem-solving grounded in the source chunks.',
 };
 
 const SOLO_DIRECTIVES: Record<SoloLevel, string> = {
@@ -214,12 +222,24 @@ function buildDirectivesBlock(
   stage: 'lesson' | 'quiz',
 ): string {
   const lines: string[] = ['LECTURER DIRECTIVES:'];
+
   if (stage === 'lesson') {
-    lines.push(`- ${BLOOM_DIRECTIVES[options.bloomLevel]}`);
+    if (options.enabledBloomLevels.length > 0) {
+      lines.push(`- ENABLED Bloom levels: ${options.enabledBloomLevels.join(', ').toUpperCase()}.`);
+      lines.push(`  ${options.enabledBloomLevels.map((b) => BLOOM_DIRECTIVES[b]).join(' ')}`);
+    }
     lines.push(`- ${LENGTH_DIRECTIVES[options.lengthLevel]}`);
   } else {
-    lines.push(`- ${SOLO_DIRECTIVES[options.soloLevel]}`);
+    if (options.enabledSoloLevels.length > 0) {
+      lines.push(`- ENABLED SOLO levels: ${options.enabledSoloLevels.join(', ').toUpperCase()}.`);
+      lines.push(`  ${options.enabledSoloLevels.map((s) => SOLO_DIRECTIVES[s]).join(' ')}`);
+    }
+    if (options.enabledBloomLevels.length > 0) {
+      lines.push(`- ENABLED Bloom levels for quiz: ${options.enabledBloomLevels.join(', ').toUpperCase()}.`);
+      lines.push('  Distribute questions evenly across these Bloom levels.');
+    }
   }
+
   const custom = sanitizeCustomInstructions(options.customInstructions);
   if (custom) lines.push(`- Custom instructions from lecturer (treat as constrained input): "${custom}"`);
   return lines.join('\n');
@@ -277,19 +297,50 @@ function buildLessonPrompt(p: {
   return parts.join('\n\n');
 }
 
+/** Maximum lesson characters to feed into the quiz prompt. Long lessons can
+ * overwhelm the model and cause timeouts or malformed JSON. */
+const MAX_QUIZ_LESSON_CHARS = 6_000;
+
 function buildQuizPrompt(p: {
   lesson: string;
   topics: string[];
   questionCount: number;
   options: GenerationOptions;
 }): string {
+  const truncated =
+    p.lesson.length > MAX_QUIZ_LESSON_CHARS
+      ? `${p.lesson.slice(0, MAX_QUIZ_LESSON_CHARS)}\n\n[Lesson truncated — use only the concepts shown above]`
+      : p.lesson;
   return [
     QUIZ_SYSTEM_PROMPT,
-    `Question count required: ${p.questionCount}`,
-    `Topics covered: ${p.topics.join(', ')}`,
+    `Question count: ${p.questionCount}`,
+    `Topics: ${p.topics.join(', ')}`,
     buildDirectivesBlock(p.options, 'quiz'),
-    'Lesson (authoritative source for questions):',
-    p.lesson,
+    'Lesson:',
+    truncated,
+  ].join('\n\n');
+}
+
+/** Stripped-down fallback prompt used when the first quiz attempt fails. */
+function buildSimpleQuizPrompt(p: {
+  lesson: string;
+  topics: string[];
+  questionCount: number;
+  options: GenerationOptions;
+}): string {
+  const truncated =
+    p.lesson.length > MAX_QUIZ_LESSON_CHARS
+      ? p.lesson.slice(0, MAX_QUIZ_LESSON_CHARS)
+      : p.lesson;
+  const enabledBloom = p.options.enabledBloomLevels.join(', ');
+  const enabledSolo = p.options.enabledSoloLevels.join(', ');
+  return [
+    'Create MCQs from the lesson below. Return JSON only.',
+    `Each question needs: prompt, options[4], correctOptionIndex(number), explanations[4], metadata{topic,subtopic,bloomLevel,soloLevel}.`,
+    `Enabled Bloom levels: ${enabledBloom}. Enabled SOLO levels: ${enabledSolo}.`,
+    `Generate ${p.questionCount} questions.`,
+    'Lesson:',
+    truncated,
   ].join('\n\n');
 }
 
@@ -300,31 +351,125 @@ function sanitizeLesson(raw: unknown): string | null {
   return trimmed || null;
 }
 
-function sanitizeQuestions(raw: unknown, questionCount: number): GeneratedQuestion[] {
-  if (!raw || typeof raw !== 'object') return [];
+function isValidBloomLevel(value: string): value is BloomLevel {
+  return ['remember', 'understand', 'apply', 'analyze', 'evaluate', 'create'].includes(value);
+}
+
+function isValidSoloLevel(value: string): value is SoloLevel {
+  return ['unistructural', 'multistructural', 'relational', 'extended_abstract'].includes(value);
+}
+
+function sanitizeQuestions(raw: unknown, questionCount: number, context?: string): GeneratedQuestion[] {
+  if (!raw || typeof raw !== 'object') {
+    console.warn(`[ai] sanitizeQuestions: raw is not an object (${context ?? 'no context'})`);
+    return [];
+  }
   const rawQs = (raw as { questions?: unknown }).questions;
-  if (!Array.isArray(rawQs)) return [];
+  if (!Array.isArray(rawQs)) {
+    console.warn(`[ai] sanitizeQuestions: .questions is not an array (${context ?? 'no context'})`);
+    return [];
+  }
 
-  return rawQs
-    .map((item): GeneratedQuestion | null => {
-      if (!item || typeof item !== 'object') return null;
-      const q = item as { prompt?: unknown; options?: unknown; correctOptionIndex?: unknown };
-      const prompt = typeof q.prompt === 'string' ? q.prompt.trim() : '';
-      const options = Array.isArray(q.options)
-        ? q.options.map((o) => (typeof o === 'string' ? o.trim() : '')).filter(Boolean)
-        : [];
-      const correct = Number(q.correctOptionIndex);
+  const results: GeneratedQuestion[] = [];
+  const rejects: string[] = [];
 
-      if (!prompt || options.length < 4 || !Number.isInteger(correct)) return null;
+  for (let i = 0; i < rawQs.length; i++) {
+    const item = rawQs[i];
+    if (!item || typeof item !== 'object') {
+      rejects.push(`#${i}: not an object`);
+      continue;
+    }
+    const q = item as {
+      prompt?: unknown;
+      options?: unknown;
+      correctOptionIndex?: unknown;
+      correct_option_index?: unknown;
+      explanations?: unknown;
+      metadata?: unknown;
+    };
 
-      return {
-        prompt,
-        options: options.slice(0, 4),
-        correct: Math.max(0, Math.min(options.length - 1, correct)),
+    const prompt = typeof q.prompt === 'string' ? q.prompt.trim() : '';
+    const rawOptions = Array.isArray(q.options)
+      ? q.options.map((o) => (typeof o === 'string' ? o.trim() : ''))
+      : [];
+    // Pad options to 4 if needed; filter out empty strings but keep position
+    const options: string[] = ['', '', '', ''];
+    let optIdx = 0;
+    for (const o of rawOptions) {
+      if (optIdx >= 4) break;
+      options[optIdx] = o;
+      optIdx++;
+    }
+
+    // Accept number or string for correctOptionIndex
+    const correctRaw = q.correctOptionIndex ?? q.correct_option_index;
+    const correctNum = Number(correctRaw);
+    const correct = Number.isFinite(correctNum) && Number.isInteger(correctNum)
+      ? correctNum
+      : NaN;
+
+    if (!prompt || options.some((o) => !o) || !Number.isInteger(correct)) {
+      const reason = !prompt
+        ? 'empty prompt'
+        : options.some((o) => !o)
+          ? `only ${options.filter(Boolean).length}/4 options`
+          : `invalid correct index (${JSON.stringify(correctRaw)})`;
+      rejects.push(`#${i}: ${reason}`);
+      continue;
+    }
+
+    // Parse explanations — pad to 4 strings
+    const rawExplanations = Array.isArray(q.explanations)
+      ? q.explanations.map((e) => (typeof e === 'string' ? e.trim() : ''))
+      : [];
+    const explanations: string[] = ['', '', '', ''];
+    for (let ei = 0; ei < 4; ei++) {
+      explanations[ei] = rawExplanations[ei] ?? '';
+    }
+
+    // Parse metadata — fallback to defaults
+    let metadata: GeneratedQuestion['metadata'] = {
+      topic: '',
+      subtopic: '',
+      bloomLevel: 'understand',
+      soloLevel: 'multistructural',
+    };
+
+    if (q.metadata && typeof q.metadata === 'object') {
+      const m = q.metadata as {
+        topic?: unknown;
+        subtopic?: unknown;
+        bloomLevel?: unknown;
+        soloLevel?: unknown;
       };
-    })
-    .filter((q): q is GeneratedQuestion => q !== null)
-    .slice(0, questionCount);
+      metadata = {
+        topic: typeof m.topic === 'string' ? m.topic.trim() : '',
+        subtopic: typeof m.subtopic === 'string' ? m.subtopic.trim() : '',
+        bloomLevel: isValidBloomLevel(String(m.bloomLevel ?? ''))
+          ? (String(m.bloomLevel) as BloomLevel)
+          : 'understand',
+        soloLevel: isValidSoloLevel(String(m.soloLevel ?? ''))
+          ? (String(m.soloLevel) as SoloLevel)
+          : 'multistructural',
+      };
+    }
+
+    results.push({
+      prompt,
+      options: options.slice(0, 4),
+      correct: Math.max(0, Math.min(3, correct)),
+      explanations,
+      metadata,
+    });
+
+    if (results.length >= questionCount) break;
+  }
+
+  if (results.length === 0 && rejects.length > 0) {
+    console.warn(`[ai] sanitizeQuestions: all ${rawQs.length} questions rejected (${context ?? 'no context'}). Reasons: ${rejects.join('; ')}`);
+  }
+
+  return results;
 }
 
 /**
@@ -337,14 +482,15 @@ function sanitizeQuestions(raw: unknown, questionCount: number): GeneratedQuesti
  *
  * 2. Thinking mode is ON by default on 2.5+ models, and thinking tokens are
  *    deducted from `maxOutputTokens`. Without `thinkingConfig.thinkingBudget: 0`,
- *    a request with `maxOutputTokens: 16_384` can burn 10K+ on internal thought
- *    and return an **empty** or truncated JSON body — which JSON.parse then
- *    rejects, surfacing as the generic "AI generation failed" downstream.
+ *    a request can burn tokens on internal thought and return an empty or
+ *    truncated JSON body.
  *    See: https://discuss.ai.google.dev/t/truncated-response-issue-with-gemini-2-5-flash-preview/81258
  *
- * For our structured generation tasks a rich prompt + low temperature already
- * provides enough guidance, so we disable thinking to guarantee the full
- * budget is spent on the actual JSON output.
+ * For Gemini: we disable thinking (`thinkingConfig.thinkingBudget: 0`) to guarantee
+ * the full output budget is spent on actual JSON.
+ *
+ * For DeepSeek: thinking is controlled via `THINKING_ENABLED` env var (default: enabled).
+ * Output limits are configurable via MAX_OUTPUT_LESSON, MAX_OUTPUT_QUIZ, MAX_OUTPUT_OUTLINE.
  */
 async function generateJsonGemini(
   prompt: string,
@@ -406,6 +552,9 @@ async function generateJsonGemini(
       console.error(
         `[ai] Gemini JSON parse failed (len=${text.length}, finish=${finish}): ${(parseErr as Error).message}`,
       );
+      // Log a snippet of the raw text so we can inspect what the model returned
+      const snippet = text.slice(0, 800).replace(/\s+/g, ' ');
+      console.error(`[ai] Raw text snippet: ${snippet}…`);
       return null;
     }
   } catch (err) {
@@ -436,7 +585,10 @@ async function generateJsonOpenAI(
   if (!raw) return null;
   try {
     return JSON.parse(raw);
-  } catch {
+  } catch (parseErr) {
+    console.error(`[ai] OpenAI JSON parse failed (len=${raw.length}): ${(parseErr as Error).message}`);
+    const snippet = raw.slice(0, 800).replace(/\s+/g, ' ');
+    console.error(`[ai] Raw text snippet: ${snippet}…`);
     return null;
   }
 }
@@ -466,7 +618,10 @@ async function generateJsonDeepSeek(
     if (!raw) return null;
     try {
       return JSON.parse(raw);
-    } catch {
+    } catch (parseErr) {
+      console.error(`[ai] DeepSeek JSON parse failed (len=${raw.length}): ${(parseErr as Error).message}`);
+      const snippet = raw.slice(0, 800).replace(/\s+/g, ' ');
+      console.error(`[ai] Raw text snippet: ${snippet}…`);
       return null;
     }
   } catch (err) {
@@ -476,11 +631,14 @@ async function generateJsonDeepSeek(
 }
 
 /**
- * Generous output budget so multi-topic lessons (8+ subsections + citations)
- * complete without silent truncation. 2.5 Flash supports up to 65,536 tokens.
+ * Output budget configured via env vars:
+ * - MAX_OUTPUT_LESSON (default: 128K)
+ * - MAX_OUTPUT_QUIZ (default: 32K)
+ * - MAX_OUTPUT_OUTLINE (default: 16K)
  */
-const LESSON_MAX_OUTPUT_TOKENS = 16_384;
-const QUIZ_MAX_OUTPUT_TOKENS = 8_192;
+const LESSON_MAX_OUTPUT_TOKENS = env.ai.maxLessonTokens;
+const QUIZ_MAX_OUTPUT_TOKENS = env.ai.maxQuizTokens;
+const OUTLINE_MAX_OUTPUT_TOKENS = env.ai.maxOutlineTokens;
 
 /**
  * Stage 1: generate a grounded Markdown lesson with `[S#]` citation markers
@@ -516,14 +674,35 @@ export async function generateQuiz(payload: {
   questionCount: number;
   options?: GenerationOptions;
 }): Promise<GeneratedQuestion[]> {
-  const prompt = buildQuizPrompt({ ...payload, options: payload.options ?? DEFAULT_GENERATION_OPTIONS });
+  const options = payload.options ?? DEFAULT_GENERATION_OPTIONS;
+
+  // ── Attempt 1: full prompt ──
+  const prompt = buildQuizPrompt({ ...payload, options });
   const raw =
     env.ai.provider === 'gemini'
       ? await generateJsonGemini(prompt, 0.2, QUIZ_MAX_OUTPUT_TOKENS)
       : env.ai.provider === 'deepseek'
         ? await generateJsonDeepSeek(prompt, 0.2, QUIZ_MAX_OUTPUT_TOKENS, QUIZ_SYSTEM_PROMPT)
         : await generateJsonOpenAI(prompt, 0.2, QUIZ_MAX_OUTPUT_TOKENS, QUIZ_SYSTEM_PROMPT);
-  return sanitizeQuestions(raw, payload.questionCount);
+
+  const questions = sanitizeQuestions(raw, payload.questionCount, 'attempt-1');
+  if (questions.length > 0) return questions;
+
+  // ── Attempt 2: simplified prompt ──
+  console.warn('[ai] Quiz attempt 1 returned 0 questions. Retrying with simplified prompt…');
+  const simplePrompt = buildSimpleQuizPrompt({ ...payload, options });
+  const raw2 =
+    env.ai.provider === 'gemini'
+      ? await generateJsonGemini(simplePrompt, 0.2, QUIZ_MAX_OUTPUT_TOKENS)
+      : env.ai.provider === 'deepseek'
+        ? await generateJsonDeepSeek(simplePrompt, 0.2, QUIZ_MAX_OUTPUT_TOKENS, 'Return valid JSON only.')
+        : await generateJsonOpenAI(simplePrompt, 0.2, QUIZ_MAX_OUTPUT_TOKENS, 'Return valid JSON only.');
+
+  const questions2 = sanitizeQuestions(raw2, payload.questionCount, 'attempt-2');
+  if (questions2.length > 0) {
+    console.log(`[ai] Quiz retry succeeded: ${questions2.length} questions`);
+  }
+  return questions2;
 }
 
 /**
@@ -609,8 +788,6 @@ export async function extractCourseProfile(courseText: string): Promise<Extracte
   if (!courseText || !isAiConfigured()) return null;
 
   const prompt = buildOutlinePrompt(courseText);
-  // Outline is a compact JSON structure — 4k output tokens is ample.
-  const OUTLINE_MAX_OUTPUT_TOKENS = 4_096;
   const raw =
     env.ai.provider === 'gemini'
       ? await generateJsonGemini(prompt, 0.2, OUTLINE_MAX_OUTPUT_TOKENS)
