@@ -4,7 +4,7 @@ import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters';
 import { supabase } from '../lib/supabase.js';
 import { embedTexts } from './ai.service.js';
 import { extractAndSaveOutline } from './outlines.service.js';
-import type { MaterialType } from '../types/index.js';
+import type { MaterialType, SourceCitation, TopicContext } from '../types/index.js';
 
 const splitter = new RecursiveCharacterTextSplitter({ chunkSize: 1000, chunkOverlap: 200 });
 
@@ -143,32 +143,128 @@ export async function ingestMaterial(params: {
   return { chunkCount: chunks.length };
 }
 
+/**
+ * Shape returned by the `match_material_chunks` RPC. Keep this in sync with
+ * the SQL function in `supabase/mvp_schema.sql`.
+ */
+interface MatchRow {
+  id: string;
+  material_id: string;
+  source_file: string;
+  chapter: string | null;
+  chunk_index: number;
+  chunk_text: string;
+  similarity: number;
+}
+
+/** Trim a chunk into a compact preview for the UI citation chip. */
+function buildSnippet(text: string, max = 220): string {
+  const cleaned = text.replace(/\s+/g, ' ').trim();
+  return cleaned.length > max ? `${cleaned.slice(0, max - 1)}\u2026` : cleaned;
+}
+
+/**
+ * Embed a single query and run the pgvector similarity RPC. Returns rows
+ * above `minSimilarity`, preserving metadata needed for citations.
+ */
+async function vectorSearch(params: {
+  courseCode: string;
+  queryText: string;
+  limit: number;
+  minSimilarity: number;
+}): Promise<MatchRow[]> {
+  const embeddings = await embedTexts([params.queryText]);
+  if (!embeddings?.[0]) return [];
+
+  const queryVec = toVectorString(embeddings[0]);
+  const { data, error } = await supabase.rpc('match_material_chunks', {
+    query_embedding_text: queryVec,
+    match_course_code: params.courseCode,
+    match_count: params.limit,
+  });
+
+  if (error || !Array.isArray(data)) return [];
+
+  return (data as MatchRow[]).filter(
+    (row) => row.chunk_text && (row.similarity ?? 1) >= params.minSimilarity,
+  );
+}
+
+/**
+ * Legacy combined-query retrieval. Kept for any callers that want a single
+ * joined context string; new code should prefer `retrievePerTopic`.
+ */
 export async function retrieveRelevantChunks(params: {
   courseCode: string;
   topics: string[];
   limit?: number;
   minSimilarity?: number;
 }): Promise<{ chunks: string[]; matchCount: number }> {
-  const limit = params.limit ?? 10;
-  const minSimilarity = params.minSimilarity ?? 0.3;
-  const queryText = `${params.courseCode} ${params.topics.join(' ')}`.trim();
-
-  const embeddings = await embedTexts([queryText]);
-  if (!embeddings?.[0]) return { chunks: [], matchCount: 0 };
-
-  const queryVec = toVectorString(embeddings[0]);
-  const { data, error } = await supabase.rpc('match_material_chunks', {
-    query_embedding_text: queryVec,
-    match_course_code: params.courseCode,
-    match_count: limit,
+  const rows = await vectorSearch({
+    courseCode: params.courseCode,
+    queryText: `${params.courseCode} ${params.topics.join(' ')}`.trim(),
+    limit: params.limit ?? 10,
+    minSimilarity: params.minSimilarity ?? 0.3,
   });
+  const chunks = rows.map((r) => r.chunk_text);
+  return { chunks, matchCount: chunks.length };
+}
 
-  if (error || !Array.isArray(data)) return { chunks: [], matchCount: 0 };
+/**
+ * Per-topic retrieval: runs one vector search per selected topic so each topic
+ * gets breadth of coverage, then dedupes by chunk id across topics. The global
+ * `sources` array is assembled with 1-based indexes so the lesson prompt can
+ * emit `[S1]`, `[S2]` markers that resolve cleanly in the UI.
+ *
+ * Returns:
+ * - `topicContexts`: per-topic chunks with their citation metadata
+ * - `sources`: flat, deduped list of citations used across all topics
+ */
+export async function retrievePerTopic(params: {
+  courseCode: string;
+  topics: string[];
+  perTopicLimit?: number;
+  minSimilarity?: number;
+}): Promise<{ topicContexts: TopicContext[]; sources: SourceCitation[] }> {
+  const perTopicLimit = params.perTopicLimit ?? 15;
+  const minSimilarity = params.minSimilarity ?? 0.25;
 
-  // Filter out low-similarity matches to avoid hallucination from irrelevant chunks
-  const relevant = (data as Array<{ chunk_text: string; similarity?: number }>)
-    .filter((item) => item.chunk_text && (item.similarity ?? 1) >= minSimilarity)
-    .map((item) => item.chunk_text);
+  // Global source registry: chunkId -> citation (deduped across topics)
+  const sourceByChunk = new Map<string, SourceCitation>();
 
-  return { chunks: relevant, matchCount: relevant.length };
+  const topicContexts: TopicContext[] = [];
+
+  for (const topic of params.topics) {
+    const rows = await vectorSearch({
+      courseCode: params.courseCode,
+      queryText: `${params.courseCode} ${topic}`.trim(),
+      limit: perTopicLimit,
+      minSimilarity,
+    });
+
+    const chunks: TopicContext['chunks'] = [];
+    for (const row of rows) {
+      let citation = sourceByChunk.get(row.id);
+      if (!citation) {
+        citation = {
+          index: sourceByChunk.size + 1,
+          chunkId: row.id,
+          sourceFile: row.source_file,
+          chapter: row.chapter,
+          chunkIndex: row.chunk_index ?? 0,
+          similarity: Number(row.similarity.toFixed(3)),
+          snippet: buildSnippet(row.chunk_text),
+          text: row.chunk_text,
+        };
+        sourceByChunk.set(row.id, citation);
+      }
+      chunks.push({ text: row.chunk_text, citation });
+    }
+
+    topicContexts.push({ topic, chunks });
+  }
+
+  // Preserve insertion order for stable [S1], [S2] numbering.
+  const sources = [...sourceByChunk.values()];
+  return { topicContexts, sources };
 }
