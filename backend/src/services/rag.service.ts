@@ -10,6 +10,38 @@ const splitter = new RecursiveCharacterTextSplitter({ chunkSize: 1000, chunkOver
 
 const EXPECTED_DIM = 1536;
 
+/**
+ * Fix common PDF text extraction artifacts:
+ * 1. Standard Unicode ligatures (ﬁ, ﬂ, ﬃ, etc.) — from PDFs that use these codepoints.
+ * 2. Custom-font ligature misencodings where pdf-parse replaces "ti" with a quote
+ *    and "ffi" with the digit 9 (common with LaTeX/custom-CMap PDFs).
+ * Only applies context-aware replacements inside word-like patterns to avoid
+ * breaking legitimate quote/digit usage.
+ */
+function fixPdfArtifacts(raw: string): string {
+  let text = raw.normalize('NFKC');
+
+  // Standard Unicode ligatures
+  text = text
+    .replace(/\uFB00/g, 'ff')
+    .replace(/\uFB01/g, 'fi')
+    .replace(/\uFB02/g, 'fl')
+    .replace(/\uFB03/g, 'ffi')
+    .replace(/\uFB04/g, 'ffl')
+    .replace(/\uFB05/g, 'ft')
+    .replace(/\uFB06/g, 'st');
+
+  // Custom-font artifacts: letter + quote + letter → letter + "ti" + letter
+  // (covers straight ", curly " ", and stray spaces around the artifact)
+  text = text.replace(/([a-zA-Z])\s*["\u201C\u201D]\s*([a-zA-Z])/g, '$1ti$2');
+
+  // Custom-font artifact: letter + 9 + letter → letter + "ffi" + letter
+  // Only apply inside words (bounded by letters on both sides) to avoid breaking numbers.
+  text = text.replace(/([a-zA-Z])9([a-zA-Z])/g, '$1ffi$2');
+
+  return text;
+}
+
 function stripXmlTags(input: string): string {
   return input.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
 }
@@ -35,13 +67,13 @@ async function extractText(params: { buffer: Buffer; mimeType: string; fileName:
   const isPdf = params.mimeType === 'application/pdf' || lower.endsWith('.pdf');
   if (isPdf) {
     const parsed = await pdfParse(params.buffer);
-    return parsed.text ?? '';
+    return fixPdfArtifacts(parsed.text ?? '');
   }
 
   const isPptx =
     params.mimeType === 'application/vnd.openxmlformats-officedocument.presentationml.presentation' ||
     lower.endsWith('.pptx');
-  if (isPptx) return extractTextFromPptx(params.buffer);
+  if (isPptx) return fixPdfArtifacts(await extractTextFromPptx(params.buffer));
 
   throw new Error('Unsupported file type. Use PDF or PPTX.');
 }
@@ -115,31 +147,28 @@ export async function retrieveRelevantChunks(params: {
   courseCode: string;
   topics: string[];
   limit?: number;
-}): Promise<string[]> {
+  minSimilarity?: number;
+}): Promise<{ chunks: string[]; matchCount: number }> {
   const limit = params.limit ?? 10;
+  const minSimilarity = params.minSimilarity ?? 0.3;
   const queryText = `${params.courseCode} ${params.topics.join(' ')}`.trim();
 
   const embeddings = await embedTexts([queryText]);
-  if (embeddings?.[0]) {
-    const queryVec = toVectorString(embeddings[0]);
-    const { data, error } = await supabase.rpc('match_material_chunks', {
-      query_embedding_text: queryVec,
-      match_course_code: params.courseCode,
-      match_count: limit,
-    });
+  if (!embeddings?.[0]) return { chunks: [], matchCount: 0 };
 
-    if (!error && Array.isArray(data) && data.length > 0) {
-      return (data as Array<{ chunk_text: string }>).map((item) => item.chunk_text).filter(Boolean);
-    }
-  }
+  const queryVec = toVectorString(embeddings[0]);
+  const { data, error } = await supabase.rpc('match_material_chunks', {
+    query_embedding_text: queryVec,
+    match_course_code: params.courseCode,
+    match_count: limit,
+  });
 
-  const { data, error } = await supabase
-    .from('material_chunks')
-    .select('chunk_text')
-    .eq('course_code', params.courseCode)
-    .order('created_at', { ascending: false })
-    .limit(limit);
+  if (error || !Array.isArray(data)) return { chunks: [], matchCount: 0 };
 
-  if (error || !data) return [];
-  return (data as Array<{ chunk_text: string }>).map((item) => item.chunk_text).filter(Boolean);
+  // Filter out low-similarity matches to avoid hallucination from irrelevant chunks
+  const relevant = (data as Array<{ chunk_text: string; similarity?: number }>)
+    .filter((item) => item.chunk_text && (item.similarity ?? 1) >= minSimilarity)
+    .map((item) => item.chunk_text);
+
+  return { chunks: relevant, matchCount: relevant.length };
 }
