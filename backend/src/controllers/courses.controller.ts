@@ -9,7 +9,44 @@ import {
   listAvailableCourses,
   listMiniCourses,
 } from '../services/courses.service.js';
-import type { GeneratedQuestion } from '../types/index.js';
+import type {
+  BloomLevel,
+  GeneratedQuestion,
+  GenerationOptions,
+  LessonLength,
+  SoloLevel,
+  SourceCitation,
+} from '../types/index.js';
+
+/** Runtime type guards — the controller can't trust client payloads. */
+const BLOOM_VALUES: readonly BloomLevel[] = ['understand', 'apply', 'analyze', 'evaluate'];
+const SOLO_VALUES: readonly SoloLevel[] = [
+  'unistructural',
+  'multistructural',
+  'relational',
+  'extended_abstract',
+];
+const LENGTH_VALUES: readonly LessonLength[] = ['concise', 'standard', 'detailed'];
+
+function parseGenerationOptions(raw: unknown): Partial<GenerationOptions> | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const o = raw as Record<string, unknown>;
+  const out: Partial<GenerationOptions> = {};
+  if (typeof o.bloomLevel === 'string' && BLOOM_VALUES.includes(o.bloomLevel as BloomLevel)) {
+    out.bloomLevel = o.bloomLevel as BloomLevel;
+  }
+  if (typeof o.soloLevel === 'string' && SOLO_VALUES.includes(o.soloLevel as SoloLevel)) {
+    out.soloLevel = o.soloLevel as SoloLevel;
+  }
+  if (typeof o.lengthLevel === 'string' && LENGTH_VALUES.includes(o.lengthLevel as LessonLength)) {
+    out.lengthLevel = o.lengthLevel as LessonLength;
+  }
+  if (typeof o.customInstructions === 'string') {
+    // Hard cap + trim; deeper sanitization happens in ai.service before prompt injection.
+    out.customInstructions = o.customInstructions.slice(0, 1000).trim();
+  }
+  return out;
+}
 
 export async function getAvailableCourses(_req: Request, res: Response): Promise<void> {
   const courses = await listAvailableCourses();
@@ -85,20 +122,22 @@ export async function previewCourse(req: Request, res: Response): Promise<void> 
   const courseCode = typeof req.body.courseCode === 'string' ? req.body.courseCode : '';
   const topics = Array.isArray(req.body.topics) ? (req.body.topics as unknown[]).map(String) : [];
   const questionCount = Number(req.body.questionCount ?? 15);
+  const options = parseGenerationOptions(req.body.options);
 
   if (!courseCode) throw new HttpError(400, 'Course code is required');
 
-  const preview = await generateCoursePreview({ courseCode, topics, questionCount });
+  const preview = await generateCoursePreview({ courseCode, topics, questionCount, options });
   res.json({ preview });
 }
 
 export async function confirmCourse(req: Request, res: Response): Promise<void> {
-  const { title, courseCode, lesson, topics, questions, lecturerName } = req.body as {
+  const { title, courseCode, lesson, topics, questions, sources, lecturerName } = req.body as {
     title?: string;
     courseCode?: string;
     lesson?: string;
     topics?: string[];
     questions?: GeneratedQuestion[];
+    sources?: SourceCitation[];
     lecturerName?: string;
   };
 
@@ -112,6 +151,7 @@ export async function confirmCourse(req: Request, res: Response): Promise<void> 
     topics: topics ?? [],
     lesson,
     questions,
+    sources: Array.isArray(sources) ? sources : [],
     lecturerName: lecturerName ?? 'Lecturer',
   });
 
