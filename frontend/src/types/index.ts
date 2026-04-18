@@ -33,7 +33,7 @@ export interface CourseSummary {
   shareToken: string;
   shareUrl: string;
   createdAt: string;
-  generationSource?: 'RAG+LLM' | 'RAG-only' | 'Fallback';
+  generationSource?: 'RAG+LLM' | 'RAG-only';
   contextChunksUsed?: number;
 }
 

@@ -70,13 +70,40 @@ function inferChapterAndItem(fileName: string) {
   const chapterMatch = lower.match(/(?:chapter|ch|week|w)\s*[-_ ]?(\d{1,2})/i) || lower.match(/(?:^|[^\d])(\d{1,2})(?:[^\d]|$)/);
   const itemMatch = lower.match(/(?:part|p|section|sec|sub)\s*[-_ ]?(\d{1,2})/i) || lower.match(/(?:\.|_|-)\s*(\d{1,2})\s*(?:\.pdf|\.pptx)$/i);
 
-  const chapterNum = chapterMatch?.[1] ? Number(chapterMatch[1]) : 1;
-  const itemNum = itemMatch?.[1] ? Number(itemMatch[1]) : 0;
+  const chapterNum = Math.max(1, chapterMatch?.[1] ? Number(chapterMatch[1]) : 1);
+  const itemNum = Math.max(0, itemMatch?.[1] ? Number(itemMatch[1]) : 0);
 
   return {
-    chapterLabel: `Chapter ${Math.max(1, chapterNum)}`,
-    chapterItemLabel: `1.${Math.max(0, itemNum)}`,
+    chapterLabel: `Chapter ${chapterNum}`,
+    chapterItemLabel: `${chapterNum}.${itemNum}`,
   };
+}
+
+/** Sort chapter-like keys: Course Information first, then Chapter N numerically. */
+function compareChapterKeys(a: string, b: string): number {
+  if (a === 'Course Information') return -1;
+  if (b === 'Course Information') return 1;
+  return a.localeCompare(b, undefined, { numeric: true });
+}
+
+/** Parse a label like "1.10" into a numeric tuple for proper ordering. */
+function parseItemLabel(label: string | null | undefined): number[] {
+  return String(label ?? '')
+    .split('.')
+    .map((part) => Number.parseInt(part, 10))
+    .map((n) => (Number.isFinite(n) ? n : 0));
+}
+
+/** Sort items within a chapter by their sub-chapter label (1.0 < 1.1 < 1.10), then by file name. */
+function compareQueueItems(a: QueueItem, b: QueueItem): number {
+  const aParts = parseItemLabel(a.chapterItemLabel);
+  const bParts = parseItemLabel(b.chapterItemLabel);
+  const len = Math.max(aParts.length, bParts.length);
+  for (let i = 0; i < len; i += 1) {
+    const diff = (aParts[i] ?? 0) - (bParts[i] ?? 0);
+    if (diff !== 0) return diff;
+  }
+  return a.fileName.localeCompare(b.fileName, undefined, { numeric: true });
 }
 
 function inferMaterialType(fileName: string): MaterialType {
@@ -469,119 +496,128 @@ export function MaterialsPage() {
                 <p className="text-sm text-[#4b4b4b]">{queue.length} file(s) ready to upload</p>
               </div>
 
-              <div className="space-y-3 max-h-[440px] overflow-y-auto">
+              <div className="space-y-4 max-h-[500px] overflow-y-auto pr-1 p-4 m-4">
                 {Object.entries(uploadHierarchy)
-                  .sort(([a], [b]) => a.localeCompare(b))
+                  .sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true }))
                   .map(([courseCode, courseChapters]) => {
                     const courseKey = `upload-course-${courseCode}`;
                     const courseCollapsed = collapsedUploadCourses[courseKey] || false;
                     const totalFiles = Object.values(courseChapters).reduce((sum, list) => sum + list.length, 0);
 
                     return (
-                    <div key={courseCode} className="surface-card p-3">
-                      <div className="flex items-center justify-between mb-2">
-                        <button type="button" className="inline-flex items-center gap-2" onClick={() => toggleUploadCourse(courseKey)}>
-                          {courseCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                          <p className="text-sm font-semibold text-[#0e0f0c]">{getCourseDisplay(courseCode)}</p>
-                          <span className="text-xs text-[#4b4b4b]">({totalFiles} files)</span>
-                        </button>
-                        <button type="button" onClick={() => setEditingCourseCode(editingCourseCode === courseCode ? null : courseCode)} className="p-1.5 text-[#4b4b4b]">
-                          <Edit2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
+                      <div key={courseCode} className="surface-card p-4">
+                        {/* Course header */}
+                        <div className="flex items-center justify-between gap-3 mb-3">
+                          <button type="button" className="inline-flex items-center gap-2 min-w-0 flex-1" onClick={() => toggleUploadCourse(courseKey)}>
+                            {courseCollapsed ? <ChevronRight className="w-4 h-4 flex-shrink-0" /> : <ChevronDown className="w-4 h-4 flex-shrink-0" />}
+                            <p className="text-sm font-semibold text-[#0e0f0c] truncate">{getCourseDisplay(courseCode)}</p>
+                            <span className="text-xs text-[#4b4b4b] flex-shrink-0">({totalFiles} files)</span>
+                          </button>
+                          <button type="button" onClick={() => setEditingCourseCode(editingCourseCode === courseCode ? null : courseCode)} className="p-1.5 text-[#4b4b4b] flex-shrink-0">
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
 
-                      {editingCourseCode === courseCode && (
-                        <select
-                          className="field !py-1.5 text-xs mb-2"
-                          value={courseCode}
-                          onChange={(event) => {
-                            setQueue((prev) => prev.map((item) => (item.courseCode === courseCode ? { ...item, courseCode: event.target.value } : item)));
-                            setEditingCourseCode(null);
-                          }}
-                        >
-                          {COURSE_OPTIONS.map((c) => (
-                            <option key={c.code} value={c.code}>{c.name} ({c.code})</option>
-                          ))}
-                        </select>
-                      )}
+                        {editingCourseCode === courseCode && (
+                          <select
+                            className="field !py-1.5 text-xs mb-3"
+                            value={courseCode}
+                            onChange={(event) => {
+                              setQueue((prev) => prev.map((item) => (item.courseCode === courseCode ? { ...item, courseCode: event.target.value } : item)));
+                              setEditingCourseCode(null);
+                            }}
+                          >
+                            {COURSE_OPTIONS.map((c) => (
+                              <option key={c.code} value={c.code}>{c.name} ({c.code})</option>
+                            ))}
+                          </select>
+                        )}
 
-                      {!courseCollapsed && (
-                      <div className="space-y-2">
-                        {Object.entries(courseChapters)
-                          .sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true }))
-                          .map(([chapterKey, chapterItems]) => {
-                            const uploadChapterKey = `upload-chapter-${courseCode}-${chapterKey}`;
-                            const chapterCollapsed = collapsedUploadChapters[uploadChapterKey] || false;
+                        {/* Chapters (Course Information first, then Chapter 1, 2, 3...) */}
+                        {!courseCollapsed && (
+                          <div className="space-y-3">
+                            {Object.entries(courseChapters)
+                              .sort(([a], [b]) => compareChapterKeys(a, b))
+                              .map(([chapterKey, chapterItems]) => {
+                                const uploadChapterKey = `upload-chapter-${courseCode}-${chapterKey}`;
+                                const chapterCollapsed = collapsedUploadChapters[uploadChapterKey] || false;
+                                const sortedItems = [...chapterItems].sort(compareQueueItems);
 
-                            return (
-                            <div key={uploadChapterKey} className="ring-card p-2">
-                              <button type="button" className="inline-flex items-center gap-2 mb-2" onClick={() => toggleUploadChapter(uploadChapterKey)}>
-                                {chapterCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                                <span className="text-xs font-semibold text-[#4b4b4b]">{chapterKey}</span>
-                                <span className="text-xs text-[#4b4b4b]">({chapterItems.length})</span>
-                              </button>
-
-                              {!chapterCollapsed && chapterItems.map((item) => {
-                                const chapterValue = item.materialType === 'course_info' ? 'CI' : item.chapterLabel || 'Chapter 1';
                                 return (
-                            <div key={item.id} className="ring-card p-3 border border-[#efefef]">
-                              <div className="flex items-start justify-between gap-2 mb-2">
-                                <div className="min-w-0 flex-1">
-                                  <p
-                                    className="text-sm font-semibold text-[#0e0f0c] truncate"
-                                    onDoubleClick={() => {
-                                      const next = window.prompt('Edit file name', item.fileName);
-                                      if (next !== null) updateQueueItem(item.id, { fileName: next });
-                                    }}
-                                  >
-                                    {item.fileName}
-                                  </p>
-                                  <p className="text-xs text-[#4b4b4b]">{formatBytes(item.file.size)}</p>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  {item.status === 'uploading' && <Loader className="w-4 h-4 text-[#4b4b4b] animate-spin" />}
-                                  {item.status === 'success' && <CheckCircle className="w-4 h-4 text-[#054d28]" />}
-                                  {item.status === 'error' && <AlertCircle className="w-4 h-4 text-[#d03238]" />}
-                                  {item.status === 'pending' && (
-                                    <button type="button" onClick={() => removeFromQueue(item.id)} className="p-1 text-[#4b4b4b]"><X className="w-4 h-4" /></button>
-                                  )}
-                                </div>
-                              </div>
+                                  <div key={uploadChapterKey} className="border border-[#e2e2e2] rounded-lg p-3 bg-[#fafafa]">
+                                    <button type="button" className="inline-flex items-center gap-2 mb-2" onClick={() => toggleUploadChapter(uploadChapterKey)}>
+                                      {chapterCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                                      <span className="text-xs font-semibold text-[#0e0f0c]">{chapterKey}</span>
+                                      <span className="text-xs text-[#4b4b4b]">({sortedItems.length})</span>
+                                    </button>
 
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                <select
-                                  value={chapterValue}
-                                  onChange={(event) => {
-                                    const value = event.target.value;
-                                    if (value === 'CI') {
-                                      updateQueueItem(item.id, { materialType: 'course_info', chapterLabel: 'CI', chapterItemLabel: '' });
-                                    } else {
-                                      updateQueueItem(item.id, { materialType: 'slide', chapterLabel: value });
-                                    }
-                                  }}
-                                  className="field !py-1.5 text-xs"
-                                >
-                                  {chapterMenuOptions.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
-                                </select>
-                                <input
-                                  className="field !py-1.5 text-xs"
-                                  value={item.chapterItemLabel}
-                                  onChange={(event) => updateQueueItem(item.id, { chapterItemLabel: event.target.value })}
-                                  placeholder="1.0"
-                                  disabled={item.materialType === 'course_info'}
-                                />
-                              </div>
+                                    {!chapterCollapsed && (
+                                      <div className="space-y-2">
+                                        {sortedItems.map((item) => {
+                                          const chapterValue = item.materialType === 'course_info' ? 'CI' : item.chapterLabel || 'Chapter 1';
+                                          return (
+                                            <div key={item.id} className="bg-white border border-[#e2e2e2] rounded-md p-3">
+                                              <div className="flex items-start justify-between gap-2 mb-2">
+                                                <div className="min-w-0 flex-1">
+                                                  <p
+                                                    className="text-sm font-semibold text-[#0e0f0c] truncate"
+                                                    onDoubleClick={() => {
+                                                      const next = window.prompt('Edit file name', item.fileName);
+                                                      if (next !== null) updateQueueItem(item.id, { fileName: next });
+                                                    }}
+                                                  >
+                                                    {item.fileName}
+                                                  </p>
+                                                  <p className="text-xs text-[#4b4b4b]">{formatBytes(item.file.size)}</p>
+                                                </div>
+                                                <div className="flex items-center gap-2 flex-shrink-0">
+                                                  {item.status === 'uploading' && <Loader className="w-4 h-4 text-[#4b4b4b] animate-spin" />}
+                                                  {item.status === 'success' && <CheckCircle className="w-4 h-4 text-[#054d28]" />}
+                                                  {item.status === 'error' && <AlertCircle className="w-4 h-4 text-[#d03238]" />}
+                                                  {item.status === 'pending' && (
+                                                    <button type="button" onClick={() => removeFromQueue(item.id)} className="p-1 text-[#4b4b4b]">
+                                                      <X className="w-4 h-4" />
+                                                    </button>
+                                                  )}
+                                                </div>
+                                              </div>
 
-                              {item.error && <p className="text-xs text-[#d03238] mt-1">{item.error}</p>}
-                            </div>
+                                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                                <select
+                                                  value={chapterValue}
+                                                  onChange={(event) => {
+                                                    const value = event.target.value;
+                                                    if (value === 'CI') {
+                                                      updateQueueItem(item.id, { materialType: 'course_info', chapterLabel: 'CI', chapterItemLabel: '' });
+                                                    } else {
+                                                      updateQueueItem(item.id, { materialType: 'slide', chapterLabel: value });
+                                                    }
+                                                  }}
+                                                  className="field !py-1.5 text-xs"
+                                                >
+                                                  {chapterMenuOptions.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
+                                                </select>
+                                                <input
+                                                  className="field !py-1.5 text-xs"
+                                                  value={item.chapterItemLabel}
+                                                  onChange={(event) => updateQueueItem(item.id, { chapterItemLabel: event.target.value })}
+                                                  placeholder={item.materialType === 'course_info' ? '—' : '1.0'}
+                                                  disabled={item.materialType === 'course_info'}
+                                                />
+                                              </div>
+
+                                              {item.error && <p className="text-xs text-[#d03238] mt-2">{item.error}</p>}
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    )}
+                                  </div>
                                 );
                               })}
-                            </div>
-                            );
-                          })}
+                          </div>
+                        )}
                       </div>
-                      )}
-                    </div>
                     );
                   })}
               </div>
@@ -652,7 +688,7 @@ export function MaterialsPage() {
                             <div className="ring-card p-3">
                               <p className="text-sm font-semibold text-[#0e0f0c] mb-2">Course Information</p>
                               {ci.map((item) => (
-                                <div key={item.id} className="flex flex-wrap items-center justify-between gap-2 border border-[#efefef] rounded-[8px] p-2">
+                                <div key={item.id} className="flex flex-wrap items-center justify-between gap-2 rounded-[8px] p-2">
                                   <p className="text-sm text-[#0e0f0c]">{item.file_name}</p>
                                   <div className="flex items-center gap-2">
                                     <button type="button" className="pill-secondary !px-2 !py-1.5" onClick={() => openReplace(item)}>
@@ -712,7 +748,7 @@ export function MaterialsPage() {
                                               {!subgroupCollapsed && (
                                                 <div className="space-y-2">
                                                   {subgroupItems.map((item) => (
-                                                    <div key={item.id} className="flex flex-wrap items-center justify-between gap-2 border border-[#efefef] rounded-[8px] p-2">
+                                                    <div key={item.id} className="flex flex-wrap items-center justify-between gap-2  rounded-[8px] p-2">
                                                       <div>
                                                         <p className="text-sm text-[#0e0f0c]">{item.file_name}</p>
                                                         {item.error_message && <p className="text-xs text-[#d03238] mt-1">{item.error_message}</p>}
