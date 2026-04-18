@@ -24,6 +24,8 @@ export interface ChapterOutline {
 }
 
 export interface CourseOutline {
+  synopsis: string;
+  learningOutcomes: string[];
   chapters: ChapterOutline[];
   updatedAt?: string;
 }
