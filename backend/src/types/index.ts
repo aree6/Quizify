@@ -30,10 +30,37 @@ export interface CourseOutline {
   updatedAt?: string;
 }
 
+/**
+ * Strict analytics metadata for every generated question.
+ * Powers the Lecturer Dashboard to pinpoint exactly where students fail.
+ */
+export interface QuestionMetadata {
+  /** The primary topic this question belongs to. */
+  topic: string;
+  /** The specific subtopic or concept being tested. */
+  subtopic: string;
+  /** The Bloom's Taxonomy cognitive target of this question. */
+  bloomLevel: BloomLevel;
+  /** The SOLO Taxonomy depth level of this question. */
+  soloLevel: SoloLevel;
+}
+
 export interface GeneratedQuestion {
   prompt: string;
   options: string[];
   correct: number;
+  /**
+   * Pedagogical explanation for EACH option (index 0-3).
+   * Must explain why the correct answer is right and why each distractor is wrong,
+   * diagnosing misconceptions to reinforce learning.
+   */
+  explanations: string[];
+  /**
+   * Strict analytics tagging for dashboard insights.
+   * Every question MUST carry exact metadata so the system can report:
+   * "The student understands X at a multi-structural level, but fails at Bloom 'Apply' level."
+   */
+  metadata: QuestionMetadata;
 }
 
 /**
@@ -75,27 +102,44 @@ export interface GeneratedContent {
  * We expose Bloom + SOLO + length as lecturer-visible controls. ICAP scales
  * implicitly: higher Bloom/SOLO levels imply more constructive engagement
  * (Passive → Active → Constructive → Interactive).
+ *
+ * CONFIG-DRIVEN BEHAVIOR:
+ *   - Lecturers toggle SPECIFIC levels of Bloom's and SOLO Taxonomies.
+ *   - We ONLY generate content and questions for the levels they ENABLE.
+ *   - If a level is toggled off, it is ignored completely.
  */
 
+/** Standard Bloom's Taxonomy cognitive levels. */
 export type BloomLevel =
-  | 'understand'   // explain, summarize, interpret
-  | 'apply'        // use in new situations, execute procedures
-  | 'analyze'      // compare, contrast, differentiate
-  | 'evaluate';    // justify, critique, defend
+  | 'remember'   // recall facts, basic concepts
+  | 'understand' // explain, summarize, interpret
+  | 'apply'      // use in new situations, execute procedures
+  | 'analyze'    // compare, contrast, differentiate
+  | 'evaluate'   // justify, critique, defend
+  | 'create';    // design, construct, formulate
 
+/** Official academic SOLO Taxonomy terms (mapped from UI labels). */
 export type SoloLevel =
-  | 'unistructural'     // single correct fact (foundational)
-  | 'multistructural'   // several independent facts (intermediate)
-  | 'relational'        // integrate multiple concepts (advanced)
-  | 'extended_abstract'; // transfer to novel contexts (challenge)
+  | 'unistructural'     // single correct fact (UI: Foundational)
+  | 'multistructural'   // several independent facts (UI: Intermediate)
+  | 'relational'        // integrate multiple concepts (UI: Advanced)
+  | 'extended_abstract'; // transfer to novel contexts (UI: Challenge)
 
 export type LessonLength = 'concise' | 'standard' | 'detailed';
 
 export interface GenerationOptions {
-  /** Bloom's cognitive level targeted by the lesson. Defaults to 'understand'. */
-  bloomLevel: BloomLevel;
-  /** SOLO complexity level targeted by quiz items. Defaults to 'multistructural'. */
-  soloLevel: SoloLevel;
+  /**
+   * Bloom's cognitive levels ENABLED by the lecturer.
+   * The lesson and quiz will ONLY target these levels.
+   * Defaults to ['understand', 'apply'].
+   */
+  enabledBloomLevels: BloomLevel[];
+  /**
+   * SOLO complexity levels ENABLED by the lecturer.
+   * Quiz items will ONLY target these levels.
+   * Defaults to ['multistructural'].
+   */
+  enabledSoloLevels: SoloLevel[];
   /** Lesson verbosity per topic subsection. Defaults to 'standard'. */
   lengthLevel: LessonLength;
   /**
@@ -110,8 +154,8 @@ export interface GenerationOptions {
 
 /** Balanced baseline — good starting point for undergrad topics. */
 export const DEFAULT_GENERATION_OPTIONS: GenerationOptions = {
-  bloomLevel: 'understand',
-  soloLevel: 'multistructural',
+  enabledBloomLevels: ['understand', 'apply'],
+  enabledSoloLevels: ['multistructural'],
   lengthLevel: 'standard',
   customInstructions: '',
 };

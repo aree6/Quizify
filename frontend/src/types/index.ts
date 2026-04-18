@@ -77,27 +77,70 @@ export interface TopicCoverage {
 
 /* ─── Pedagogically-grounded generation options (mirrors backend types) ────── */
 
-export type BloomLevel = 'understand' | 'apply' | 'analyze' | 'evaluate';
+/** Standard Bloom's Taxonomy cognitive levels. */
+export type BloomLevel =
+  | 'remember'
+  | 'understand'
+  | 'apply'
+  | 'analyze'
+  | 'evaluate'
+  | 'create';
+
+/** Official academic SOLO Taxonomy terms (mapped from UI labels). */
 export type SoloLevel =
   | 'unistructural'
   | 'multistructural'
   | 'relational'
   | 'extended_abstract';
+
 export type LessonLength = 'concise' | 'standard' | 'detailed';
 
-export interface GenerationOptions {
+/**
+ * Strict analytics metadata for every generated question.
+ * Powers the Lecturer Dashboard to pinpoint exactly where students fail.
+ */
+export interface QuestionMetadata {
+  topic: string;
+  subtopic: string;
   bloomLevel: BloomLevel;
   soloLevel: SoloLevel;
+}
+
+export interface GenerationOptions {
+  /**
+   * Bloom's cognitive levels ENABLED by the lecturer.
+   * The lesson and quiz will ONLY target these levels.
+   */
+  enabledBloomLevels: BloomLevel[];
+  /**
+   * SOLO complexity levels ENABLED by the lecturer.
+   * Quiz items will ONLY target these levels.
+   */
+  enabledSoloLevels: SoloLevel[];
+  /** Lesson verbosity per topic subsection. Defaults to 'standard'. */
   lengthLevel: LessonLength;
+  /**
+   * Free-text lecturer directives appended to BOTH lesson and quiz prompts.
+   */
   customInstructions?: string;
 }
 
 export const DEFAULT_GENERATION_OPTIONS: GenerationOptions = {
-  bloomLevel: 'understand',
-  soloLevel: 'multistructural',
+  enabledBloomLevels: ['understand', 'apply'],
+  enabledSoloLevels: ['multistructural'],
   lengthLevel: 'standard',
   customInstructions: '',
 };
+
+export interface GeneratedQuestion {
+  prompt: string;
+  options: string[];
+  correct: number;
+  /** Pedagogical explanation for each option (why right or wrong). */
+  explanations: string[];
+  /** Strict analytics tagging for dashboard insights. */
+  metadata: QuestionMetadata;
+}
 
 export interface CoursePreview {
   title: string;
@@ -105,7 +148,7 @@ export interface CoursePreview {
   courseName: string;
   topics: string[];
   lesson: string;
-  questions: Array<{ prompt: string; options: string[]; correct: number }>;
+  questions: GeneratedQuestion[];
   questionCount: number;
   generationSource: string;
   contextChunksUsed: number;
@@ -117,6 +160,8 @@ export interface PublicQuestion {
   id: string;
   prompt: string;
   options: string[];
+  explanations: string[];
+  metadata: QuestionMetadata;
 }
 
 export interface PublicCourse {
@@ -134,6 +179,7 @@ export interface SubmissionAnswer {
   selectedOptionIndex: number;
   correctOptionIndex: number;
   isCorrect: boolean;
+  metadata: QuestionMetadata;
 }
 
 export interface QuizSubmissionResult {
