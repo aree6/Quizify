@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
-import ReactMarkdown from 'react-markdown';
 import { Search, ChevronDown, ChevronRight, Loader2, ArrowLeft, Check, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { apiService } from '../services/api';
-import type { CoursePreview } from '../types';
+import { LessonWithCitations } from '../components/common/LessonWithCitations';
+import { PromptBuilder } from '../components/common/PromptBuilder';
+import { DEFAULT_GENERATION_OPTIONS } from '../types';
+import type { CoursePreview, GenerationOptions } from '../types';
 
 interface AvailableCourse {
   code: string;
@@ -207,15 +209,24 @@ function PreviewPanel({
           <p className="text-xs text-[#4b4b4b]">
             {preview.generationSource} · {preview.contextChunksUsed} chunks · {preview.questionCount} questions
           </p>
+          {preview.topicCoverage.length > 0 && (
+            <p className="text-xs text-[#4b4b4b] mt-1">
+              {preview.topicCoverage
+                .map((tc) => `${tc.topic}: ${tc.chunkCount}`)
+                .join(' · ')}
+            </p>
+          )}
         </div>
       </div>
 
-      {/* Lesson content */}
+      {/* Lesson content — [S#] markers are clickable and open a source modal. */}
       <div className="surface-card p-6">
         <h4 className="text-sm font-semibold text-[#0e0f0c] mb-3">Lesson Content</h4>
-        <div className="markdown-content text-sm text-[#4b4b4b] leading-relaxed">
-          <ReactMarkdown>{preview.lesson}</ReactMarkdown>
-        </div>
+        <LessonWithCitations
+          markdown={preview.lesson}
+          sources={preview.sources}
+          className="markdown-content text-sm text-[#4b4b4b] leading-relaxed"
+        />
       </div>
 
       {/* Quiz questions */}
@@ -277,6 +288,8 @@ export function CreateCoursePage() {
 
   // Form
   const [questionCount, setQuestionCount] = useState(15);
+  // Lecturer-selected pedagogy options (Bloom / SOLO / length / custom instructions).
+  const [options, setOptions] = useState<GenerationOptions>(DEFAULT_GENERATION_OPTIONS);
 
   // Preview state
   const [preview, setPreview] = useState<CoursePreview | null>(null);
@@ -344,6 +357,7 @@ export function CreateCoursePage() {
         courseCode: selectedCourse.code,
         topics: [...selectedTopics],
         questionCount,
+        options,
       });
       setPreview(res.preview);
     } catch (err) {
@@ -366,6 +380,7 @@ export function CreateCoursePage() {
         topics: preview.topics,
         lesson: preview.lesson,
         questions: preview.questions,
+        sources: preview.sources,
         lecturerName: user?.name || 'Lecturer',
       });
       setCreatedLink(`${window.location.origin}${res.course.shareUrl}`);
@@ -442,6 +457,9 @@ export function CreateCoursePage() {
             loading={topicsLoading}
           />
         </div>
+
+        {/* Pedagogy-grounded prompt builder (Bloom / SOLO / length / custom). */}
+        <PromptBuilder value={options} onChange={setOptions} />
 
         {/* Error */}
         {error && <div className="p-3 rounded-[8px] bg-[#ffe5e7] text-[#d03238] text-sm">{error}</div>}

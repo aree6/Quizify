@@ -2,9 +2,11 @@ import type {
   CourseAnalytics,
   CoursePreview,
   CourseSummary,
+  GenerationOptions,
   Material,
   PublicCourse,
   QuizSubmissionResult,
+  SourceCitation,
 } from '../types';
 import { API_BASE_URL, http } from './http';
 
@@ -30,6 +32,7 @@ export const apiService = {
     courseCode: string;
     topics: string[];
     questionCount: number;
+    options?: GenerationOptions;
   }) {
     const { data } = await http.post<{ preview: CoursePreview }>('/api/courses/preview', payload);
     return data;
@@ -41,6 +44,7 @@ export const apiService = {
     topics: string[];
     lesson: string;
     questions: Array<{ prompt: string; options: string[]; correct: number }>;
+    sources: SourceCitation[];
     lecturerName?: string;
   }) {
     const { data } = await http.post<{ course: CourseSummary }>('/api/courses/confirm', payload);
