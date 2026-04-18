@@ -4,8 +4,9 @@ import { HttpError } from '../middleware/error-handler.js';
 import { randomToken, toSlug } from '../lib/utils.js';
 import { findCourseByCode } from '../constants/courses.js';
 import { retrieveRelevantChunks } from './rag.service.js';
+import { getStoredOutline } from './outlines.service.js';
 import { generateLessonAndQuiz, isAiConfigured } from './ai.service.js';
-import { generateFallbackContent } from '../data/fallback-content.js';
+
 import type { GeneratedContent, GeneratedQuestion } from '../types/index.js';
 
 const ONE_MONTH_MS = 30 * 24 * 60 * 60 * 1000;
@@ -18,7 +19,7 @@ export interface CoursePreviewResult {
   lesson: string;
   questions: GeneratedQuestion[];
   questionCount: number;
-  generationSource: 'RAG+LLM' | 'RAG-only' | 'Fallback';
+  generationSource: 'RAG+LLM' | 'RAG-only';
   contextChunksUsed: number;
 }
 
@@ -57,19 +58,32 @@ export async function generateCoursePreview(params: {
   const courseName = courseEntry?.name ?? courseCode;
   const autoTitle = `${courseName} — ${topics.slice(0, 3).join(', ')}`;
 
-  const contextChunks = await retrieveRelevantChunks({ courseCode, topics, limit: 20 });
+  const { chunks: contextChunks, matchCount } = await retrieveRelevantChunks({ courseCode, topics, limit: 20 });
   const contextText = contextChunks.join('\n\n');
 
+  // No relevant context found — the selected topics have no indexed material
+  if (matchCount === 0 || contextChunks.length === 0) {
+    throw new HttpError(
+      404,
+      `No indexed content found for the selected topics in ${courseCode}. The course materials for these topics may have been removed or not yet uploaded.`,
+    );
+  }
+
+  // Load course profile (synopsis + learning outcomes) to ground generation
+  const profile = await getStoredOutline(courseCode);
+
   const generationSource: CoursePreviewResult['generationSource'] =
-    contextChunks.length > 0 ? (isAiConfigured() ? 'RAG+LLM' : 'RAG-only') : 'Fallback';
+    isAiConfigured() ? 'RAG+LLM' : 'RAG-only';
 
   let content: GeneratedContent | null = null;
-  if (contextChunks.length > 0 && isAiConfigured()) {
+  if (isAiConfigured()) {
     content = await generateLessonAndQuiz({
       title: autoTitle,
       topics,
       context: contextText,
       questionCount,
+      synopsis: profile?.synopsis,
+      learningOutcomes: profile?.learningOutcomes,
     });
   }
 
@@ -80,11 +94,7 @@ export async function generateCoursePreview(params: {
     );
   }
 
-  // Pad with fallback questions if AI returned fewer
-  if (content.questions.length < questionCount) {
-    const supplement = generateFallbackContent({ title: autoTitle, topics, questionCount });
-    content.questions = [...content.questions, ...supplement.questions].slice(0, questionCount);
-  }
+  // Use only RAG-grounded questions — no fallback padding
 
   return {
     title: autoTitle,

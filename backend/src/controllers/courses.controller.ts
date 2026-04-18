@@ -23,7 +23,12 @@ export async function getCourseTopics(req: Request, res: Response): Promise<void
   // 1) Persisted outline (extracted at upload time)
   const stored = await getStoredOutline(courseCode);
   if (stored && stored.chapters.length > 0) {
-    res.json({ chapters: stored.chapters, source: 'stored' });
+    res.json({
+      chapters: stored.chapters,
+      synopsis: stored.synopsis,
+      learningOutcomes: stored.learningOutcomes,
+      source: 'stored',
+    });
     return;
   }
 
@@ -48,8 +53,13 @@ export async function getCourseTopics(req: Request, res: Response): Promise<void
     .slice(0, 30_000);
 
   const extracted = await extractAndSaveOutline(courseCode, combinedText);
-  if (extracted && extracted.length > 0) {
-    res.json({ chapters: extracted, source: 'ai' });
+  if (extracted && extracted.chapters.length > 0) {
+    res.json({
+      chapters: extracted.chapters,
+      synopsis: extracted.synopsis,
+      learningOutcomes: extracted.learningOutcomes,
+      source: 'ai',
+    });
     return;
   }
 
@@ -129,11 +139,16 @@ export async function reindexOutline(req: Request, res: Response): Promise<void>
     .slice(0, 30_000);
 
   const extracted = await extractAndSaveOutline(courseCode, combinedText);
-  if (!extracted || extracted.length === 0) {
+  if (!extracted || extracted.chapters.length === 0) {
     throw new HttpError(500, 'AI outline extraction failed. Check Gemini quota.');
   }
 
-  res.json({ chapters: extracted, source: 'ai' });
+  res.json({
+    chapters: extracted.chapters,
+    synopsis: extracted.synopsis,
+    learningOutcomes: extracted.learningOutcomes,
+    source: 'ai',
+  });
 }
 
 export async function getCourses(_req: Request, res: Response): Promise<void> {
