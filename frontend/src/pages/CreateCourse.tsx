@@ -238,6 +238,20 @@ function PreviewPanel({
               <p className="text-sm font-medium text-[#0e0f0c] mb-2">
                 {idx + 1}. {q.prompt}
               </p>
+              {/* Metadata chips */}
+              <div className="flex flex-wrap gap-1.5 mb-3">
+                <span className="px-2 py-0.5 text-[10px] rounded-full bg-[#efefef] text-[#4b4b4b] font-medium uppercase tracking-wide">
+                  {q.metadata.bloomLevel}
+                </span>
+                <span className="px-2 py-0.5 text-[10px] rounded-full bg-[#efefef] text-[#4b4b4b] font-medium uppercase tracking-wide">
+                  {q.metadata.soloLevel.replace('_', '-')}
+                </span>
+                {q.metadata.topic && (
+                  <span className="px-2 py-0.5 text-[10px] rounded-full bg-[#e2f6d5] text-[#054d28] font-medium">
+                    {q.metadata.topic}
+                  </span>
+                )}
+              </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {q.options.map((opt, oi) => (
                   <div
@@ -251,6 +265,22 @@ function PreviewPanel({
                     <span className="font-semibold mr-1.5">{optionLabels[oi]}.</span>
                     {opt}
                     {oi === q.correct && <Check className="inline w-3.5 h-3.5 ml-1" />}
+                  </div>
+                ))}
+              </div>
+              {/* Explanations */}
+              <div className="mt-3 space-y-1.5">
+                {q.explanations.map((exp, ei) => (
+                  <div
+                    key={ei}
+                    className={`text-xs px-2.5 py-1.5 rounded-md ${
+                      ei === q.correct
+                        ? 'bg-[#e2f6d5] text-[#054d28]'
+                        : 'bg-[#fafafa] text-[#4b4b4b]'
+                    }`}
+                  >
+                    <span className="font-semibold mr-1">{optionLabels[ei]}:</span>
+                    {exp}
                   </div>
                 ))}
               </div>

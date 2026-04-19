@@ -110,16 +110,59 @@ export function QuizPage() {
               {result.passed ? 'Passed' : 'Not passed'} (required {result.passPercentage}%)
             </p>
 
-            <div className="mt-6 space-y-3">
+            <div className="mt-6 space-y-5">
               {course.questions.map((question, index) => {
                 const answer = result.answers.find((item) => item.questionId === question.id);
+                const selectedIdx = answer?.selectedOptionIndex ?? -1;
+                const correctIdx = answer?.correctOptionIndex ?? -1;
                 return (
                   <div key={question.id} className="ring-card p-4">
                     <p className="text-sm font-semibold text-[#0e0f0c] mb-2">
                       {index + 1}. {question.prompt}
                     </p>
-                    <p className="text-xs text-[#4b4b4b]">Your answer: {question.options[answer?.selectedOptionIndex ?? -1] || 'N/A'}</p>
-                    <p className="text-xs text-[#4b4b4b]">Correct: {question.options[answer?.correctOptionIndex ?? -1] || 'N/A'}</p>
+                    {/* Metadata chips */}
+                    <div className="flex flex-wrap gap-1.5 mb-3">
+                      <span className="px-2 py-0.5 text-[10px] rounded-full bg-[#efefef] text-[#4b4b4b] font-medium uppercase tracking-wide">
+                        {question.metadata.bloomLevel}
+                      </span>
+                      <span className="px-2 py-0.5 text-[10px] rounded-full bg-[#efefef] text-[#4b4b4b] font-medium uppercase tracking-wide">
+                        {question.metadata.soloLevel.replace('_', '-')}
+                      </span>
+                      {question.metadata.topic && (
+                        <span className="px-2 py-0.5 text-[10px] rounded-full bg-[#e2f6d5] text-[#054d28] font-medium">
+                          {question.metadata.topic}
+                        </span>
+                      )}
+                    </div>
+                    {/* Options with explanations */}
+                    <div className="space-y-2">
+                      {question.options.map((opt, oi) => {
+                        const isSelected = oi === selectedIdx;
+                        const isCorrect = oi === correctIdx;
+                        return (
+                          <div
+                            key={oi}
+                            className={`text-sm px-3 py-2 rounded-md border ${
+                              isCorrect
+                                ? 'bg-[#e2f6d5] border-[#9fe870] text-[#054d28]'
+                                : isSelected
+                                  ? 'bg-[#ffe5e7] border-[#d03238] text-[#d03238]'
+                                  : 'bg-[#fafafa] border-[#e2e2e2] text-[#4b4b4b]'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold">{['A', 'B', 'C', 'D'][oi]}.</span>
+                              <span className="flex-1">{opt}</span>
+                              {isCorrect && <span className="text-xs font-bold">Correct</span>}
+                              {isSelected && !isCorrect && <span className="text-xs font-bold">Your answer</span>}
+                            </div>
+                            {question.explanations[oi] && (
+                              <p className="text-xs mt-1 opacity-90">{question.explanations[oi]}</p>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 );
               })}
