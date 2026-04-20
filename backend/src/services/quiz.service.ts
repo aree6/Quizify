@@ -3,6 +3,13 @@ import { env } from '../config/env.js';
 import { HttpError } from '../middleware/error-handler.js';
 import type { SourceCitation } from '../types/index.js';
 
+interface QuestionMetadata {
+  topic: string;
+  subtopic: string;
+  bloomLevel: string;
+  soloLevel: string;
+}
+
 interface StoredQuestion {
   id: string;
   prompt: string;
@@ -12,6 +19,8 @@ interface StoredQuestion {
   option_d: string | null;
   order_index: number;
   correct_option_index?: number;
+  explanations?: string[] | null;
+  metadata?: QuestionMetadata | null;
 }
 
 interface StoredCourse {
@@ -53,7 +62,7 @@ export async function getPublicCourse(token: string) {
       quizzes (
         id,
         title,
-        questions (id, prompt, option_a, option_b, option_c, option_d, order_index)
+        questions (id, prompt, option_a, option_b, option_c, option_d, order_index, correct_option_index, explanations, metadata)
       )
     `,
     )
@@ -72,6 +81,12 @@ export async function getPublicCourse(token: string) {
       id: q.id,
       prompt: q.prompt,
       options: [q.option_a, q.option_b, q.option_c, q.option_d].filter((o): o is string => Boolean(o)),
+      explanations: Array.isArray(q.explanations) && q.explanations.length === 4
+        ? q.explanations
+        : ['', '', '', ''],
+      metadata: q.metadata && typeof q.metadata === 'object'
+        ? (q.metadata as QuestionMetadata)
+        : { topic: '', subtopic: '', bloomLevel: 'understand', soloLevel: 'multistructural' },
     }));
 
   return {
@@ -116,6 +131,9 @@ export async function submitQuizAttempt(params: {
       selectedOptionIndex: selected,
       correctOptionIndex: q.correct_option_index ?? -1,
       isCorrect,
+      metadata: q.metadata && typeof q.metadata === 'object'
+        ? (q.metadata as QuestionMetadata)
+        : { topic: '', subtopic: '', bloomLevel: 'understand', soloLevel: 'multistructural' },
     };
   });
 
