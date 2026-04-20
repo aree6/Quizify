@@ -216,6 +216,8 @@ export async function confirmAndSaveCourse(params: {
     option_d: q.options[3] ?? null,
     correct_option_index: q.correct,
     order_index: idx,
+    explanations: q.explanations ?? ['', '', '', ''],
+    metadata: q.metadata ?? { topic: '', subtopic: '', bloomLevel: 'understand', soloLevel: 'multistructural' },
   }));
 
   const { error: questionsError } = await supabase.from('questions').insert(questionRows);

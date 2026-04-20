@@ -19,7 +19,14 @@ import type {
 } from '../types/index.js';
 
 /** Runtime type guards — the controller can't trust client payloads. */
-const BLOOM_VALUES: readonly BloomLevel[] = ['understand', 'apply', 'analyze', 'evaluate'];
+const BLOOM_VALUES: readonly BloomLevel[] = [
+  'remember',
+  'understand',
+  'apply',
+  'analyze',
+  'evaluate',
+  'create',
+];
 const SOLO_VALUES: readonly SoloLevel[] = [
   'unistructural',
   'multistructural',
@@ -32,12 +39,23 @@ function parseGenerationOptions(raw: unknown): Partial<GenerationOptions> | unde
   if (!raw || typeof raw !== 'object') return undefined;
   const o = raw as Record<string, unknown>;
   const out: Partial<GenerationOptions> = {};
-  if (typeof o.bloomLevel === 'string' && BLOOM_VALUES.includes(o.bloomLevel as BloomLevel)) {
-    out.bloomLevel = o.bloomLevel as BloomLevel;
+
+  // Parse enabledBloomLevels as an array of valid BloomLevel strings
+  if (Array.isArray(o.enabledBloomLevels)) {
+    const parsedBloom = o.enabledBloomLevels
+      .filter((v): v is string => typeof v === 'string')
+      .filter((v) => BLOOM_VALUES.includes(v as BloomLevel)) as BloomLevel[];
+    if (parsedBloom.length > 0) out.enabledBloomLevels = parsedBloom;
   }
-  if (typeof o.soloLevel === 'string' && SOLO_VALUES.includes(o.soloLevel as SoloLevel)) {
-    out.soloLevel = o.soloLevel as SoloLevel;
+
+  // Parse enabledSoloLevels as an array of valid SoloLevel strings
+  if (Array.isArray(o.enabledSoloLevels)) {
+    const parsedSolo = o.enabledSoloLevels
+      .filter((v): v is string => typeof v === 'string')
+      .filter((v) => SOLO_VALUES.includes(v as SoloLevel)) as SoloLevel[];
+    if (parsedSolo.length > 0) out.enabledSoloLevels = parsedSolo;
   }
+
   if (typeof o.lengthLevel === 'string' && LENGTH_VALUES.includes(o.lengthLevel as LessonLength)) {
     out.lengthLevel = o.lengthLevel as LessonLength;
   }
