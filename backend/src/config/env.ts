@@ -47,6 +47,9 @@ export const env = {
       process.env.AI_PROVIDER === 'gemini' ? 'gemini-2.5-flash' : process.env.AI_PROVIDER === 'deepseek' ? 'deepseek-v4-flash' : 'gpt-4o-mini',
     ),
     thinkingEnabled: process.env.THINKING_ENABLED !== 'false',
-    reasoningEffort: optional('REASONING_EFFORT', 'medium'),
+    reasoningEffort: optional('REASONING_EFFORT', 'low'),
+    maxLessonTokens: num('MAX_OUTPUT_LESSON', 64_000),
+    maxQuizTokens: num('MAX_OUTPUT_QUIZ', 32_000),
+    maxOutlineTokens: num('MAX_OUTPUT_OUTLINE', 16_000),
   },
 } as const;
