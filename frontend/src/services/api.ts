@@ -43,7 +43,7 @@ export const apiService = {
     courseCode: string;
     topics: string[];
     lesson: string;
-    questions: Array<{ prompt: string; options: string[]; correct: number }>;
+    questions: Array<{ prompt: string; options: string[]; correct: number; explanations: string[]; metadata: { topic: string; subtopic: string; bloomLevel: string; soloLevel: string } }>;
     sources: SourceCitation[];
     lecturerName?: string;
   }) {
