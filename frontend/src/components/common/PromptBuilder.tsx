@@ -13,7 +13,6 @@ import type {
  * Each control is grounded in a pedagogical framework from the SRS:
  *   - Bloom's Taxonomy   → lesson cognitive depth
  *   - SOLO Taxonomy      → quiz structural complexity
- *   - ICAP Framework     → scales implicitly with Bloom/SOLO choices
  *
  * CONFIG-DRIVEN BEHAVIOR:
  *   - Lecturers toggle SPECIFIC levels of Bloom's and SOLO Taxonomies.

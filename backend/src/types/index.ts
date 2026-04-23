@@ -94,14 +94,9 @@ export interface GeneratedContent {
 
 /* ─── Pedagogically-grounded generation options (SRS UC003 + UC004) ──────────
  *
- * The SRS mandates three taxonomies for grounding content and assessment:
+ * The SRS mandates two taxonomies for grounding content and assessment:
  *   - Bloom's Taxonomy (lesson depth)      → UC003: Generate Content
  *   - SOLO Taxonomy (quiz complexity)      → UC004: Create Quizzes
- *   - ICAP Framework (learner engagement)  → UC004, overall active-learning goal
- *
- * We expose Bloom + SOLO + length as lecturer-visible controls. ICAP scales
- * implicitly: higher Bloom/SOLO levels imply more constructive engagement
- * (Passive → Active → Constructive → Interactive).
  *
  * CONFIG-DRIVEN BEHAVIOR:
  *   - Lecturers toggle SPECIFIC levels of Bloom's and SOLO Taxonomies.
