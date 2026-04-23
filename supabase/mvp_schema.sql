@@ -337,4 +337,11 @@ ORDER BY ordinal_position;
 ALTER TABLE public.mini_courses
     ADD COLUMN IF NOT EXISTS sources jsonb NOT NULL DEFAULT '[]'::jsonb;
 
+-- Add explanations and metadata columns to questions table
+ALTER TABLE public.questions
+    ADD COLUMN IF NOT EXISTS explanations jsonb;
+
+ALTER TABLE public.questions
+    ADD COLUMN IF NOT EXISTS metadata jsonb;
+
 SELECT 'Schema setup complete!' as status;
