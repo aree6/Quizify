@@ -5,6 +5,7 @@ import { pathParam } from '../middleware/async-handler.js';
 import { extractAndSaveOutline, getStoredOutline } from '../services/outlines.service.js';
 import {
   confirmAndSaveCourse,
+  deleteMiniCourse,
   generateCoursePreview,
   listAvailableCourses,
   listMiniCourses,
@@ -212,4 +213,11 @@ export async function reindexOutline(req: Request, res: Response): Promise<void>
 export async function getCourses(_req: Request, res: Response): Promise<void> {
   const courses = await listMiniCourses();
   res.json({ courses });
+}
+
+export async function deleteCourse(req: Request, res: Response): Promise<void> {
+  const id = pathParam(req.params.id).trim();
+  if (!id) throw new HttpError(400, 'Course ID is required');
+  await deleteMiniCourse(id);
+  res.json({ success: true });
 }

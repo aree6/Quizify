@@ -12,6 +12,7 @@ import {
 } from '../controllers/materials.controller.js';
 import {
   confirmCourse,
+  deleteCourse,
   getAvailableCourses,
   getCourses,
   getCourseTopics,
@@ -46,6 +47,7 @@ router.get('/api/courses/:courseCode/topics', asyncHandler(getCourseTopics));
 router.post('/api/courses/:courseCode/reindex-outline', asyncHandler(reindexOutline));
 router.post('/api/courses/preview', asyncHandler(previewCourse));
 router.post('/api/courses/confirm', asyncHandler(confirmCourse));
+router.delete('/api/courses/:id', asyncHandler(deleteCourse));
 
 // Public (student-facing)
 router.get('/api/public/course/:token', asyncHandler(publicCourse));

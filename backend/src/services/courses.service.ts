@@ -235,6 +235,15 @@ export async function confirmAndSaveCourse(params: {
   };
 }
 
+export async function deleteMiniCourse(id: string): Promise<void> {
+  const { error } = await supabase
+    .from('mini_courses')
+    .delete()
+    .eq('id', id);
+
+  if (error) throw new HttpError(500, 'Failed to delete mini-course', { details: error.message });
+}
+
 export async function listMiniCourses(): Promise<
   Array<{
     id: string;
