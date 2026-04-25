@@ -9,6 +9,7 @@ import {
   LogOut,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import logoSvg from '../../assets/logo.svg';
 
 const navItems = [
   { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['Lecturer', 'Admin', 'Student'] },
@@ -32,11 +33,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="app-shell min-h-screen">
-      <header className="sticky top-0 z-50 bg-[#0e0f0c] border-b border-[#1f211d]">
+      <header className="sticky top-0 z-50 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
-          <div className="flex items-center gap-3 overflow-x-auto pb-1 scrollbar-hide">
-            <div className="shrink-0 mr-2">
-              <span className="text-white font-extrabold text-base">QUIZIFY</span>
+          <div className="flex items-center gap-1 overflow-x-auto pb-1 scrollbar-hide">
+            <div className="shrink-0 mr-4">
+              <img src={logoSvg} alt="Quizify" className="h-8 w-8" />
             </div>
 
             {links.map((item) => {
@@ -46,10 +47,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   key={item.path}
                   to={item.path}
                   className={({ isActive }) =>
-                    `shrink-0 inline-flex items-center gap-2 px-3 py-2 rounded-[999px] text-sm font-semibold border transition-colors ${
+                    `shrink-0 inline-flex items-center gap-2 px-3 py-2 rounded-[999px] text-sm font-semibold transition-colors ${
                       isActive
-                        ? 'bg-[#9fe870] text-[#163300] border-[#163300]'
-                        : 'bg-[#0e0f0c] text-[#afafaf] border-[#4b4b4b] hover:text-white hover:border-[#efefef]'
+                        ? 'bg-[#e2f6d5] text-[#163300]'
+                        : 'text-[#4b4b4b] hover:text-[#1c1d1a] hover:bg-[#efefef]'
                     }`
                   }
                 >
@@ -62,7 +63,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <button
               type="button"
               onClick={handleLogout}
-              className="shrink-0 ml-auto inline-flex items-center gap-2 px-3 py-2 rounded-[999px] text-sm font-semibold bg-[#efefef] text-[#0e0f0c] border border-[#0e0f0c] hover:border-[#9fe870]"
+              className="shrink-0 ml-auto inline-flex items-center gap-2 px-3 py-2 rounded-[999px] text-sm font-semibold text-[#4b4b4b] hover:text-[#d03238] hover:bg-[#efefef] transition-colors"
             >
               <LogOut className="w-4 h-4" />
               Logout

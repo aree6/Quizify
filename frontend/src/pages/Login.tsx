@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Mail, Lock, GraduationCap, Shield, User } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { getSelectedRole, setSelectedRole } from '../services/auth';
+import logoSvg from '../assets/logo.svg';
 
 type UserRole = 'Lecturer' | 'Admin' | 'Student';
 
@@ -79,13 +80,13 @@ export function LoginPage() {
     <div className="min-h-screen bg-white p-4 sm:p-6 lg:p-8 flex items-center justify-center">
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
-          <h1 className="display-title">QUIZIFY</h1>
+          <img src={logoSvg} alt="Quizify" className="h-16 w-16 mx-auto" />
           <p className="section-subtitle mt-3">Course materials into interactive learning</p>
         </div>
 
         <div className="surface-card p-6 sm:p-8">
           <div className="mb-6">
-            <label className="block text-sm font-semibold text-[#0e0f0c] mb-2">Login role</label>
+            <label className="block text-sm font-semibold text-[#1c1d1a] mb-2">Login role</label>
             <div className="relative">
               <RoleIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#4b4b4b] pointer-events-none" />
               <select
@@ -137,7 +138,7 @@ export function LoginPage() {
 
           <p className="text-xs text-[#afafaf] mt-5 text-center">Demo: lecturer@utm.my / password123</p>
 
-          {error && <div className="mt-4 p-3 rounded-[8px] bg-[#ffe5e7] text-[#d03238] text-sm">{error}</div>}
+          {error && <div className="mt-4 p-3 rounded-lg bg-[#ffe5e7] text-[#d03238] text-sm">{error}</div>}
         </div>
 
         <div className="ring-card mt-4 p-4">
