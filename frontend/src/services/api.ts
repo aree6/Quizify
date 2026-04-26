@@ -64,6 +64,13 @@ export const apiService = {
     return data;
   },
 
+  async deleteCourse(id: string) {
+    const { data } = await http.delete<{ success: boolean }>(
+      `/api/courses/${encodeURIComponent(id)}`,
+    );
+    return data;
+  },
+
   async getPublicCourse(token: string) {
     const { data } = await http.get<{ course: PublicCourse }>(
       `/api/public/course/${encodeURIComponent(token)}`,
