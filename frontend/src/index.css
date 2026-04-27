@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 :root {
-  --near-black: #0e0f0c;
+  --near-black: #1c1d1a;
   --pure-white: #ffffff;
   --lime: #9fe870;
   --dark-green: #163300;
@@ -13,9 +13,7 @@
   --positive: #054d28;
   --danger: #d03238;
   --warning: #ffd11a;
-  --shadow-standard: rgba(14, 15, 12, 0.12) 0px 4px 16px 0px;
-  --shadow-elevated: rgba(14, 15, 12, 0.16) 0px 2px 8px 0px;
-  --card-ring: rgba(14, 15, 12, 0.12) 0px 0px 0px 1px;
+  --card-ring: rgba(28, 29, 26, 0.12) 0px 0px 0px 1px;
 }
 
 * {
@@ -43,11 +41,7 @@ button,
 }
 
 .card-hover {
-  transition: box-shadow 150ms ease, border-color 150ms ease, background-color 150ms ease;
-}
-
-.card-hover:hover {
-  box-shadow: var(--shadow-elevated);
+  transition: border-color 150ms ease, background-color 150ms ease;
 }
 
 @layer components {
@@ -76,14 +70,11 @@ button,
   }
 
   .surface-card {
-    @apply bg-white;
-    border-radius: 12px;
-    box-shadow: var(--shadow-standard);
+    @apply bg-white rounded-lg;
   }
 
   .ring-card {
-    @apply bg-white;
-    border-radius: 12px;
+    @apply bg-white rounded-lg;
     box-shadow: var(--card-ring);
   }
 
@@ -138,7 +129,7 @@ button,
 
   .field {
     @apply w-full px-4 py-3 text-sm;
-    border: 1px solid var(--near-black);
+    border: 1px solid #afafaf;
     border-radius: 8px;
     background: var(--pure-white);
     color: var(--near-black);
@@ -151,8 +142,7 @@ button,
   }
 
   .top-stat {
-    @apply p-6;
-    border-radius: 12px;
+    @apply p-6 rounded-lg;
     background: var(--pure-white);
     box-shadow: var(--card-ring);
   }
@@ -202,6 +192,47 @@ button,
 .pill-secondary:hover,
 .chip:hover {
   border-color: var(--near-black);
+}
+
+/* ── Tree connector system ── */
+
+.tree-level {
+  position: relative;
+}
+
+.tree-node {
+  position: relative;
+  padding-left: 28px;
+}
+
+/* └/├ corner: vertical trunk above branch + horizontal branch to content */
+.tree-node::before {
+  content: '';
+  position: absolute;
+  left: 8px;
+  top: 0;
+  width: 14px;
+  height: 50%;
+  border-left: 2px solid var(--muted-gray);
+  border-bottom: 2px solid var(--muted-gray);
+  border-bottom-left-radius: 8px;
+  pointer-events: none;
+}
+
+/* Trunk continuation below branch (hidden for last child => └ shape) */
+.tree-node::after {
+  content: '';
+  position: absolute;
+  left: 8px;
+  top: 30%;
+  bottom: 0;
+  width: 2px;
+  background: var(--muted-gray);
+  pointer-events: none;
+}
+
+.tree-node:last-child::after {
+  display: none;
 }
 
 /* Markdown-rendered content styles */
