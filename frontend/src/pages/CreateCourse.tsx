@@ -40,7 +40,7 @@ function CoursePicker({
 
   return (
     <div className="relative">
-      <label className="block text-sm font-semibold text-[#0e0f0c] mb-2">Course</label>
+      <label className="block text-sm font-semibold text-[#1c1d1a] mb-2">Course</label>
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#4b4b4b]" />
         <input
@@ -67,7 +67,7 @@ function CoursePicker({
                 onClick={() => { onChange(c); setQuery(`${c.code} - ${c.name}`); setOpen(false); }}
                 className="w-full text-left px-4 py-2.5 hover:bg-[#efefef]"
               >
-                <p className="text-sm font-semibold text-[#0e0f0c]">{c.code}</p>
+                <p className="text-sm font-semibold text-[#1c1d1a]">{c.code}</p>
                 <p className="text-xs text-[#4b4b4b]">{c.name}</p>
               </button>
             ))
@@ -150,7 +150,7 @@ function TopicSelector({
                 {isOpen
                   ? <ChevronDown className="w-4 h-4 text-[#4b4b4b]" />
                   : <ChevronRight className="w-4 h-4 text-[#4b4b4b]" />}
-                <span className="text-sm font-semibold text-[#0e0f0c]">{ch.chapter}</span>
+                <span className="text-sm font-semibold text-[#1c1d1a]">{ch.chapter}</span>
                 {selectedCount > 0 && (
                   <span className="ml-auto text-xs text-[#4b4b4b]">
                     {selectedCount}/{ch.topics.length}
@@ -171,7 +171,7 @@ function TopicSelector({
                       onChange={() => onToggle(topic)}
                       className="w-4 h-4 accent-[#9fe870] cursor-pointer"
                     />
-                    <span className="text-sm text-[#0e0f0c]">{topic}</span>
+                    <span className="text-sm text-[#1c1d1a]">{topic}</span>
                   </label>
                 ))}
               </div>
@@ -205,7 +205,7 @@ function PreviewPanel({
           <ArrowLeft className="w-4 h-4" /> Back
         </button>
         <div className="flex-1">
-          <h3 className="text-lg font-bold text-[#0e0f0c]">{preview.title}</h3>
+          <h3 className="text-lg font-bold text-[#1c1d1a]">{preview.title}</h3>
           <p className="text-xs text-[#4b4b4b]">
             {preview.generationSource} · {preview.contextChunksUsed} chunks · {preview.questionCount} questions
           </p>
@@ -221,7 +221,7 @@ function PreviewPanel({
 
       {/* Lesson content — [S#] markers are clickable and open a source modal. */}
       <div className="surface-card p-6">
-        <h4 className="text-sm font-semibold text-[#0e0f0c] mb-3">Lesson Content</h4>
+        <h4 className="text-sm font-semibold text-[#1c1d1a] mb-3">Lesson Content</h4>
         <LessonWithCitations
           markdown={preview.lesson}
           sources={preview.sources}
@@ -231,11 +231,11 @@ function PreviewPanel({
 
       {/* Quiz questions */}
       <div className="surface-card p-6">
-        <h4 className="text-sm font-semibold text-[#0e0f0c] mb-4">Quiz Questions</h4>
+        <h4 className="text-sm font-semibold text-[#1c1d1a] mb-4">Quiz Questions</h4>
         <div className="space-y-5">
           {preview.questions.map((q, idx) => (
             <div key={idx} className="border border-[#e2e2e2] rounded-lg p-4">
-              <p className="text-sm font-medium text-[#0e0f0c] mb-2">
+              <p className="text-sm font-medium text-[#1c1d1a] mb-2">
                 {idx + 1}. {q.prompt}
               </p>
               {/* Metadata chips */}
@@ -430,7 +430,7 @@ export function CreateCoursePage() {
           <h2 className="section-title">Preview Mini-Course</h2>
           <p className="section-subtitle mt-2">Review the generated content before publishing.</p>
         </div>
-        {error && <div className="p-3 rounded-[8px] bg-[#ffe5e7] text-[#d03238] text-sm mb-4">{error}</div>}
+        {error && <div className="p-3 rounded-lg bg-[#ffe5e7] text-[#d03238] text-sm mb-4">{error}</div>}
         <PreviewPanel
           preview={preview}
           onConfirm={onConfirm}
@@ -458,7 +458,7 @@ export function CreateCoursePage() {
             loading={coursesLoading}
           />
           <div>
-            <label className="block text-sm font-semibold text-[#0e0f0c] mb-2">Question count</label>
+            <label className="block text-sm font-semibold text-[#1c1d1a] mb-2">Question count</label>
             <select
               className="field"
               value={questionCount}
@@ -474,7 +474,7 @@ export function CreateCoursePage() {
 
         {/* Topics — chapter accordion */}
         <div>
-          <label className="block text-sm font-semibold text-[#0e0f0c] mb-2">
+          <label className="block text-sm font-semibold text-[#1c1d1a] mb-2">
             Topics
             {selectedTopics.size > 0 && (
               <span className="ml-2 font-normal text-[#4b4b4b]">({selectedTopics.size} selected)</span>
@@ -492,11 +492,11 @@ export function CreateCoursePage() {
         <PromptBuilder value={options} onChange={setOptions} />
 
         {/* Error */}
-        {error && <div className="p-3 rounded-[8px] bg-[#ffe5e7] text-[#d03238] text-sm">{error}</div>}
+        {error && <div className="p-3 rounded-lg bg-[#ffe5e7] text-[#d03238] text-sm">{error}</div>}
 
         {/* Success (after confirm) */}
         {createdLink && (
-          <div className="p-4 rounded-[8px] bg-[#e2f6d5] text-[#054d28] text-sm">
+          <div className="p-4 rounded-lg bg-[#e2f6d5] text-[#054d28] text-sm">
             <p className="font-semibold mb-1">Mini-course created and published.</p>
             <p className="break-all">{createdLink}</p>
           </div>

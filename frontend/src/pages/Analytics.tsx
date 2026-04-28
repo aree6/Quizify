@@ -55,7 +55,7 @@ export function AnalyticsPage() {
         <div className="surface-card p-6 text-sm text-[#4b4b4b]">No courses generated yet.</div>
       ) : (
         <div className="mb-6 max-w-xl">
-          <label className="block text-sm font-semibold text-[#0e0f0c] mb-2">Select course</label>
+          <label className="block text-sm font-semibold text-[#1c1d1a] mb-2">Select course</label>
           <select className="field" value={selectedCourseId} onChange={(event) => setSelectedCourseId(event.target.value)}>
             {courses.map((course) => (
               <option key={course.id} value={course.id}>
@@ -66,7 +66,7 @@ export function AnalyticsPage() {
         </div>
       )}
 
-      {error && <div className="mb-4 p-3 rounded-[8px] bg-[#ffe5e7] text-[#d03238] text-sm">{error}</div>}
+      {error && <div className="mb-4 p-3 rounded-lg bg-[#ffe5e7] text-[#d03238] text-sm">{error}</div>}
 
       {loadingAnalytics ? (
         <div className="surface-card p-6 text-sm text-[#4b4b4b]">Loading analytics...</div>
@@ -75,15 +75,15 @@ export function AnalyticsPage() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
             <div className="top-stat">
               <p className="text-xs text-[#4b4b4b]">Total submissions</p>
-              <p className="text-3xl font-bold text-[#0e0f0c]">{analytics.totalSubmissions}</p>
+              <p className="text-3xl font-bold text-[#1c1d1a]">{analytics.totalSubmissions}</p>
             </div>
             <div className="top-stat">
               <p className="text-xs text-[#4b4b4b]">Average score</p>
-              <p className="text-3xl font-bold text-[#0e0f0c]">{analytics.averageScore}%</p>
+              <p className="text-3xl font-bold text-[#1c1d1a]">{analytics.averageScore}%</p>
             </div>
             <div className="top-stat">
               <p className="text-xs text-[#4b4b4b]">Pass rate</p>
-              <p className="text-3xl font-bold text-[#0e0f0c]">{analytics.passRate}%</p>
+              <p className="text-3xl font-bold text-[#1c1d1a]">{analytics.passRate}%</p>
             </div>
           </div>
 
@@ -103,7 +103,7 @@ export function AnalyticsPage() {
                 <tbody>
                   {analytics.submissions.map((submission) => (
                     <tr key={submission.id} className="border-b border-[#efefef] last:border-b-0">
-                      <td className="px-5 py-3 text-sm font-semibold text-[#0e0f0c]">{submission.studentName}</td>
+                      <td className="px-5 py-3 text-sm font-semibold text-[#1c1d1a]">{submission.studentName}</td>
                       <td className="px-5 py-3 text-sm text-[#4b4b4b]">{submission.score}/{submission.total}</td>
                       <td className="px-5 py-3 text-sm text-[#4b4b4b]">{submission.percentage}%</td>
                       <td className="px-5 py-3 text-sm text-[#4b4b4b]">{new Date(submission.submittedAt).toLocaleString()}</td>
