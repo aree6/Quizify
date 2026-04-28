@@ -129,17 +129,17 @@ function SourceModal({ source, total, onClose, onNavigate }: SourceModalProps) {
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[85vh] flex flex-col"
+        className="bg-white rounded-lg  max-w-2xl w-full max-h-[85vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-[#e2e2e2]">
           <div className="flex items-center gap-2 min-w-0">
             <FileText className="w-4 h-4 text-[#4b4b4b] flex-shrink-0" />
-            <span className="font-mono font-semibold text-sm text-[#0e0f0c]">
+            <span className="font-mono font-semibold text-sm text-[#1c1d1a]">
               [S{source.index}]
             </span>
-            <span className="text-sm font-medium text-[#0e0f0c] truncate">
+            <span className="text-sm font-medium text-[#1c1d1a] truncate">
               {source.sourceFile}
             </span>
           </div>
@@ -155,14 +155,14 @@ function SourceModal({ source, total, onClose, onNavigate }: SourceModalProps) {
 
         {/* Metadata */}
         <div className="flex items-center gap-3 px-5 py-2.5 border-b border-[#e2e2e2] bg-[#fafafa] text-xs text-[#4b4b4b] flex-wrap">
-          {source.chapter && <span>Chapter: <span className="text-[#0e0f0c] font-medium">{source.chapter}</span></span>}
+          {source.chapter && <span>Chapter: <span className="text-[#1c1d1a] font-medium">{source.chapter}</span></span>}
           <span>Chunk #{source.chunkIndex}</span>
           <span>Similarity: {Math.round(source.similarity * 100)}%</span>
         </div>
 
         {/* Full chunk text */}
         <div className="flex-1 overflow-y-auto px-5 py-4">
-          <p className="text-sm text-[#0e0f0c] leading-relaxed whitespace-pre-wrap">
+          <p className="text-sm text-[#1c1d1a] leading-relaxed whitespace-pre-wrap">
             {source.text}
           </p>
         </div>

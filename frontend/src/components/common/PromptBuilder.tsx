@@ -84,7 +84,7 @@ function TogglePills<T extends string>({
   return (
     <div className="space-y-1.5">
       <div className="flex items-start gap-1.5">
-        <p className="text-xs font-semibold text-[#0e0f0c]">{label}</p>
+        <p className="text-xs font-semibold text-[#1c1d1a]">{label}</p>
         <span title={hint} className="text-[#a0a0a0] cursor-help">
           <Info className="w-3 h-3" />
         </span>
@@ -101,7 +101,7 @@ function TogglePills<T extends string>({
               className={
                 'px-2.5 py-1 text-xs rounded-full border transition-colors cursor-pointer ' +
                 (active
-                  ? 'bg-[#9fe870] border-[#9fe870] text-[#0e0f0c] font-semibold'
+                  ? 'bg-[#9fe870] border-[#9fe870] text-[#1c1d1a] font-semibold'
                   : 'bg-white border-[#e2e2e2] text-[#4b4b4b] hover:border-[#9fe870]')
               }
             >
@@ -137,7 +137,7 @@ function PillRadio<T extends string>({
   return (
     <div className="space-y-1.5">
       <div className="flex items-start gap-1.5">
-        <p className="text-xs font-semibold text-[#0e0f0c]">{label}</p>
+        <p className="text-xs font-semibold text-[#1c1d1a]">{label}</p>
         <span title={hint} className="text-[#a0a0a0] cursor-help">
           <Info className="w-3 h-3" />
         </span>
@@ -154,7 +154,7 @@ function PillRadio<T extends string>({
               className={
                 'px-2.5 py-1 text-xs rounded-full border transition-colors cursor-pointer ' +
                 (active
-                  ? 'bg-[#9fe870] border-[#9fe870] text-[#0e0f0c] font-semibold'
+                  ? 'bg-[#9fe870] border-[#9fe870] text-[#1c1d1a] font-semibold'
                   : 'bg-white border-[#e2e2e2] text-[#4b4b4b] hover:border-[#9fe870]')
               }
             >
@@ -219,7 +219,7 @@ export function PromptBuilder({ value, onChange, defaultExpanded = false }: Prom
       >
         {expanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
         <Sparkles className="w-4 h-4 text-[#054d28]" />
-        <span className="text-sm font-semibold text-[#0e0f0c]">Generation options</span>
+        <span className="text-sm font-semibold text-[#1c1d1a]">Generation options</span>
         <span className="text-xs text-[#4b4b4b] ml-auto truncate max-w-[50%]">
           Bloom: {enabledBloomLabels || 'None'} · SOLO: {enabledSoloLabels || 'None'} · Length: {LENGTH_OPTIONS.find((o) => o.value === value.lengthLevel)?.label}
         </span>
@@ -252,7 +252,7 @@ export function PromptBuilder({ value, onChange, defaultExpanded = false }: Prom
           {/* Custom instructions — free-text override */}
           <div className="space-y-1.5">
             <div className="flex items-start gap-1.5">
-              <p className="text-xs font-semibold text-[#0e0f0c]">Custom instructions (optional)</p>
+              <p className="text-xs font-semibold text-[#1c1d1a]">Custom instructions (optional)</p>
               <span
                 title="Free-text directives appended to the prompt. Injection-like patterns are auto-stripped."
                 className="text-[#a0a0a0] cursor-help"
