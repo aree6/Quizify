@@ -51,9 +51,9 @@ export function DashboardPage() {
           return (
             <div key={card.path} className="surface-card card-hover p-6">
               <div className="w-12 h-12 rounded-full bg-[#efefef] flex items-center justify-center mb-4">
-                <Icon className="w-5 h-5 text-[#0e0f0c]" />
+                <Icon className="w-5 h-5 text-[#1c1d1a]" />
               </div>
-              <h3 className="text-xl font-bold text-[#0e0f0c] mb-1">{card.title}</h3>
+              <h3 className="text-xl font-bold text-[#1c1d1a] mb-1">{card.title}</h3>
               <p className="text-sm text-[#4b4b4b] mb-4">{card.desc}</p>
               <Link to={card.path} className="pill-primary">
                 {card.cta}
@@ -64,7 +64,7 @@ export function DashboardPage() {
       </div>
 
       <div className="mt-8 surface-card p-6">
-        <h3 className="text-lg font-bold text-[#0e0f0c] mb-2">Recent Activity</h3>
+        <h3 className="text-lg font-bold text-[#1c1d1a] mb-2">Recent Activity</h3>
         {user?.role === 'Student' ? (
           <p className="text-sm text-[#4b4b4b]">No attempts yet. Ask your lecturer for the latest quiz link.</p>
         ) : (

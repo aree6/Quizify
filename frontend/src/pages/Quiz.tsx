@@ -86,7 +86,7 @@ export function QuizPage() {
     <div className="min-h-screen bg-white py-6 sm:py-8 px-4">
       <div className="max-w-3xl mx-auto">
         <div className="surface-card p-6 sm:p-8 mb-5">
-          <h1 className="text-2xl sm:text-3xl font-bold text-[#0e0f0c]">{course.title}</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-[#1c1d1a]">{course.title}</h1>
           <LessonWithCitations
             markdown={course.lessonContent}
             sources={course.sources}
@@ -102,9 +102,9 @@ export function QuizPage() {
 
         {result ? (
           <div className="surface-card p-6 sm:p-8">
-            <h2 className="text-2xl font-bold text-[#0e0f0c] mb-3">Result</h2>
+            <h2 className="text-2xl font-bold text-[#1c1d1a] mb-3">Result</h2>
             <p className="text-sm text-[#4b4b4b]">
-              Score: <span className="font-bold text-[#0e0f0c]">{result.score}/{result.total}</span> ({result.percentage}%)
+              Score: <span className="font-bold text-[#1c1d1a]">{result.score}/{result.total}</span> ({result.percentage}%)
             </p>
             <p className={`text-sm mt-2 font-semibold ${result.passed ? 'text-[#054d28]' : 'text-[#d03238]'}`}>
               {result.passed ? 'Passed' : 'Not passed'} (required {result.passPercentage}%)
@@ -117,7 +117,7 @@ export function QuizPage() {
                 const correctIdx = answer?.correctOptionIndex ?? -1;
                 return (
                   <div key={question.id} className="ring-card p-4">
-                    <p className="text-sm font-semibold text-[#0e0f0c] mb-2">
+                    <p className="text-sm font-semibold text-[#1c1d1a] mb-2">
                       {index + 1}. {question.prompt}
                     </p>
                     {/* Metadata chips */}
@@ -171,24 +171,24 @@ export function QuizPage() {
         ) : (
           <form onSubmit={submitQuiz} className="space-y-4">
             <div className="surface-card p-6">
-              <label className="block text-sm font-semibold text-[#0e0f0c] mb-2">Student name</label>
+              <label className="block text-sm font-semibold text-[#1c1d1a] mb-2">Student name</label>
               <input className="field" value={studentName} onChange={(event) => setStudentName(event.target.value)} required placeholder="Enter full name" />
             </div>
 
             {course.questions.map((question, index) => (
               <div key={question.id} className="surface-card p-6">
-                <p className="text-sm font-semibold text-[#0e0f0c] mb-3">
+                <p className="text-sm font-semibold text-[#1c1d1a] mb-3">
                   {index + 1}. {question.prompt}
                 </p>
                 <div className="space-y-2">
                   {question.options.map((option, optionIndex) => (
                     <label
                       key={`${question.id}-${optionIndex}`}
-                      className={`flex items-center gap-3 p-3 rounded-[999px] border ${
-                        answers[question.id] === optionIndex
-                          ? 'border-[#9fe870] bg-[#e2f6d5]'
-                          : 'border-[#0e0f0c] bg-white'
-                      }`}
+                       className={`flex items-center gap-3 p-3 rounded-lg border ${
+                         answers[question.id] === optionIndex
+                           ? 'border-[#9fe870] bg-[#e2f6d5]'
+                           : 'border-[#afafaf] bg-white'
+                       }`}
                     >
                       <input
                         type="radio"
@@ -196,14 +196,14 @@ export function QuizPage() {
                         checked={answers[question.id] === optionIndex}
                         onChange={() => setAnswers((prev) => ({ ...prev, [question.id]: optionIndex }))}
                       />
-                      <span className="text-sm text-[#0e0f0c]">{option}</span>
+                      <span className="text-sm text-[#1c1d1a]">{option}</span>
                     </label>
                   ))}
                 </div>
               </div>
             ))}
 
-            {error && <div className="p-3 rounded-[8px] bg-[#ffe5e7] text-[#d03238] text-sm">{error}</div>}
+            {error && <div className="p-3 rounded-lg bg-[#ffe5e7] text-[#d03238] text-sm">{error}</div>}
 
             <button type="submit" disabled={submitting} className="pill-primary">
               {submitting ? 'Submitting...' : 'Submit Quiz'}
