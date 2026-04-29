@@ -180,7 +180,6 @@ export function MaterialsPage() {
   const [courseQuery, setCourseQuery] = useState('');
   const [collapsedStoredCourses, setCollapsedStoredCourses] = useState<Record<string, boolean>>({});
   const [collapsedChapters, setCollapsedChapters] = useState<Record<string, boolean>>({});
-  const [collapsedSubgroups, setCollapsedSubgroups] = useState<Record<string, boolean>>({});
   const [collapsedUploadCourses, setCollapsedUploadCourses] = useState<Record<string, boolean>>({});
   const [collapsedUploadChapters, setCollapsedUploadChapters] = useState<Record<string, boolean>>({});
 
@@ -384,10 +383,6 @@ export function MaterialsPage() {
     setCollapsedChapters((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
-  const toggleSubgroup = (key: string) => {
-    setCollapsedSubgroups((prev) => ({ ...prev, [key]: !prev[key] }));
-  };
-
   const toggleUploadCourse = (key: string) => {
     setCollapsedUploadCourses((prev) => ({ ...prev, [key]: !prev[key] }));
   };
@@ -455,7 +450,7 @@ export function MaterialsPage() {
         <div className="surface-card p-6 mb-6">
           <div onDragOver={(event) => event.preventDefault()} onDrop={handleDrop} className="ring-card p-8 text-center mb-4">
             <Upload className="w-8 h-8 mx-auto text-[#4b4b4b] mb-2" />
-            <p className="text-sm font-semibold text-[#0e0f0c]">Drop files here or click to select</p>
+            <p className="text-sm font-semibold text-[#1c1d1a]">Drop files here or click to select</p>
             <p className="text-xs text-[#4b4b4b] mt-1">PDF and PPTX files supported</p>
             <div className="flex flex-wrap gap-2 justify-center mt-4">
               <button type="button" onClick={() => fileInputRef.current?.click()} className="pill-secondary">Select Files</button>
@@ -510,7 +505,7 @@ export function MaterialsPage() {
                         <div className="flex items-center justify-between gap-3 mb-2 mt-2">
                           <button type="button" className="inline-flex items-center gap-2 min-w-0 flex-1" onClick={() => toggleUploadCourse(courseKey)}>
                             {courseCollapsed ? <ChevronRight className="w-4 h-4 flex-shrink-0" /> : <ChevronDown className="w-4 h-4 flex-shrink-0" />}
-                            <p className="text-sm font-semibold text-[#0e0f0c] truncate">{getCourseDisplay(courseCode)}</p>
+                            <p className="text-sm font-semibold text-[#1c1d1a] truncate">{getCourseDisplay(courseCode)}</p>
                             <span className="text-xs text-[#4b4b4b] flex-shrink-0">({totalFiles} files)</span>
                           </button>
                           <button type="button" onClick={() => setEditingCourseCode(editingCourseCode === courseCode ? null : courseCode)} className="p-1.5 text-[#4b4b4b] flex-shrink-0">
@@ -547,7 +542,7 @@ export function MaterialsPage() {
                                   <div key={uploadChapterKey} className="border border-[#e2e2e2] rounded-lg p-3 bg-[#fafafa]">
                                     <button type="button" className="inline-flex items-center gap-2 mb-2" onClick={() => toggleUploadChapter(uploadChapterKey)}>
                                       {chapterCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                                      <span className="text-xs font-semibold text-[#0e0f0c]">{chapterKey}</span>
+                                      <span className="text-xs font-semibold text-[#1c1d1a]">{chapterKey}</span>
                                       <span className="text-xs text-[#4b4b4b]">({sortedItems.length})</span>
                                     </button>
 
@@ -560,7 +555,7 @@ export function MaterialsPage() {
                                               <div className="flex items-start justify-between gap-2 mb-2">
                                                 <div className="min-w-0 flex-1">
                                                   <p
-                                                    className="text-sm font-semibold text-[#0e0f0c] truncate"
+                                                    className="text-sm font-semibold text-[#1c1d1a] truncate"
                                                     onDoubleClick={() => {
                                                       const next = window.prompt('Edit file name', item.fileName);
                                                       if (next !== null) updateQueueItem(item.id, { fileName: next });
@@ -630,7 +625,7 @@ export function MaterialsPage() {
             </div>
           )}
 
-          {error && <div className="mt-4 p-3 rounded-[8px] bg-[#ffe5e7] text-[#d03238] text-sm">{error}</div>}
+          {error && <div className="mt-4 p-3 rounded-lg bg-[#ffe5e7] text-[#d03238] text-sm">{error}</div>}
         </div>
       )}
 
@@ -649,7 +644,7 @@ export function MaterialsPage() {
           ) : Object.keys(filteredStoredByCourse).length === 0 ? (
             <div className="surface-card p-6 text-sm text-[#4b4b4b]">No materials uploaded yet.</div>
           ) : (
-            <div className="space-y-6">
+            <div className="space-y-6 border border-[#e2e2e2] rounded-lg">
               {Object.entries(filteredStoredByCourse)
                 .sort(([a], [b]) => a.localeCompare(b))
                 .map(([courseCode, items]) => {
@@ -668,10 +663,10 @@ export function MaterialsPage() {
 
                   return (
                     <div key={courseCode} className="surface-card overflow-hidden">
-                      <div className="px-4 sm:px-6 py-4 border-b border-[#efefef] flex flex-wrap items-center justify-between gap-2">
+                      <div className="px-4 sm:px-6 py-4 flex flex-wrap items-center justify-between gap-2">
                         <button type="button" onClick={() => toggleStoredCourse(courseCode)} className="inline-flex items-center gap-2 text-left">
                           {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                          <span className="text-lg font-bold text-[#0e0f0c]">{course?.name || courseCode}</span>
+                          <span className="text-lg font-bold text-[#1c1d1a]">{course?.name || courseCode}</span>
                           <span className="text-sm text-[#4b4b4b]">({courseCode})</span>
                         </button>
                         <div className="flex items-center gap-2">
@@ -683,23 +678,25 @@ export function MaterialsPage() {
                       </div>
 
                       {!collapsed && (
-                        <div className="p-3 sm:p-4 space-y-3">
+                        <div className="p-3 sm:p-4 tree-level">
                           {ci.length > 0 && (
-                            <div className="ring-card p-3">
-                              <p className="text-sm font-semibold text-[#0e0f0c] mb-2">Course Information</p>
-                              {ci.map((item) => (
-                                <div key={item.id} className="flex flex-wrap items-center justify-between gap-2 rounded-[8px] p-2">
-                                  <p className="text-sm text-[#0e0f0c]">{item.file_name}</p>
-                                  <div className="flex items-center gap-2">
-                                    <button type="button" className="pill-secondary !px-2 !py-1.5" onClick={() => openReplace(item)}>
-                                      <Edit2 className="w-3.5 h-3.5" />
-                                    </button>
-                                    <button type="button" onClick={() => handleDelete(item.id)} className="pill-secondary !px-2 !py-1.5">
-                                      <Trash2 className="w-3.5 h-3.5" />
-                                    </button>
+                            <div className="bg-white rounded-lg p-3 tree-node ">
+                              <p className="text-sm font-semibold text-[#1c1d1a] mb-2">Course Information</p>
+                              <div className="tree-level">
+                                {ci.map((item) => (
+                                  <div key={item.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg p-2 tree-node">
+                                    <p className="text-sm text-[#1c1d1a]">{item.file_name}</p>
+                                    <div className="flex items-center gap-2">
+                                      <button type="button" className="pill-secondary !px-2 !py-1.5" onClick={() => openReplace(item)}>
+                                        <Edit2 className="w-3.5 h-3.5" />
+                                      </button>
+                                      <button type="button" onClick={() => handleDelete(item.id)} className="pill-secondary !px-2 !py-1.5">
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                      </button>
+                                    </div>
                                   </div>
-                                </div>
-                              ))}
+                                ))}
+                              </div>
                             </div>
                           )}
 
@@ -708,7 +705,7 @@ export function MaterialsPage() {
                             .map(([chapter, chapterItems]) => {
                               const sorted = [...chapterItems].sort((a, b) => a.file_name.localeCompare(b.file_name, undefined, { numeric: true, sensitivity: 'base' }));
                               const chapterKey = `${courseCode}__${chapter}`;
-                              const chapterCollapsed = collapsedChapters[chapterKey] || false;
+                              const chapterCollapsed = collapsedChapters[chapterKey] ?? true;
 
                               const subgrouped: Record<string, Material[]> = {};
                               sorted.forEach((item) => {
@@ -718,11 +715,11 @@ export function MaterialsPage() {
                               });
 
                               return (
-                                <div key={chapter} className="ring-card p-3">
+                                <div key={chapter} className="bg-white rounded-lg pr-3 pt-3 pb-3  tree-node ">
                                   <div className="flex items-center justify-between mb-2">
                                     <button type="button" onClick={() => toggleChapter(chapterKey)} className="inline-flex items-center gap-2">
                                       {chapterCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                                      <span className="text-sm font-semibold text-[#0e0f0c]">{chapter}</span>
+                                      <span className="text-sm font-semibold text-[#1c1d1a]">{chapter}</span>
                                     </button>
                                     <div className="flex items-center gap-2">
                                       <button type="button" className="pill-secondary !px-2 !py-1.5" onClick={() => handleDeleteChapter(courseCode, chapter)}>
@@ -732,45 +729,32 @@ export function MaterialsPage() {
                                   </div>
 
                                   {!chapterCollapsed && (
-                                    <div className="space-y-2">
+                                    <div className="tree-level">
                                       {Object.entries(subgrouped)
                                         .sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true }))
-                                        .map(([subgroup, subgroupItems]) => {
-                                          const subgroupKey = `${courseCode}__${chapter}__${subgroup}`;
-                                          const subgroupCollapsed = collapsedSubgroups[subgroupKey] || false;
-
-                                          return (
-                                            <div key={subgroupKey} className="border border-[#efefef] rounded-[8px] p-2">
-                                              <button type="button" onClick={() => toggleSubgroup(subgroupKey)} className="inline-flex items-center gap-2 mb-2">
-                                                {subgroupCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                                                <span className="text-xs font-semibold text-[#4b4b4b]">Sub-chapter {subgroup}</span>
-                                              </button>
-                                              {!subgroupCollapsed && (
-                                                <div className="space-y-2">
-                                                  {subgroupItems.map((item) => (
-                                                    <div key={item.id} className="flex flex-wrap items-center justify-between gap-2  rounded-[8px] p-2">
-                                                      <div>
-                                                        <p className="text-sm text-[#0e0f0c]">{item.file_name}</p>
-                                                        {item.error_message && <p className="text-xs text-[#d03238] mt-1">{item.error_message}</p>}
-                                                      </div>
-                                                      <div className="flex items-center gap-2">
-                                                        <span className="text-xs text-[#4b4b4b]">{formatBytes(item.file_size)}</span>
-                                                        <span className="text-xs text-[#4b4b4b]">{item.chunk_count} chunks</span>
-                                                        <span className={statusBadgeClass(item.status)}>{item.status}</span>
-                                                        <button type="button" className="pill-secondary !px-2 !py-1.5" onClick={() => openReplace(item)}>
-                                                          <Edit2 className="w-3.5 h-3.5" />
-                                                        </button>
-                                                        <button type="button" onClick={() => handleDelete(item.id)} className="pill-secondary !px-2 !py-1.5">
-                                                          <Trash2 className="w-3.5 h-3.5" />
-                                                        </button>
-                                                      </div>
-                                                    </div>
-                                                  ))}
-                                                </div>
-                                              )}
+                                        .flatMap(([subgroup, subgroupItems]) =>
+                                          subgroupItems.map((item) => ({ ...item, _subgroup: subgroup }))
+                                        )
+                                        .map((item) => (
+                                          <div key={item.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg pt-2 pb-2 pl-2 tree-node">
+                                            <div>
+                                              <p className="text-sm text-[#1c1d1a]">
+                                                <span className="text-[#afafaf] font-medium">{item._subgroup}</span> {item.file_name}
+                                              </p>
+                                              {item.error_message && <p className="text-xs text-[#d03238] mt-1">{item.error_message}</p>}
                                             </div>
-                                          );
-                                        })}
+                                            <div className="flex items-center gap-2">
+                                              <span className="text-xs text-[#4b4b4b]">{formatBytes(item.file_size)}</span>
+                                              {item.status === 'Processing' && <span className={statusBadgeClass(item.status)}>{item.status}</span>}
+                                              <button type="button" className="pill-secondary !px-2 !py-1.5" onClick={() => openReplace(item)}>
+                                                <Edit2 className="w-3.5 h-3.5" />
+                                              </button>
+                                              <button type="button" onClick={() => handleDelete(item.id)} className="pill-secondary !px-2 !py-1.5">
+                                                <Trash2 className="w-3.5 h-3.5" />
+                                              </button>
+                                            </div>
+                                          </div>
+                                        ))}
                                     </div>
                                   )}
                                 </div>
@@ -794,19 +778,19 @@ export function MaterialsPage() {
         className="hidden"
       />
 
-      <div className="mt-8 pt-6 border-t border-[#efefef]">
+      <div className="mt-8 pt-6 ">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="top-stat">
             <p className="text-xs text-[#4b4b4b]">Files</p>
-            <p className="text-3xl font-bold text-[#0e0f0c]">{stats.files}</p>
+            <p className="text-3xl font-bold text-[#1c1d1a]">{stats.files}</p>
           </div>
           <div className="top-stat">
             <p className="text-xs text-[#4b4b4b]">Indexed chunks</p>
-            <p className="text-3xl font-bold text-[#0e0f0c]">{stats.chunks}</p>
+            <p className="text-3xl font-bold text-[#1c1d1a]">{stats.chunks}</p>
           </div>
           <div className="top-stat">
             <p className="text-xs text-[#4b4b4b]">Storage</p>
-            <p className="text-3xl font-bold text-[#0e0f0c]">{formatBytes(stats.bytes)}</p>
+            <p className="text-3xl font-bold text-[#1c1d1a]">{formatBytes(stats.bytes)}</p>
           </div>
         </div>
       </div>
