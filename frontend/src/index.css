@@ -1,5 +1,21 @@
 @import "tailwindcss";
 
+@theme {
+  --color-near-black: #1c1d1a;
+  --color-pure-white: #ffffff;
+  --color-lime: #9fe870;
+  --color-dark-green: #163300;
+  --color-chip-gray: #efefef;
+  --color-body-gray: #4b4b4b;
+  --color-muted-gray: #afafaf;
+  --color-hover-gray: #e2e2e2;
+  --color-light-mint: #e2f6d5;
+  --color-positive: #054d28;
+  --color-danger: #d03238;
+  --color-warning: #ffd11a;
+  --color-error-surface: #ffe5e7;
+}
+
 :root {
   --near-black: #1c1d1a;
   --pure-white: #ffffff;
@@ -46,27 +62,23 @@ button,
 
 @layer components {
   .app-shell {
-    @apply min-h-screen;
-    background: var(--pure-white);
+    @apply min-h-screen bg-pure-white;
   }
 
   .section-title {
-    @apply text-[2rem] sm:text-[2.5rem] font-bold;
-    color: var(--near-black);
+    @apply text-[2rem] sm:text-[2.5rem] font-bold text-near-black;
     line-height: 1.1;
-    font-weight: 700;
   }
 
   .section-subtitle {
-    @apply text-sm sm:text-base;
-    color: var(--body-gray);
+    @apply text-sm sm:text-base text-body-gray;
   }
 
   .display-title {
     font-size: clamp(2.25rem, 10vw, 6rem);
     font-weight: 900;
     line-height: 0.85;
-    color: var(--near-black);
+    @apply text-near-black;
   }
 
   .surface-card {
@@ -79,60 +91,37 @@ button,
   }
 
   .pill-primary {
-    @apply inline-flex items-center justify-center px-5 py-2.5 text-sm font-semibold;
-    border-radius: 999px;
-    background: var(--lime);
-    color: var(--dark-green);
-    border: 1px solid transparent;
+    @apply inline-flex items-center justify-center px-5 py-2.5 text-sm font-semibold rounded-[999px] bg-lime text-dark-green border border-transparent cursor-pointer;
     transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease, opacity 150ms ease;
-    cursor: pointer;
   }
 
   .pill-dark {
-    @apply inline-flex items-center justify-center px-5 py-2.5 text-sm font-semibold;
-    border-radius: 999px;
-    background: var(--near-black);
-    color: var(--pure-white);
-    border: 1px solid transparent;
+    @apply inline-flex items-center justify-center px-5 py-2.5 text-sm font-semibold rounded-[999px] bg-near-black text-white border border-transparent cursor-pointer;
     transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease, opacity 150ms ease;
-    cursor: pointer;
   }
 
   .pill-secondary {
-    @apply inline-flex items-center justify-center px-5 py-2.5 text-sm font-semibold;
-    border-radius: 999px;
-    background: var(--chip-gray);
-    color: var(--near-black);
-    border: 1px solid transparent;
+    @apply inline-flex items-center justify-center px-5 py-2.5 text-sm font-semibold rounded-[999px] bg-chip-gray text-near-black border border-transparent cursor-pointer;
     transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease, opacity 150ms ease;
-    cursor: pointer;
+  }
+
+  .pill-icon {
+    @apply inline-flex items-center justify-center w-9 h-9 rounded-[999px] bg-chip-gray text-near-black border border-transparent cursor-pointer;
+    transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease, opacity 150ms ease;
   }
 
   .chip {
-    @apply inline-flex items-center px-4 py-2 text-sm font-medium;
-    border-radius: 999px;
-    background: var(--chip-gray);
-    color: var(--near-black);
-    border: 1px solid transparent;
-    cursor: pointer;
+    @apply inline-flex items-center px-4 py-2 text-sm font-medium rounded-[999px] bg-chip-gray text-near-black border border-transparent cursor-pointer;
     transition: background-color 150ms ease, color 150ms ease, opacity 150ms ease;
   }
 
   .chip-active {
-    @apply inline-flex items-center px-4 py-2 text-sm font-medium;
-    border-radius: 999px;
-    background: var(--near-black);
-    color: var(--pure-white);
-    border: 1px solid var(--near-black);
-    cursor: pointer;
+    @apply inline-flex items-center px-4 py-2 text-sm font-medium rounded-[999px] bg-near-black text-white border border-near-black cursor-pointer;
   }
 
   .field {
-    @apply w-full px-4 py-3 text-sm;
+    @apply w-full px-4 py-3 text-sm rounded-lg bg-white text-near-black;
     border: 1px solid #afafaf;
-    border-radius: 8px;
-    background: var(--pure-white);
-    color: var(--near-black);
   }
 
   .field:focus {
@@ -142,19 +131,16 @@ button,
   }
 
   .top-stat {
-    @apply p-6 rounded-lg;
-    background: var(--pure-white);
+    @apply p-6 rounded-lg bg-white;
     box-shadow: var(--card-ring);
   }
 
   .status-badge {
-    @apply inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold;
-    border-radius: 999px;
+    @apply inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-[999px];
   }
 
   .status-active {
-    background: var(--light-mint);
-    color: var(--positive);
+    @apply bg-light-mint text-positive;
   }
 
   .status-processing {
@@ -163,20 +149,18 @@ button,
   }
 
   .status-failed {
-    background: #ffe5e7;
-    color: var(--danger);
+    @apply bg-[#ffe5e7] text-danger;
   }
 
   .loading-screen {
-    @apply min-h-screen flex items-center justify-center;
-    color: var(--body-gray);
-    background: var(--pure-white);
+    @apply min-h-screen flex items-center justify-center text-body-gray bg-white;
   }
 }
 
 .pill-primary:hover,
 .pill-dark:hover,
 .pill-secondary:hover,
+.pill-icon:hover,
 .chip:hover {
   opacity: 1;
 }
@@ -190,6 +174,7 @@ button,
 }
 
 .pill-secondary:hover,
+.pill-icon:hover,
 .chip:hover {
   border-color: var(--near-black);
 }
