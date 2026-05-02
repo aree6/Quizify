@@ -12,7 +12,7 @@ export function RequireRole({ roles, children, fallback = null }: RequireRolePro
   const { user, isAuthenticated, isLoading } = useAuth();
 
   if (isLoading) {
-    return <div className="flex items-center justify-center min-h-screen text-slate-500">Loading...</div>;
+    return <div className="loading-screen">Loading...</div>;
   }
 
   if (!isAuthenticated || !user) {
