@@ -68,8 +68,8 @@ export function LessonWithCitations({ markdown, sources, className }: LessonWith
               className={
                 'inline-flex items-center align-baseline px-1.5 py-0 mx-0.5 text-[11px] font-mono font-semibold rounded ' +
                 (exists
-                  ? 'bg-[#e2f6d5] text-[#054d28] hover:bg-[#9fe870] cursor-pointer'
-                  : 'bg-[#f5f5f5] text-[#a0a0a0] cursor-not-allowed')
+                  ? 'bg-light-mint text-positive hover:bg-lime cursor-pointer'
+                  : 'bg-chip-gray/60 text-muted-gray cursor-not-allowed')
               }
             >
               {children}
@@ -123,7 +123,7 @@ function SourceModal({ source, total, onClose, onNavigate }: SourceModalProps) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-near-black/40 px-4"
       role="dialog"
       aria-modal="true"
       onClick={onClose}
@@ -133,13 +133,13 @@ function SourceModal({ source, total, onClose, onNavigate }: SourceModalProps) {
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-[#e2e2e2]">
+        <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-hover-gray">
           <div className="flex items-center gap-2 min-w-0">
-            <FileText className="w-4 h-4 text-[#4b4b4b] flex-shrink-0" />
-            <span className="font-mono font-semibold text-sm text-[#1c1d1a]">
+            <FileText className="w-4 h-4 text-body-gray flex-shrink-0" />
+            <span className="font-mono font-semibold text-sm text-near-black">
               [S{source.index}]
             </span>
-            <span className="text-sm font-medium text-[#1c1d1a] truncate">
+            <span className="text-sm font-medium text-near-black truncate">
               {source.sourceFile}
             </span>
           </div>
@@ -147,28 +147,28 @@ function SourceModal({ source, total, onClose, onNavigate }: SourceModalProps) {
             type="button"
             onClick={onClose}
             aria-label="Close source"
-            className="p-1 rounded hover:bg-[#f5f5f5] flex-shrink-0"
+            className="p-1 rounded hover:bg-chip-gray/60 flex-shrink-0"
           >
-            <X className="w-4 h-4 text-[#4b4b4b]" />
+            <X className="w-4 h-4 text-body-gray" />
           </button>
         </div>
 
         {/* Metadata */}
-        <div className="flex items-center gap-3 px-5 py-2.5 border-b border-[#e2e2e2] bg-[#fafafa] text-xs text-[#4b4b4b] flex-wrap">
-          {source.chapter && <span>Chapter: <span className="text-[#1c1d1a] font-medium">{source.chapter}</span></span>}
+        <div className="flex items-center gap-3 px-5 py-2.5 border-b border-hover-gray bg-chip-gray/60 text-xs text-body-gray flex-wrap">
+          {source.chapter && <span>Chapter: <span className="text-near-black font-medium">{source.chapter}</span></span>}
           <span>Chunk #{source.chunkIndex}</span>
           <span>Similarity: {Math.round(source.similarity * 100)}%</span>
         </div>
 
         {/* Full chunk text */}
         <div className="flex-1 overflow-y-auto px-5 py-4">
-          <p className="text-sm text-[#1c1d1a] leading-relaxed whitespace-pre-wrap">
+          <p className="text-sm text-near-black leading-relaxed whitespace-pre-wrap">
             {source.text}
           </p>
         </div>
 
         {/* Footer with prev/next navigation */}
-        <div className="flex items-center justify-between gap-2 px-5 py-3 border-t border-[#e2e2e2]">
+        <div className="flex items-center justify-between gap-2 px-5 py-3 border-t border-hover-gray">
           <button
             type="button"
             onClick={() => onNavigate(-1)}
@@ -177,7 +177,7 @@ function SourceModal({ source, total, onClose, onNavigate }: SourceModalProps) {
           >
             <ChevronLeft className="w-4 h-4" /> Previous
           </button>
-          <span className="text-xs text-[#4b4b4b]">
+          <span className="text-xs text-body-gray">
             Source {source.index} of {total}
           </span>
           <button

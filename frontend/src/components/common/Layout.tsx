@@ -34,10 +34,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
   return (
     <div className="app-shell min-h-screen">
       <header className="sticky top-0 z-50 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
-          <div className="flex items-center gap-1 overflow-x-auto pb-1 scrollbar-hide">
-            <div className="shrink-0 mr-4">
-              <img src={logoSvg} alt="Quizify" className="h-8 w-8" />
+        <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8 py-2 sm:py-3">
+          <div className="flex items-center gap-0 sm:gap-1 overflow-x-auto pb-1 scrollbar-hide">
+            <div className="shrink-0 sm:mr-4">
+              <img src={logoSvg} alt="Quizify" className="h-6 w-6 sm:h-8 sm:w-8 scale-125" />
             </div>
 
             {links.map((item) => {
@@ -47,15 +47,15 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   key={item.path}
                   to={item.path}
                   className={({ isActive }) =>
-                    `shrink-0 inline-flex items-center gap-2 px-3 py-2 rounded-[999px] text-sm font-semibold transition-colors ${
+                    `shrink-0 flex flex-col items-center gap-0 px-1 py-3 sm:inline-flex sm:flex-row sm:items-center sm:gap-2 sm:px-3 sm:py-2 rounded-lg text-[8px] sm:text-sm font-semibold transition-colors ${
                       isActive
-                        ? 'bg-[#e2f6d5] text-[#163300]'
-                        : 'text-[#4b4b4b] hover:text-[#1c1d1a] hover:bg-[#efefef]'
+                        ? 'bg-light-mint text-dark-green'
+                        : 'text-body-gray hover:text-near-black hover:bg-chip-gray'
                     }`
                   }
                 >
-                  <Icon className="w-4 h-4" />
-                  <span>{item.label}</span>
+                  <Icon className="w-5 h-5 sm:w-4 sm:h-4" />
+                  <span className="leading-tight">{item.label}</span>
                 </NavLink>
               );
             })}
@@ -63,7 +63,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <button
               type="button"
               onClick={handleLogout}
-              className="shrink-0 ml-auto inline-flex items-center gap-2 px-3 py-2 rounded-[999px] text-sm font-semibold text-[#4b4b4b] hover:text-[#d03238] hover:bg-[#efefef] transition-colors"
+              className="shrink-0 ml-auto inline-flex items-center gap-2 px-3 py-2 rounded-[999px] text-sm font-semibold text-body-gray hover:text-danger hover:bg-chip-gray transition-colors"
             >
               <LogOut className="w-4 h-4" />
               Logout
@@ -73,7 +73,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       </header>
 
       <main>
-        <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">{children}</div>
+        <div className="max-w-7xl mx-auto p-2">{children}</div>
       </main>
     </div>
   );

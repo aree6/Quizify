@@ -84,8 +84,8 @@ function TogglePills<T extends string>({
   return (
     <div className="space-y-1.5">
       <div className="flex items-start gap-1.5">
-        <p className="text-xs font-semibold text-[#1c1d1a]">{label}</p>
-        <span title={hint} className="text-[#a0a0a0] cursor-help">
+        <p className="text-xs font-semibold text-near-black">{label}</p>
+        <span title={hint} className="text-muted-gray cursor-help">
           <Info className="w-3 h-3" />
         </span>
       </div>
@@ -101,8 +101,8 @@ function TogglePills<T extends string>({
               className={
                 'px-2.5 py-1 text-xs rounded-full border transition-colors cursor-pointer ' +
                 (active
-                  ? 'bg-[#9fe870] border-[#9fe870] text-[#1c1d1a] font-semibold'
-                  : 'bg-white border-[#e2e2e2] text-[#4b4b4b] hover:border-[#9fe870]')
+                  ? 'bg-lime border-lime text-near-black font-semibold'
+                  : 'bg-white border-hover-gray text-body-gray hover:border-lime')
               }
             >
               {opt.label}
@@ -111,7 +111,7 @@ function TogglePills<T extends string>({
         })}
       </div>
       {selected.length > 0 && (
-        <p className="text-[11px] text-[#4b4b4b] leading-snug">
+        <p className="text-[11px] text-body-gray leading-snug">
           Enabled: {options.filter((o) => selected.includes(o.value)).map((o) => o.label).join(', ')}
         </p>
       )}
@@ -137,8 +137,8 @@ function PillRadio<T extends string>({
   return (
     <div className="space-y-1.5">
       <div className="flex items-start gap-1.5">
-        <p className="text-xs font-semibold text-[#1c1d1a]">{label}</p>
-        <span title={hint} className="text-[#a0a0a0] cursor-help">
+        <p className="text-xs font-semibold text-near-black">{label}</p>
+        <span title={hint} className="text-muted-gray cursor-help">
           <Info className="w-3 h-3" />
         </span>
       </div>
@@ -154,8 +154,8 @@ function PillRadio<T extends string>({
               className={
                 'px-2.5 py-1 text-xs rounded-full border transition-colors cursor-pointer ' +
                 (active
-                  ? 'bg-[#9fe870] border-[#9fe870] text-[#1c1d1a] font-semibold'
-                  : 'bg-white border-[#e2e2e2] text-[#4b4b4b] hover:border-[#9fe870]')
+                  ? 'bg-lime border-lime text-near-black font-semibold'
+                  : 'bg-white border-hover-gray text-body-gray hover:border-lime')
               }
             >
               {opt.label}
@@ -163,7 +163,7 @@ function PillRadio<T extends string>({
           );
         })}
       </div>
-      {activeHint && <p className="text-[11px] text-[#4b4b4b] leading-snug">{activeHint}</p>}
+      {activeHint && <p className="text-[11px] text-body-gray leading-snug">{activeHint}</p>}
     </div>
   );
 }
@@ -218,15 +218,15 @@ export function PromptBuilder({ value, onChange, defaultExpanded = false }: Prom
         className="w-full flex items-center gap-2 text-left cursor-pointer"
       >
         {expanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-        <Sparkles className="w-4 h-4 text-[#054d28]" />
-        <span className="text-sm font-semibold text-[#1c1d1a]">Generation options</span>
-        <span className="text-xs text-[#4b4b4b] ml-auto truncate max-w-[50%]">
+        <Sparkles className="w-4 h-4 text-positive" />
+        <span className="text-sm font-semibold text-near-black">Generation options</span>
+        <span className="text-xs text-body-gray ml-auto truncate max-w-[50%]">
           Bloom: {enabledBloomLabels || 'None'} · SOLO: {enabledSoloLabels || 'None'} · Length: {LENGTH_OPTIONS.find((o) => o.value === value.lengthLevel)?.label}
         </span>
       </button>
 
       {expanded && (
-        <div className="space-y-4 pt-2 border-t border-[#e2e2e2]">
+        <div className="space-y-4 pt-2 border-t border-hover-gray">
           <TogglePills
             label="Bloom's Taxonomy (Lesson + Quiz cognitive targets)"
             hint="Toggle the cognitive levels you want to target. Only enabled levels will appear in generated content."
@@ -252,10 +252,10 @@ export function PromptBuilder({ value, onChange, defaultExpanded = false }: Prom
           {/* Custom instructions — free-text override */}
           <div className="space-y-1.5">
             <div className="flex items-start gap-1.5">
-              <p className="text-xs font-semibold text-[#1c1d1a]">Custom instructions (optional)</p>
+              <p className="text-xs font-semibold text-near-black">Custom instructions (optional)</p>
               <span
                 title="Free-text directives appended to the prompt. Injection-like patterns are auto-stripped."
-                className="text-[#a0a0a0] cursor-help"
+                className="text-muted-gray cursor-help"
               >
                 <Info className="w-3 h-3" />
               </span>
@@ -270,7 +270,7 @@ export function PromptBuilder({ value, onChange, defaultExpanded = false }: Prom
               className="field text-xs w-full resize-y"
               maxLength={500}
             />
-            <p className="text-[11px] text-[#a0a0a0] text-right">{customRemaining} characters left</p>
+            <p className="text-[11px] text-muted-gray text-right">{customRemaining} characters left</p>
           </div>
         </div>
       )}
