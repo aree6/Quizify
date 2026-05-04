@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Mail, Lock, GraduationCap, Shield, User } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { getSelectedRole, setSelectedRole } from '../services/auth';
+import { PageError } from '../components/common/PageState';
 import logoSvg from '../assets/logo.svg';
 
 type UserRole = 'Lecturer' | 'Admin' | 'Student';
@@ -86,9 +87,9 @@ export function LoginPage() {
 
         <div className="surface-card p-6 sm:p-8">
           <div className="mb-6">
-            <label className="block text-sm font-semibold text-[#1c1d1a] mb-2">Login role</label>
+            <label className="block text-sm font-semibold text-near-black mb-2">Login role</label>
             <div className="relative">
-              <RoleIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#4b4b4b] pointer-events-none" />
+              <RoleIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-body-gray pointer-events-none" />
               <select
                 value={selectedRole}
                 onChange={(event) => handleRoleChange(event.target.value as UserRole)}
@@ -106,9 +107,9 @@ export function LoginPage() {
           </button>
 
           <div className="flex items-center gap-3 my-5">
-            <div className="h-px bg-[#efefef] flex-1" />
-            <span className="text-xs text-[#afafaf]">or</span>
-            <div className="h-px bg-[#efefef] flex-1" />
+            <div className="h-px bg-chip-gray flex-1" />
+            <span className="text-xs text-muted-gray">or</span>
+            <div className="h-px bg-chip-gray flex-1" />
           </div>
 
           <form
@@ -122,12 +123,12 @@ export function LoginPage() {
             }}
           >
             <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#4b4b4b]" />
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-body-gray" />
               <input name="email" type="email" required placeholder="Email" className="field pl-10" />
             </div>
 
             <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#4b4b4b]" />
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-body-gray" />
               <input name="password" type="password" required placeholder="Password" className="field pl-10" />
             </div>
 
@@ -136,17 +137,19 @@ export function LoginPage() {
             </button>
           </form>
 
-          <p className="text-xs text-[#afafaf] mt-5 text-center">Demo: lecturer@utm.my / password123</p>
+          <p className="text-xs text-muted-gray mt-5 text-center">Demo: lecturer@utm.my / password123</p>
 
-          {error && <div className="mt-4 p-3 rounded-lg bg-[#ffe5e7] text-[#d03238] text-sm">{error}</div>}
+          {error && <PageError error={error} className="mt-4" />}
         </div>
 
-        <div className="ring-card mt-4 p-4">
-          <p className="text-xs text-[#4b4b4b] font-semibold mb-2 text-center">Development Quick Access</p>
-          <button type="button" onClick={handleDevLogin} className="pill-secondary w-full">
-            Continue as {selectedRole}
-          </button>
-        </div>
+        {import.meta.env.DEV && (
+          <div className="ring-card mt-4 p-4">
+            <p className="text-xs text-body-gray font-semibold mb-2 text-center">Development Quick Access</p>
+            <button type="button" onClick={handleDevLogin} className="pill-secondary w-full">
+              Continue as {selectedRole}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -3,6 +3,10 @@ import { AlertCircle, CheckCircle, ChevronDown, ChevronRight, Edit2, Loader, Sea
 import { apiService } from '../services/api';
 import { COURSE_OPTIONS, findCourseByCode } from '../constants/courses';
 import type { Material } from '../types';
+import { PageLoading, PageEmpty, PageError } from '../components/common/PageState';
+import { useConfirmDialog } from '../components/common/useConfirmDialog';
+import { useToast } from '../components/common/Toast';
+import { Breadcrumbs } from '../components/common/Breadcrumbs';
 
 type MaterialType = 'course_info' | 'slide';
 
@@ -138,7 +142,7 @@ function queueFromFiles(files: FileList | null): QueueItem[] {
         status: 'pending' as const,
         fileName: inferFileName(file.name),
         materialType: inferredType,
-        chapterLabel: inferredType === 'course_info' ? 'CI' : inferred.chapterLabel,
+        chapterLabel: inferredType === 'course_info' ? 'Course Information' : inferred.chapterLabel,
         chapterItemLabel: inferredType === 'course_info' ? '' : inferred.chapterItemLabel,
         courseCode: suggestedCourseCode,
         folderRoot,
@@ -155,7 +159,7 @@ function normalizeChapterLabel(raw: string) {
 }
 
 function chapterOptions(max = 13) {
-  const options = ['CI'];
+  const options = ['Course Information'];
   for (let i = 1; i <= max; i += 1) {
     options.push(`Chapter ${i}`);
   }
@@ -178,12 +182,15 @@ export function MaterialsPage() {
   const [editingCourseCode, setEditingCourseCode] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [courseQuery, setCourseQuery] = useState('');
-  const [collapsedStoredCourses, setCollapsedStoredCourses] = useState<Record<string, boolean>>({});
+  const [expandedStoredCourses, setExpandedStoredCourses] = useState<Record<string, boolean>>({});
   const [collapsedChapters, setCollapsedChapters] = useState<Record<string, boolean>>({});
   const [collapsedUploadCourses, setCollapsedUploadCourses] = useState<Record<string, boolean>>({});
   const [collapsedUploadChapters, setCollapsedUploadChapters] = useState<Record<string, boolean>>({});
 
   const chapterMenuOptions = chapterOptions(13);
+
+  const { ask: confirm, dialog: confirmDialog } = useConfirmDialog();
+  const { showToast } = useToast();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
@@ -263,7 +270,7 @@ export function MaterialsPage() {
         if (item.id !== id) return item;
         const next = { ...item, ...patch };
         if (patch.materialType === 'course_info') {
-          next.chapterLabel = 'CI';
+          next.chapterLabel = 'Course Information';
           next.chapterItemLabel = '';
         }
         return next;
@@ -303,7 +310,7 @@ export function MaterialsPage() {
         const message = err instanceof Error ? err.message : 'Upload failed';
 
         if (message.toLowerCase().includes('duplicate material exists')) {
-          const shouldReplace = window.confirm(`Duplicate detected for ${item.fileName}. Replace existing material?`);
+          const shouldReplace = await confirm(`Duplicate detected for ${item.fileName}. Replace existing material?`, { title: 'Duplicate', confirmLabel: 'Replace', destructive: false });
           if (shouldReplace) {
             try {
               await apiService.uploadMaterialAdvanced({
@@ -362,21 +369,23 @@ export function MaterialsPage() {
   };
 
   const handleDeleteChapter = async (courseCode: string, chapter: string) => {
-    const yes = window.confirm(`Delete all materials in ${courseCode} / ${chapter}?`);
+    const yes = await confirm(`Delete all materials in ${courseCode} / ${chapter}?`, { title: 'Delete chapter' });
     if (!yes) return;
     await apiService.deleteChapterMaterials(courseCode, chapter);
     await loadMaterials();
+    showToast(`Deleted chapter ${chapter} materials.`);
   };
 
   const handleDeleteCourse = async (courseCode: string) => {
-    const yes = window.confirm(`Delete ALL materials for ${courseCode}?`);
+    const yes = await confirm(`Delete ALL materials for ${courseCode}?`, { title: 'Delete course' });
     if (!yes) return;
     await apiService.deleteCourseMaterials(courseCode);
     await loadMaterials();
+    showToast(`Deleted all materials for ${courseCode}.`);
   };
 
   const toggleStoredCourse = (courseCode: string) => {
-    setCollapsedStoredCourses((prev) => ({ ...prev, [courseCode]: !prev[courseCode] }));
+    setExpandedStoredCourses((prev) => ({ ...prev, [courseCode]: !prev[courseCode] }));
   };
 
   const toggleChapter = (key: string) => {
@@ -432,6 +441,7 @@ export function MaterialsPage() {
 
   return (
     <div>
+      <Breadcrumbs />
       <div className="mb-8">
         <h2 className="section-title">Materials Library</h2>
         <p className="section-subtitle mt-2">Upload course materials and manage them by course and chapter.</p>
@@ -449,9 +459,9 @@ export function MaterialsPage() {
       {viewMode === 'upload' && (
         <div className="surface-card p-6 mb-6">
           <div onDragOver={(event) => event.preventDefault()} onDrop={handleDrop} className="ring-card p-8 text-center mb-4">
-            <Upload className="w-8 h-8 mx-auto text-[#4b4b4b] mb-2" />
-            <p className="text-sm font-semibold text-[#1c1d1a]">Drop files here or click to select</p>
-            <p className="text-xs text-[#4b4b4b] mt-1">PDF and PPTX files supported</p>
+            <Upload className="w-8 h-8 mx-auto text-body-gray mb-2" />
+            <p className="text-sm font-semibold text-near-black">Drop files here or click to select</p>
+            <p className="text-xs text-body-gray mt-1">PDF and PPTX files supported</p>
             <div className="flex flex-wrap gap-2 justify-center mt-4">
               <button type="button" onClick={() => fileInputRef.current?.click()} className="pill-secondary">Select Files</button>
               <button type="button" onClick={() => folderInputRef.current?.click()} className="pill-secondary">Select Folder</button>
@@ -480,15 +490,15 @@ export function MaterialsPage() {
 
               {uploading && (
                 <div className="mb-3">
-                  <div className="w-full h-2 rounded-full bg-[#efefef] overflow-hidden">
-                    <div className="h-full bg-[#9fe870] transition-all duration-200" style={{ width: `${uploadProgress}%` }} />
+                  <div className="w-full h-2 rounded-full bg-chip-gray overflow-hidden">
+                    <div className="h-full bg-lime transition-[width] duration-200" style={{ width: `${uploadProgress}%` }} />
                   </div>
-                  <p className="text-xs text-[#4b4b4b] mt-1">Uploading {uploadProgress}%</p>
+                  <p className="text-xs text-body-gray mt-1">Uploading {uploadProgress}%</p>
                 </div>
               )}
 
               <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-                <p className="text-sm text-[#4b4b4b]">{queue.length} file(s) ready to upload</p>
+                <p className="text-sm text-body-gray">{queue.length} file(s) ready to upload</p>
               </div>
 
               <div className="space-y-4 max-h-[500px] overflow-y-auto pr-1 p-4 m-4">
@@ -505,17 +515,17 @@ export function MaterialsPage() {
                         <div className="flex items-center justify-between gap-3 mb-2 mt-2">
                           <button type="button" className="inline-flex items-center gap-2 min-w-0 flex-1" onClick={() => toggleUploadCourse(courseKey)}>
                             {courseCollapsed ? <ChevronRight className="w-4 h-4 flex-shrink-0" /> : <ChevronDown className="w-4 h-4 flex-shrink-0" />}
-                            <p className="text-sm font-semibold text-[#1c1d1a] truncate">{getCourseDisplay(courseCode)}</p>
-                            <span className="text-xs text-[#4b4b4b] flex-shrink-0">({totalFiles} files)</span>
+                            <p className="text-sm font-semibold text-near-black truncate">{getCourseDisplay(courseCode)}</p>
+                            <span className="text-xs text-body-gray flex-shrink-0">({totalFiles} files)</span>
                           </button>
-                          <button type="button" onClick={() => setEditingCourseCode(editingCourseCode === courseCode ? null : courseCode)} className="p-1.5 text-[#4b4b4b] flex-shrink-0">
+                          <button type="button" onClick={() => setEditingCourseCode(editingCourseCode === courseCode ? null : courseCode)} className="p-1.5 text-body-gray flex-shrink-0">
                             <Edit2 className="w-3.5 h-3.5" />
                           </button>
                         </div>
 
                         {editingCourseCode === courseCode && (
                           <select
-                            className="field !py-1.5 border border-gray-300 text-xs mb-3"
+                            className="field !py-1.5 border border-muted-gray text-xs mb-3"
                             value={courseCode}
                             onChange={(event) => {
                               setQueue((prev) => prev.map((item) => (item.courseCode === courseCode ? { ...item, courseCode: event.target.value } : item)));
@@ -539,23 +549,23 @@ export function MaterialsPage() {
                                 const sortedItems = [...chapterItems].sort(compareQueueItems);
 
                                 return (
-                                  <div key={uploadChapterKey} className="border border-[#e2e2e2] rounded-lg p-3 bg-[#fafafa]">
+                                  <div key={uploadChapterKey} className="border border-hover-gray rounded-lg p-3 bg-chip-gray/60">
                                     <button type="button" className="inline-flex items-center gap-2 mb-2" onClick={() => toggleUploadChapter(uploadChapterKey)}>
                                       {chapterCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                                      <span className="text-xs font-semibold text-[#1c1d1a]">{chapterKey}</span>
-                                      <span className="text-xs text-[#4b4b4b]">({sortedItems.length})</span>
+                                      <span className="text-xs font-semibold text-near-black">{chapterKey}</span>
+                                      <span className="text-xs text-body-gray">({sortedItems.length})</span>
                                     </button>
 
                                     {!chapterCollapsed && (
                                       <div className="space-y-2">
                                         {sortedItems.map((item) => {
-                                          const chapterValue = item.materialType === 'course_info' ? 'CI' : item.chapterLabel || 'Chapter 1';
+                                          const chapterValue = item.materialType === 'course_info' ? 'Course Information' : item.chapterLabel || 'Chapter 1';
                                           return (
                                             <div key={item.id} className="bg-white rounded-md p-3">
                                               <div className="flex items-start justify-between gap-2 mb-2">
                                                 <div className="min-w-0 flex-1">
                                                   <p
-                                                    className="text-sm font-semibold text-[#1c1d1a] truncate"
+                                                    className="text-sm font-semibold text-near-black truncate"
                                                     onDoubleClick={() => {
                                                       const next = window.prompt('Edit file name', item.fileName);
                                                       if (next !== null) updateQueueItem(item.id, { fileName: next });
@@ -563,14 +573,14 @@ export function MaterialsPage() {
                                                   >
                                                     {item.fileName}
                                                   </p>
-                                                  <p className="text-xs text-[#4b4b4b]">{formatBytes(item.file.size)}</p>
+                                                  <p className="text-xs text-body-gray">{formatBytes(item.file.size)}</p>
                                                 </div>
                                                 <div className="flex items-center gap-2 flex-shrink-0">
-                                                  {item.status === 'uploading' && <Loader className="w-4 h-4 text-[#4b4b4b] animate-spin" />}
-                                                  {item.status === 'success' && <CheckCircle className="w-4 h-4 text-[#054d28]" />}
-                                                  {item.status === 'error' && <AlertCircle className="w-4 h-4 text-[#d03238]" />}
+                                                  {item.status === 'uploading' && <Loader className="w-4 h-4 text-body-gray animate-spin" />}
+                                                  {item.status === 'success' && <CheckCircle className="w-4 h-4 text-positive" />}
+                                                  {item.status === 'error' && <AlertCircle className="w-4 h-4 text-danger" />}
                                                   {item.status === 'pending' && (
-                                                    <button type="button" onClick={() => removeFromQueue(item.id)} className="p-1 text-[#4b4b4b]">
+                                                    <button type="button" onClick={() => removeFromQueue(item.id)} className="p-1 text-body-gray">
                                                       <X className="w-4 h-4" />
                                                     </button>
                                                   )}
@@ -582,18 +592,18 @@ export function MaterialsPage() {
                                                   value={chapterValue}
                                                   onChange={(event) => {
                                                     const value = event.target.value;
-                                                    if (value === 'CI') {
-                                                      updateQueueItem(item.id, { materialType: 'course_info', chapterLabel: 'CI', chapterItemLabel: '' });
+                                                    if (value === 'Course Information') {
+                                                      updateQueueItem(item.id, { materialType: 'course_info', chapterLabel: 'Course Information', chapterItemLabel: '' });
                                                     } else {
                                                       updateQueueItem(item.id, { materialType: 'slide', chapterLabel: value });
                                                     }
                                                   }}
-                                                  className="field !py-1.5 border border-gray-300 text-xs"
+                                                  className="field !py-1.5 border border-muted-gray text-xs"
                                                 >
                                                   {chapterMenuOptions.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
                                                 </select>
                                                 <input
-                                                  className="field !py-1.5 border border-gray-300 text-xs"
+                                                  className="field !py-1.5 border border-muted-gray text-xs"
                                                   value={item.chapterItemLabel}
                                                   onChange={(event) => updateQueueItem(item.id, { chapterItemLabel: event.target.value })}
                                                   placeholder={item.materialType === 'course_info' ? '—' : '1.0'}
@@ -601,7 +611,7 @@ export function MaterialsPage() {
                                                 />
                                               </div>
 
-                                              {item.error && <p className="text-xs text-[#d03238] mt-2">{item.error}</p>}
+                                              {item.error && <p className="text-xs text-danger mt-2">{item.error}</p>}
                                             </div>
                                           );
                                         })}
@@ -625,31 +635,31 @@ export function MaterialsPage() {
             </div>
           )}
 
-          {error && <div className="mt-4 p-3 rounded-lg bg-[#ffe5e7] text-[#d03238] text-sm">{error}</div>}
+          {error && <PageError error={error} className="mt-4" />}
         </div>
       )}
 
       {viewMode === 'view' && (
         <>
           <div className="surface-card p-4 mb-4">
-            <label className="block text-xs font-semibold text-[#4b4b4b] mb-1">Search by course</label>
+            <label className="block text-xs font-semibold text-body-gray mb-1">Search by course</label>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#4b4b4b]" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-body-gray" />
               <input className="field pl-10" value={courseQuery} onChange={(event) => setCourseQuery(event.target.value)} placeholder="Type course name or code" />
             </div>
           </div>
 
           {loading ? (
-            <div className="surface-card p-6 text-sm text-[#4b4b4b]">Loading materials...</div>
+            <PageLoading message="Loading materials..." />
           ) : Object.keys(filteredStoredByCourse).length === 0 ? (
-            <div className="surface-card p-6 text-sm text-[#4b4b4b]">No materials uploaded yet.</div>
+            <PageEmpty message="No materials uploaded yet." />
           ) : (
-            <div className="space-y-6 border border-[#e2e2e2] rounded-lg">
+            <div className="space-y-6 border border-hover-gray rounded-lg">
               {Object.entries(filteredStoredByCourse)
                 .sort(([a], [b]) => a.localeCompare(b))
                 .map(([courseCode, items]) => {
                   const course = findCourseByCode(courseCode);
-                  const collapsed = collapsedStoredCourses[courseCode] || false;
+                  const expanded = expandedStoredCourses[courseCode] || false;
 
                   const slides = items.filter((item) => item.material_type !== 'course_info');
                   const ci = items.filter((item) => item.material_type === 'course_info');
@@ -665,33 +675,33 @@ export function MaterialsPage() {
                     <div key={courseCode} className="surface-card overflow-hidden">
                       <div className="px-4 sm:px-6 py-4 flex flex-wrap items-center justify-between gap-2">
                         <button type="button" onClick={() => toggleStoredCourse(courseCode)} className="inline-flex items-center gap-2 text-left">
-                          {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                          <span className="text-lg font-bold text-[#1c1d1a]">{course?.name || courseCode}</span>
-                          <span className="text-sm text-[#4b4b4b]">({courseCode})</span>
+                          {expanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                          <span className="text-lg font-bold text-near-black">{course?.name || courseCode}</span>
+                          <span className="text-sm text-body-gray">({courseCode})</span>
                         </button>
                         <div className="flex items-center gap-2">
-                          <span className="text-sm text-[#4b4b4b]">{items.length} files</span>
-                          <button type="button" className="pill-secondary !px-2 !py-1.5" onClick={() => handleDeleteCourse(courseCode)}>
-                            <Trash2 className="w-3.5 h-3.5" />
+                          <span className="text-sm text-body-gray">{items.length} files</span>
+                          <button type="button" className="pill-icon" onClick={() => handleDeleteCourse(courseCode)}>
+                            <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
                       </div>
 
-                      {!collapsed && (
+                      {expanded && (
                         <div className="p-3 sm:p-4 tree-level">
                           {ci.length > 0 && (
                             <div className="bg-white rounded-lg p-3 tree-node ">
-                              <p className="text-sm font-semibold text-[#1c1d1a] mb-2">Course Information</p>
+                              <p className="text-sm font-semibold text-near-black mb-2">Course Information</p>
                               <div className="tree-level">
                                 {ci.map((item) => (
                                   <div key={item.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg p-2 tree-node">
-                                    <p className="text-sm text-[#1c1d1a]">{item.file_name}</p>
+                                    <p className="text-sm text-near-black">{item.file_name}</p>
                                     <div className="flex items-center gap-2">
-                                      <button type="button" className="pill-secondary !px-2 !py-1.5" onClick={() => openReplace(item)}>
+                                      <button type="button" className="pill-icon" onClick={() => openReplace(item)}>
                                         <Edit2 className="w-3.5 h-3.5" />
                                       </button>
-                                      <button type="button" onClick={() => handleDelete(item.id)} className="pill-secondary !px-2 !py-1.5">
-                                        <Trash2 className="w-3.5 h-3.5" />
+                                      <button type="button" onClick={() => handleDelete(item.id)} className="pill-icon">
+                                        <Trash2 className="w-4 h-4" />
                                       </button>
                                     </div>
                                   </div>
@@ -715,15 +725,15 @@ export function MaterialsPage() {
                               });
 
                               return (
-                                <div key={chapter} className="bg-white rounded-lg pr-3 pt-3 pb-3  tree-node ">
+                                <div key={chapter} className="bg-white rounded-lg pr-1 pt-1 pb-1  tree-node ">
                                   <div className="flex items-center justify-between mb-2">
                                     <button type="button" onClick={() => toggleChapter(chapterKey)} className="inline-flex items-center gap-2">
                                       {chapterCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                                      <span className="text-sm font-semibold text-[#1c1d1a]">{chapter}</span>
+                                      <span className="text-sm font-semibold text-near-black">{chapter}</span>
                                     </button>
                                     <div className="flex items-center gap-2">
-                                      <button type="button" className="pill-secondary !px-2 !py-1.5" onClick={() => handleDeleteChapter(courseCode, chapter)}>
-                                        <Trash2 className="w-3.5 h-3.5" />
+                                      <button type="button" className="pill-icon" onClick={() => handleDeleteChapter(courseCode, chapter)}>
+                                        <Trash2 className="w-4 h-4" />
                                       </button>
                                     </div>
                                   </div>
@@ -738,19 +748,19 @@ export function MaterialsPage() {
                                         .map((item) => (
                                           <div key={item.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg pt-2 pb-2 pl-2 tree-node">
                                             <div>
-                                              <p className="text-sm text-[#1c1d1a]">
-                                                <span className="text-[#afafaf] font-medium">{item._subgroup}</span> {item.file_name}
+                                              <p className="text-sm text-near-black">
+                                                <span className="text-muted-gray font-medium">{item._subgroup}</span> {item.file_name}
                                               </p>
-                                              {item.error_message && <p className="text-xs text-[#d03238] mt-1">{item.error_message}</p>}
+                                              {item.error_message && <p className="text-xs text-danger mt-1">{item.error_message}</p>}
                                             </div>
                                             <div className="flex items-center gap-2">
-                                              <span className="text-xs text-[#4b4b4b]">{formatBytes(item.file_size)}</span>
+                                              <span className="text-xs text-body-gray">{formatBytes(item.file_size)}</span>
                                               {item.status === 'Processing' && <span className={statusBadgeClass(item.status)}>{item.status}</span>}
-                                              <button type="button" className="pill-secondary !px-2 !py-1.5" onClick={() => openReplace(item)}>
+                                              <button type="button" className="pill-icon" onClick={() => openReplace(item)}>
                                                 <Edit2 className="w-3.5 h-3.5" />
                                               </button>
-                                              <button type="button" onClick={() => handleDelete(item.id)} className="pill-secondary !px-2 !py-1.5">
-                                                <Trash2 className="w-3.5 h-3.5" />
+                                              <button type="button" onClick={() => handleDelete(item.id)} className="pill-icon">
+                                                <Trash2 className="w-4 h-4" />
                                               </button>
                                             </div>
                                           </div>
@@ -781,19 +791,20 @@ export function MaterialsPage() {
       <div className="mt-8 pt-6 ">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="top-stat">
-            <p className="text-xs text-[#4b4b4b]">Files</p>
-            <p className="text-3xl font-bold text-[#1c1d1a]">{stats.files}</p>
+            <p className="text-xs text-body-gray">Files</p>
+            <p className="text-3xl font-bold text-near-black">{stats.files}</p>
+          </div>
+          <div className="top-stat" title="Number of indexed content segments extracted from your files for AI retrieval">
+            <p className="text-xs text-body-gray">Content segments</p>
+            <p className="text-3xl font-bold text-near-black">{stats.chunks}</p>
           </div>
           <div className="top-stat">
-            <p className="text-xs text-[#4b4b4b]">Indexed chunks</p>
-            <p className="text-3xl font-bold text-[#1c1d1a]">{stats.chunks}</p>
-          </div>
-          <div className="top-stat">
-            <p className="text-xs text-[#4b4b4b]">Storage</p>
-            <p className="text-3xl font-bold text-[#1c1d1a]">{formatBytes(stats.bytes)}</p>
+            <p className="text-xs text-body-gray">Storage</p>
+            <p className="text-3xl font-bold text-near-black">{formatBytes(stats.bytes)}</p>
           </div>
         </div>
       </div>
+      {confirmDialog}
     </div>
   );
 }
