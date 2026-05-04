@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom';
 import { BarChart3, BookOpen, FileQuestion, FileText, PlusCircle, Users } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { PageEmpty } from '../components/common/PageState';
+import { Breadcrumbs } from '../components/common/Breadcrumbs';
 
 interface DashboardCard {
   title: string;
@@ -40,9 +42,9 @@ export function DashboardPage() {
 
   return (
     <div>
+      <Breadcrumbs />
       <div className="mb-8">
-        <h2 className="section-title">Welcome back, {user?.name}</h2>
-        <p className="section-subtitle mt-2">Your workspace is tailored for the {user?.role} role.</p>
+        <h1 className="section-title">Welcome back, {user?.name}</h1>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
@@ -50,11 +52,11 @@ export function DashboardPage() {
           const Icon = card.icon;
           return (
             <div key={card.path} className="surface-card card-hover p-6">
-              <div className="w-12 h-12 rounded-full bg-[#efefef] flex items-center justify-center mb-4">
-                <Icon className="w-5 h-5 text-[#1c1d1a]" />
+              <div className="w-12 h-12 rounded-full bg-chip-gray flex items-center justify-center mb-4">
+                <Icon className="w-5 h-5 text-near-black" />
               </div>
-              <h3 className="text-xl font-bold text-[#1c1d1a] mb-1">{card.title}</h3>
-              <p className="text-sm text-[#4b4b4b] mb-4">{card.desc}</p>
+              <h3 className="text-xl font-bold text-near-black mb-1">{card.title}</h3>
+              <p className="text-sm text-body-gray mb-4">{card.desc}</p>
               <Link to={card.path} className="pill-primary">
                 {card.cta}
               </Link>
@@ -64,12 +66,13 @@ export function DashboardPage() {
       </div>
 
       <div className="mt-8 surface-card p-6">
-        <h3 className="text-lg font-bold text-[#1c1d1a] mb-2">Recent Activity</h3>
-        {user?.role === 'Student' ? (
-          <p className="text-sm text-[#4b4b4b]">No attempts yet. Ask your lecturer for the latest quiz link.</p>
-        ) : (
-          <p className="text-sm text-[#4b4b4b]">No activity yet. Start by uploading materials or creating a mini-course.</p>
-        )}
+        <h3 className="text-lg font-bold text-near-black mb-2">Recent Activity</h3>
+        <PageEmpty
+          message={user?.role === 'Student'
+            ? 'No attempts yet. Ask your lecturer for the latest quiz link.'
+            : 'No activity yet. Start by uploading materials or creating a mini-course.'
+          }
+        />
       </div>
     </div>
   );

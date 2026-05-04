@@ -4,6 +4,8 @@ import { useAuth } from '../context/AuthContext';
 import { apiService } from '../services/api';
 import { LessonWithCitations } from '../components/common/LessonWithCitations';
 import { PromptBuilder } from '../components/common/PromptBuilder';
+import { PageError } from '../components/common/PageState';
+import { Breadcrumbs } from '../components/common/Breadcrumbs';
 import { DEFAULT_GENERATION_OPTIONS } from '../types';
 import type { CoursePreview, GenerationOptions } from '../types';
 
@@ -40,9 +42,9 @@ function CoursePicker({
 
   return (
     <div className="relative">
-      <label className="block text-sm font-semibold text-[#1c1d1a] mb-2">Course</label>
+      <label className="block text-sm font-semibold text-near-black mb-2">Course</label>
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#4b4b4b]" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-body-gray" />
         <input
           className="field pl-10"
           value={query}
@@ -56,7 +58,7 @@ function CoursePicker({
       {open && (
         <div className="absolute z-20 w-full mt-1 bg-white ring-card max-h-64 overflow-y-auto">
           {filtered.length === 0 ? (
-            <div className="p-3 text-sm text-[#4b4b4b]">
+            <div className="p-3 text-sm text-body-gray">
               {courses.length === 0 ? 'No courses with indexed materials.' : 'No matching course.'}
             </div>
           ) : (
@@ -65,10 +67,10 @@ function CoursePicker({
                 key={c.code}
                 type="button"
                 onClick={() => { onChange(c); setQuery(`${c.code} - ${c.name}`); setOpen(false); }}
-                className="w-full text-left px-4 py-2.5 hover:bg-[#efefef]"
+                className="w-full text-left px-4 py-2.5 hover:bg-chip-gray"
               >
-                <p className="text-sm font-semibold text-[#1c1d1a]">{c.code}</p>
-                <p className="text-xs text-[#4b4b4b]">{c.name}</p>
+                <p className="text-sm font-semibold text-near-black">{c.code}</p>
+                <p className="text-xs text-body-gray">{c.name}</p>
               </button>
             ))
           )}
@@ -111,7 +113,7 @@ function TopicSelector({
 
   if (loading) {
     return (
-      <div className="flex items-center gap-2 py-6 text-sm text-[#4b4b4b]">
+      <div className="flex items-center gap-2 py-6 text-sm text-body-gray">
         <Loader2 className="w-4 h-4 animate-spin" />
         Extracting chapters and topics from course materials…
       </div>
@@ -120,7 +122,7 @@ function TopicSelector({
 
   if (chapters.length === 0) {
     return (
-      <div className="py-4 text-sm text-[#4b4b4b]">
+      <div className="py-4 text-sm text-body-gray">
         No chapters found. Select a course with indexed materials first.
       </div>
     );
@@ -134,13 +136,13 @@ function TopicSelector({
         const allSelected = selectedCount === ch.topics.length;
 
         return (
-          <div key={ch.chapter} className="border border-[#e2e2e2] rounded-lg overflow-hidden">
-            <div className="flex items-center gap-3 px-4 py-3 bg-[#fafafa] cursor-pointer select-none">
+          <div key={ch.chapter} className="border border-hover-gray rounded-lg overflow-hidden">
+            <div className="flex items-center gap-3 px-4 py-3 bg-chip-gray/60 cursor-pointer select-none">
               <input
                 type="checkbox"
                 checked={allSelected && ch.topics.length > 0}
                 onChange={() => toggleAllInChapter(ch)}
-                className="w-4 h-4 accent-[#9fe870] cursor-pointer"
+                className="w-4 h-4 accent-lime cursor-pointer"
               />
               <button
                 type="button"
@@ -148,11 +150,11 @@ function TopicSelector({
                 onClick={() => toggleChapter(ch.chapter)}
               >
                 {isOpen
-                  ? <ChevronDown className="w-4 h-4 text-[#4b4b4b]" />
-                  : <ChevronRight className="w-4 h-4 text-[#4b4b4b]" />}
-                <span className="text-sm font-semibold text-[#1c1d1a]">{ch.chapter}</span>
+                  ? <ChevronDown className="w-4 h-4 text-body-gray" />
+                  : <ChevronRight className="w-4 h-4 text-body-gray" />}
+                <span className="text-sm font-semibold text-near-black">{ch.chapter}</span>
                 {selectedCount > 0 && (
-                  <span className="ml-auto text-xs text-[#4b4b4b]">
+                  <span className="ml-auto text-xs text-body-gray">
                     {selectedCount}/{ch.topics.length}
                   </span>
                 )}
@@ -163,15 +165,15 @@ function TopicSelector({
                 {ch.topics.map((topic) => (
                   <label
                     key={topic}
-                    className="flex items-center gap-3 py-1.5 px-2 rounded hover:bg-[#f5f5f5] cursor-pointer"
+                    className="flex items-center gap-3 py-1.5 px-2 rounded hover:bg-chip-gray/60 cursor-pointer"
                   >
                     <input
                       type="checkbox"
                       checked={selectedTopics.has(topic)}
                       onChange={() => onToggle(topic)}
-                      className="w-4 h-4 accent-[#9fe870] cursor-pointer"
+                      className="w-4 h-4 accent-lime cursor-pointer"
                     />
-                    <span className="text-sm text-[#1c1d1a]">{topic}</span>
+                    <span className="text-sm text-near-black">{topic}</span>
                   </label>
                 ))}
               </div>
@@ -205,12 +207,12 @@ function PreviewPanel({
           <ArrowLeft className="w-4 h-4" /> Back
         </button>
         <div className="flex-1">
-          <h3 className="text-lg font-bold text-[#1c1d1a]">{preview.title}</h3>
-          <p className="text-xs text-[#4b4b4b]">
+          <h3 className="text-lg font-bold text-near-black">{preview.title}</h3>
+          <p className="text-xs text-body-gray">
             {preview.generationSource} · {preview.contextChunksUsed} chunks · {preview.questionCount} questions
           </p>
           {preview.topicCoverage.length > 0 && (
-            <p className="text-xs text-[#4b4b4b] mt-1">
+            <p className="text-xs text-body-gray mt-1">
               {preview.topicCoverage
                 .map((tc) => `${tc.topic}: ${tc.chunkCount}`)
                 .join(' · ')}
@@ -221,33 +223,33 @@ function PreviewPanel({
 
       {/* Lesson content — [S#] markers are clickable and open a source modal. */}
       <div className="surface-card p-6">
-        <h4 className="text-sm font-semibold text-[#1c1d1a] mb-3">Lesson Content</h4>
+        <h4 className="text-sm font-semibold text-near-black mb-3">Lesson Content</h4>
         <LessonWithCitations
           markdown={preview.lesson}
           sources={preview.sources}
-          className="markdown-content text-sm text-[#4b4b4b] leading-relaxed"
+          className="markdown-content text-sm text-body-gray leading-relaxed"
         />
       </div>
 
       {/* Quiz questions */}
       <div className="surface-card p-6">
-        <h4 className="text-sm font-semibold text-[#1c1d1a] mb-4">Quiz Questions</h4>
+        <h4 className="text-sm font-semibold text-near-black mb-4">Quiz Questions</h4>
         <div className="space-y-5">
           {preview.questions.map((q, idx) => (
-            <div key={idx} className="border border-[#e2e2e2] rounded-lg p-4">
-              <p className="text-sm font-medium text-[#1c1d1a] mb-2">
+            <div key={idx} className="border border-hover-gray rounded-lg p-4">
+              <p className="text-sm font-medium text-near-black mb-2">
                 {idx + 1}. {q.prompt}
               </p>
               {/* Metadata chips */}
               <div className="flex flex-wrap gap-1.5 mb-3">
-                <span className="px-2 py-0.5 text-[10px] rounded-full bg-[#efefef] text-[#4b4b4b] font-medium uppercase tracking-wide">
+                <span className="px-2 py-0.5 text-[10px] rounded-full bg-chip-gray text-body-gray font-medium uppercase tracking-wide">
                   {q.metadata.bloomLevel}
                 </span>
-                <span className="px-2 py-0.5 text-[10px] rounded-full bg-[#efefef] text-[#4b4b4b] font-medium uppercase tracking-wide">
+                <span className="px-2 py-0.5 text-[10px] rounded-full bg-chip-gray text-body-gray font-medium uppercase tracking-wide">
                   {q.metadata.soloLevel.replace('_', '-')}
                 </span>
                 {q.metadata.topic && (
-                  <span className="px-2 py-0.5 text-[10px] rounded-full bg-[#e2f6d5] text-[#054d28] font-medium">
+                  <span className="px-2 py-0.5 text-[10px] rounded-full bg-light-mint text-positive font-medium">
                     {q.metadata.topic}
                   </span>
                 )}
@@ -258,8 +260,8 @@ function PreviewPanel({
                     key={oi}
                     className={`text-sm px-3 py-2 rounded-md ${
                       oi === q.correct
-                        ? 'bg-[#e2f6d5] text-[#054d28] font-medium'
-                        : 'bg-[#fafafa] text-[#4b4b4b]'
+                        ? 'bg-light-mint text-positive font-medium'
+                        : 'bg-chip-gray/60 text-body-gray'
                     }`}
                   >
                     <span className="font-semibold mr-1.5">{optionLabels[oi]}.</span>
@@ -275,8 +277,8 @@ function PreviewPanel({
                     key={ei}
                     className={`text-xs px-2.5 py-1.5 rounded-md ${
                       ei === q.correct
-                        ? 'bg-[#e2f6d5] text-[#054d28]'
-                        : 'bg-[#fafafa] text-[#4b4b4b]'
+                        ? 'bg-light-mint text-positive'
+                        : 'bg-chip-gray/60 text-body-gray'
                     }`}
                   >
                     <span className="font-semibold mr-1">{optionLabels[ei]}:</span>
@@ -430,7 +432,7 @@ export function CreateCoursePage() {
           <h2 className="section-title">Preview Mini-Course</h2>
           <p className="section-subtitle mt-2">Review the generated content before publishing.</p>
         </div>
-        {error && <div className="p-3 rounded-lg bg-[#ffe5e7] text-[#d03238] text-sm mb-4">{error}</div>}
+        {error && <PageError error={error} className="mb-4" />}
         <PreviewPanel
           preview={preview}
           onConfirm={onConfirm}
@@ -443,6 +445,7 @@ export function CreateCoursePage() {
 
   return (
     <div>
+      <Breadcrumbs />
       <div className="mb-8">
         <h2 className="section-title">Create Mini-Course</h2>
         <p className="section-subtitle mt-2">Select topics from indexed course materials to generate a lesson and quiz.</p>
@@ -458,7 +461,7 @@ export function CreateCoursePage() {
             loading={coursesLoading}
           />
           <div>
-            <label className="block text-sm font-semibold text-[#1c1d1a] mb-2">Question count</label>
+            <label className="block text-sm font-semibold text-near-black mb-2">Question count</label>
             <select
               className="field"
               value={questionCount}
@@ -469,15 +472,16 @@ export function CreateCoursePage() {
               <option value={15}>15</option>
               <option value={20}>20</option>
             </select>
+            <p className="text-xs text-body-gray mt-1">More questions = broader coverage but slower generation.</p>
           </div>
         </div>
 
         {/* Topics — chapter accordion */}
         <div>
-          <label className="block text-sm font-semibold text-[#1c1d1a] mb-2">
+          <label className="block text-sm font-semibold text-near-black mb-2">
             Topics
             {selectedTopics.size > 0 && (
-              <span className="ml-2 font-normal text-[#4b4b4b]">({selectedTopics.size} selected)</span>
+              <span className="ml-2 font-normal text-body-gray">({selectedTopics.size} selected)</span>
             )}
           </label>
           <TopicSelector
@@ -492,11 +496,11 @@ export function CreateCoursePage() {
         <PromptBuilder value={options} onChange={setOptions} />
 
         {/* Error */}
-        {error && <div className="p-3 rounded-lg bg-[#ffe5e7] text-[#d03238] text-sm">{error}</div>}
+        {error && <PageError error={error} />}
 
         {/* Success (after confirm) */}
         {createdLink && (
-          <div className="p-4 rounded-lg bg-[#e2f6d5] text-[#054d28] text-sm">
+          <div className="p-4 rounded-lg bg-light-mint text-positive text-sm">
             <p className="font-semibold mb-1">Mini-course created and published.</p>
             <p className="break-all">{createdLink}</p>
           </div>

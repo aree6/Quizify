@@ -1,12 +1,30 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { Search } from 'lucide-react';
 import type { CourseAnalytics, CourseSummary } from '../types';
 import { apiService } from '../services/api';
+import { PageLoading, PageEmpty, PageError } from '../components/common/PageState';
+import { Breadcrumbs } from '../components/common/Breadcrumbs';
+
+function timeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'Just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  if (days < 30) return `${days}d ago`;
+  const months = Math.floor(days / 30);
+  if (months < 12) return `${months}mo ago`;
+  return `${Math.floor(months / 12)}y ago`;
+}
 
 export function AnalyticsPage() {
   const [courses, setCourses] = useState<CourseSummary[]>([]);
   const [selectedCourseId, setSelectedCourseId] = useState('');
   const [analytics, setAnalytics] = useState<CourseAnalytics | null>(null);
   const [loadingCourses, setLoadingCourses] = useState(true);
+  const [courseSearch, setCourseSearch] = useState('');
   const [loadingAnalytics, setLoadingAnalytics] = useState(false);
   const [error, setError] = useState('');
 
@@ -42,71 +60,101 @@ export function AnalyticsPage() {
     load();
   }, [selectedCourseId]);
 
+  const filteredCourses = useMemo(() => {
+    if (!courseSearch.trim()) return courses;
+    const q = courseSearch.toLowerCase();
+    return courses.filter((c) => c.title.toLowerCase().includes(q) || c.courseCode.toLowerCase().includes(q));
+  }, [courses, courseSearch]);
+
   return (
     <div>
+      <Breadcrumbs />
       <div className="mb-8">
         <h2 className="section-title">Analytics</h2>
         <p className="section-subtitle mt-2">Review submissions, pass rates, and scoring patterns.</p>
       </div>
 
       {loadingCourses ? (
-        <div className="surface-card p-6 text-sm text-[#4b4b4b]">Loading courses...</div>
+        <PageLoading message="Loading courses..." />
       ) : courses.length === 0 ? (
-        <div className="surface-card p-6 text-sm text-[#4b4b4b]">No courses generated yet.</div>
+        <PageEmpty message="No courses generated yet." />
       ) : (
         <div className="mb-6 max-w-xl">
-          <label className="block text-sm font-semibold text-[#1c1d1a] mb-2">Select course</label>
-          <select className="field" value={selectedCourseId} onChange={(event) => setSelectedCourseId(event.target.value)}>
-            {courses.map((course) => (
-              <option key={course.id} value={course.id}>
-                {course.title} ({course.courseCode})
-              </option>
+          <label className="block text-sm font-semibold text-near-black mb-2">Select course</label>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-gray pointer-events-none" />
+            <input
+              className="field pl-10 pr-4"
+              placeholder="Search courses..."
+              value={courseSearch}
+              onChange={(e) => { setCourseSearch(e.target.value); setSelectedCourseId(''); }}
+            />
+          </div>
+          <div className="mt-2 max-h-48 overflow-y-auto space-y-1 border border-chip-gray rounded-lg">
+            {filteredCourses.map((course) => (
+              <button
+                key={course.id}
+                type="button"
+                onClick={() => { setSelectedCourseId(course.id); setCourseSearch(''); }}
+                className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm cursor-pointer transition-colors gap-3 ${
+                  selectedCourseId === course.id
+                    ? 'bg-light-mint text-dark-green font-semibold'
+                    : 'hover:bg-chip-gray text-near-black'
+                }`}
+              >
+                <span className="font-medium truncate min-w-0">{course.title}</span>
+                <span className="text-muted-gray shrink-0">({course.courseCode})</span>
+                <span className="text-muted-gray shrink-0 text-xs">{timeAgo(course.createdAt)}</span>
+              </button>
             ))}
-          </select>
+            {filteredCourses.length === 0 && (
+              <p className="text-xs text-body-gray px-3 py-2">No courses match your search.</p>
+            )}
+          </div>
         </div>
       )}
 
-      {error && <div className="mb-4 p-3 rounded-lg bg-[#ffe5e7] text-[#d03238] text-sm">{error}</div>}
+      {error && <PageError error={error} className="mb-4" />}
 
       {loadingAnalytics ? (
-        <div className="surface-card p-6 text-sm text-[#4b4b4b]">Loading analytics...</div>
+        <PageLoading message="Loading analytics..." />
       ) : analytics ? (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
             <div className="top-stat">
-              <p className="text-xs text-[#4b4b4b]">Total submissions</p>
-              <p className="text-3xl font-bold text-[#1c1d1a]">{analytics.totalSubmissions}</p>
+              <p className="text-xs text-body-gray">Total submissions</p>
+              <p className="text-3xl font-bold text-near-black">{analytics.totalSubmissions}</p>
             </div>
             <div className="top-stat">
-              <p className="text-xs text-[#4b4b4b]">Average score</p>
-              <p className="text-3xl font-bold text-[#1c1d1a]">{analytics.averageScore}%</p>
+              <p className="text-xs text-body-gray">Average score</p>
+              <p className="text-3xl font-bold text-near-black">{analytics.averageScore}%</p>
             </div>
             <div className="top-stat">
-              <p className="text-xs text-[#4b4b4b]">Pass rate</p>
-              <p className="text-3xl font-bold text-[#1c1d1a]">{analytics.passRate}%</p>
+              <p className="text-xs text-body-gray">Pass rate</p>
+              <p className="text-3xl font-bold text-near-black">{analytics.passRate}%</p>
             </div>
           </div>
 
           {analytics.submissions.length === 0 ? (
-            <div className="surface-card p-6 text-sm text-[#4b4b4b]">No submissions yet for this course.</div>
+            <PageEmpty message="No submissions yet for this course." />
           ) : (
             <div className="surface-card overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-[#efefef]">
-                    <th className="text-left px-5 py-3 text-xs font-bold text-[#4b4b4b]">Student</th>
-                    <th className="text-left px-5 py-3 text-xs font-bold text-[#4b4b4b]">Score</th>
-                    <th className="text-left px-5 py-3 text-xs font-bold text-[#4b4b4b]">Percentage</th>
-                    <th className="text-left px-5 py-3 text-xs font-bold text-[#4b4b4b]">Submitted</th>
+                  <tr className="border-b border-chip-gray">
+                    <th className="text-left px-5 py-3 text-xs font-bold text-body-gray">Student</th>
+                    <th className="text-left px-5 py-3 text-xs font-bold text-body-gray">Score</th>
+                    <th className="text-left px-5 py-3 text-xs font-bold text-body-gray">Percentage</th>
+                    <th className="text-left px-5 py-3 text-xs font-bold text-body-gray">Submitted</th>
                   </tr>
                 </thead>
                 <tbody>
                   {analytics.submissions.map((submission) => (
-                    <tr key={submission.id} className="border-b border-[#efefef] last:border-b-0">
-                      <td className="px-5 py-3 text-sm font-semibold text-[#1c1d1a]">{submission.studentName}</td>
-                      <td className="px-5 py-3 text-sm text-[#4b4b4b]">{submission.score}/{submission.total}</td>
-                      <td className="px-5 py-3 text-sm text-[#4b4b4b]">{submission.percentage}%</td>
-                      <td className="px-5 py-3 text-sm text-[#4b4b4b]">{new Date(submission.submittedAt).toLocaleString()}</td>
+                    <tr key={submission.id} className="border-b border-chip-gray last:border-b-0">
+                      <td className="px-5 py-3 text-sm font-semibold text-near-black">{submission.studentName}</td>
+                      <td className="px-5 py-3 text-sm text-body-gray">{submission.score}/{submission.total}</td>
+                      <td className="px-5 py-3 text-sm text-body-gray">{submission.percentage}%</td>
+                      <td className="px-5 py-3 text-sm text-body-gray">{new Date(submission.submittedAt).toLocaleString()}</td>
                     </tr>
                   ))}
                 </tbody>
