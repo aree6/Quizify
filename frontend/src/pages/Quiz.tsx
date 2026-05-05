@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { apiService } from '../services/api';
 import { LessonWithCitations } from '../components/common/LessonWithCitations';
+import { PageError } from '../components/common/PageState';
 import type { PublicCourse, QuizSubmissionResult } from '../types';
 
 export function QuizPage() {
@@ -75,22 +76,22 @@ export function QuizPage() {
   }
 
   if (error && !course) {
-    return <div className="min-h-screen bg-white p-6 text-[#d03238]">{error}</div>;
+    return <div className="min-h-screen bg-white p-6"><PageError error={error} /></div>;
   }
 
   if (!course) {
-    return <div className="min-h-screen bg-white p-6 text-[#4b4b4b]">Course unavailable.</div>;
+    return <div className="min-h-screen bg-white p-6 text-body-gray">Course unavailable.</div>;
   }
 
   return (
     <div className="min-h-screen bg-white py-6 sm:py-8 px-4">
       <div className="max-w-3xl mx-auto">
         <div className="surface-card p-6 sm:p-8 mb-5">
-          <h1 className="text-2xl sm:text-3xl font-bold text-[#1c1d1a]">{course.title}</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-near-black">{course.title}</h1>
           <LessonWithCitations
             markdown={course.lessonContent}
             sources={course.sources}
-            className="markdown-content text-sm text-[#4b4b4b] mt-3 leading-relaxed"
+            className="markdown-content text-sm text-body-gray mt-3 leading-relaxed"
           />
 
           <div className="mt-5 flex flex-wrap items-center gap-2">
@@ -102,11 +103,11 @@ export function QuizPage() {
 
         {result ? (
           <div className="surface-card p-6 sm:p-8">
-            <h2 className="text-2xl font-bold text-[#1c1d1a] mb-3">Result</h2>
-            <p className="text-sm text-[#4b4b4b]">
-              Score: <span className="font-bold text-[#1c1d1a]">{result.score}/{result.total}</span> ({result.percentage}%)
+            <h2 className="text-2xl font-bold text-near-black mb-3">Result</h2>
+            <p className="text-sm text-body-gray">
+              Score: <span className="font-bold text-near-black">{result.score}/{result.total}</span> ({result.percentage}%)
             </p>
-            <p className={`text-sm mt-2 font-semibold ${result.passed ? 'text-[#054d28]' : 'text-[#d03238]'}`}>
+            <p className={`text-sm mt-2 font-semibold ${result.passed ? 'text-positive' : 'text-danger'}`}>
               {result.passed ? 'Passed' : 'Not passed'} (required {result.passPercentage}%)
             </p>
 
@@ -117,19 +118,19 @@ export function QuizPage() {
                 const correctIdx = answer?.correctOptionIndex ?? -1;
                 return (
                   <div key={question.id} className="ring-card p-4">
-                    <p className="text-sm font-semibold text-[#1c1d1a] mb-2">
+                    <p className="text-sm font-semibold text-near-black mb-2">
                       {index + 1}. {question.prompt}
                     </p>
                     {/* Metadata chips */}
                     <div className="flex flex-wrap gap-1.5 mb-3">
-                      <span className="px-2 py-0.5 text-[10px] rounded-full bg-[#efefef] text-[#4b4b4b] font-medium uppercase tracking-wide">
+                      <span className="px-2 py-0.5 text-[10px] rounded-full bg-chip-gray text-body-gray font-medium uppercase tracking-wide">
                         {question.metadata.bloomLevel}
                       </span>
-                      <span className="px-2 py-0.5 text-[10px] rounded-full bg-[#efefef] text-[#4b4b4b] font-medium uppercase tracking-wide">
+                      <span className="px-2 py-0.5 text-[10px] rounded-full bg-chip-gray text-body-gray font-medium uppercase tracking-wide">
                         {question.metadata.soloLevel.replace('_', '-')}
                       </span>
                       {question.metadata.topic && (
-                        <span className="px-2 py-0.5 text-[10px] rounded-full bg-[#e2f6d5] text-[#054d28] font-medium">
+                        <span className="px-2 py-0.5 text-[10px] rounded-full bg-light-mint text-positive font-medium">
                           {question.metadata.topic}
                         </span>
                       )}
@@ -144,10 +145,10 @@ export function QuizPage() {
                             key={oi}
                             className={`text-sm px-3 py-2 rounded-md border ${
                               isCorrect
-                                ? 'bg-[#e2f6d5] border-[#9fe870] text-[#054d28]'
+                                ? 'bg-light-mint border-lime text-positive'
                                 : isSelected
-                                  ? 'bg-[#ffe5e7] border-[#d03238] text-[#d03238]'
-                                  : 'bg-[#fafafa] border-[#e2e2e2] text-[#4b4b4b]'
+                                  ? 'bg-error-surface border-danger text-danger'
+                                  : 'bg-chip-gray/60 border-hover-gray text-body-gray'
                             }`}
                           >
                             <div className="flex items-center gap-2">
@@ -171,13 +172,13 @@ export function QuizPage() {
         ) : (
           <form onSubmit={submitQuiz} className="space-y-4">
             <div className="surface-card p-6">
-              <label className="block text-sm font-semibold text-[#1c1d1a] mb-2">Student name</label>
+              <label className="block text-sm font-semibold text-near-black mb-2">Student name</label>
               <input className="field" value={studentName} onChange={(event) => setStudentName(event.target.value)} required placeholder="Enter full name" />
             </div>
 
             {course.questions.map((question, index) => (
               <div key={question.id} className="surface-card p-6">
-                <p className="text-sm font-semibold text-[#1c1d1a] mb-3">
+                <p className="text-sm font-semibold text-near-black mb-3">
                   {index + 1}. {question.prompt}
                 </p>
                 <div className="space-y-2">
@@ -186,8 +187,8 @@ export function QuizPage() {
                       key={`${question.id}-${optionIndex}`}
                        className={`flex items-center gap-3 p-3 rounded-lg border ${
                          answers[question.id] === optionIndex
-                           ? 'border-[#9fe870] bg-[#e2f6d5]'
-                           : 'border-[#afafaf] bg-white'
+                           ? 'border-lime bg-light-mint'
+                           : 'border-muted-gray bg-white'
                        }`}
                     >
                       <input
@@ -196,14 +197,14 @@ export function QuizPage() {
                         checked={answers[question.id] === optionIndex}
                         onChange={() => setAnswers((prev) => ({ ...prev, [question.id]: optionIndex }))}
                       />
-                      <span className="text-sm text-[#1c1d1a]">{option}</span>
+                      <span className="text-sm text-near-black">{option}</span>
                     </label>
                   ))}
                 </div>
               </div>
             ))}
 
-            {error && <div className="p-3 rounded-lg bg-[#ffe5e7] text-[#d03238] text-sm">{error}</div>}
+            {error && <PageError error={error} />}
 
             <button type="submit" disabled={submitting} className="pill-primary">
               {submitting ? 'Submitting...' : 'Submit Quiz'}

@@ -2,6 +2,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { ArrowUpDown, ChevronDown, Copy, ExternalLink, Trash2 } from 'lucide-react';
 import type { CourseSummary } from '../types';
 import { apiService } from '../services/api';
+import { PageLoading, PageEmpty, PageError } from '../components/common/PageState';
+import { useConfirmDialog } from '../components/common/useConfirmDialog';
+import { useToast } from '../components/common/Toast';
+import { Breadcrumbs } from '../components/common/Breadcrumbs';
 
 type SortKey = 'recent' | 'courseCode' | 'title' | 'questions' | 'attempts';
 
@@ -25,6 +29,8 @@ export function MyCoursesPage() {
   const [error, setError] = useState('');
   const [sort, setSort] = useState<SortKey>('recent');
   const [deleting, setDeleting] = useState<string | null>(null);
+  const { ask: confirm, dialog: confirmDialog } = useConfirmDialog();
+  const { showToast } = useToast();
 
   useEffect(() => {
     const load = async () => {
@@ -42,11 +48,13 @@ export function MyCoursesPage() {
   }, []);
 
   const handleDelete = async (id: string, title: string) => {
-    if (!window.confirm(`Delete "${title}"? This will also remove all associated quizzes and attempts.`)) return;
+    const yes = await confirm(`Delete "${title}"? This will also remove all associated quizzes and attempts.`, { title: 'Delete course' });
+    if (!yes) return;
     setDeleting(id);
     try {
       await apiService.deleteCourse(id);
       setCourses((prev) => prev.filter((c) => c.id !== id));
+      showToast(`Deleted "${title}".`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete course');
     } finally {
@@ -81,18 +89,19 @@ export function MyCoursesPage() {
 
   return (
     <div>
+      <Breadcrumbs />
       <div className="mb-8">
         <h2 className="section-title">My Mini-Courses</h2>
         <p className="section-subtitle mt-2">Track generated courses and share links with students.</p>
       </div>
 
       <div className="flex items-center gap-1.5 mb-6">
-        <ArrowUpDown className="w-4 h-4 text-[#4b4b4b]" />
+        <ArrowUpDown className="w-4 h-4 text-body-gray" />
         <div className="relative">
           <select
             value={sort}
             onChange={(e) => setSort(e.target.value as SortKey)}
-            className="appearance-none bg-white border border-[#efefef] rounded-lg pl-3 pr-7 py-1.5 text-sm text-[#1c1d1a] cursor-pointer focus:outline-none focus:ring-2 focus:ring-[rgba(159,232,112,0.3)]"
+            className="field !w-auto appearance-none !inline-flex !py-1.5 pr-7 cursor-pointer"
           >
             <option value="recent">Recent</option>
             <option value="courseCode">Course code</option>
@@ -100,23 +109,24 @@ export function MyCoursesPage() {
             <option value="questions">Questions</option>
             <option value="attempts">Attempts</option>
           </select>
-          <ChevronDown className="w-4 h-4 text-[#4b4b4b] pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2" />
+          <ChevronDown className="w-4 h-4 text-body-gray pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2" />
         </div>
       </div>
 
       {loading ? (
-        <div className="surface-card p-6 text-sm text-[#4b4b4b]">Loading courses...</div>
+        <PageLoading message="Loading courses..." />
       ) : error ? (
-        <div className="surface-card p-6 text-sm text-[#d03238]">{error}</div>
+        <PageError error={error} className="mb-4" />
       ) : sorted.length === 0 ? (
-        <div className="surface-card p-6 text-sm text-[#4b4b4b]">No courses yet.</div>
+        <PageEmpty message="No courses yet." />
       ) : (
         <div className="space-y-3">
+          {confirmDialog}
           {sorted.map((course) => (
-            <div key={course.id} className="surface-card p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div key={course.id} className="surface-card border border-chip-gray p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div>
-                <p className="text-base font-bold text-[#1c1d1a]">{course.title}</p>
-                <p className="text-sm text-[#4b4b4b]">
+                <p className="text-base font-bold text-near-black">{course.title}</p>
+                <p className="text-sm text-body-gray">
                   {course.courseCode} • {course.questionCount} questions • {course.attempts} attempts • {timeAgo(course.createdAt)}
                 </p>
               </div>
@@ -125,17 +135,17 @@ export function MyCoursesPage() {
                 <span className={`status-badge ${course.status === 'Ready' ? 'status-active' : course.status === 'Generating' ? 'status-processing' : 'status-active'}`}>
                   {course.status}
                 </span>
-                <button type="button" onClick={() => copyLink(course.shareUrl)} className="pill-secondary !rounded-lg !px-3 !py-2" title="Copy share link">
+                <button type="button" onClick={() => copyLink(course.shareUrl)} className="pill-icon" title="Copy share link">
                   <Copy className="w-4 h-4" />
                 </button>
-                <a href={course.shareUrl} target="_blank" rel="noreferrer" className="pill-secondary !rounded-lg !px-3 !py-2" title="Open share link">
+                <a href={course.shareUrl} target="_blank" rel="noreferrer" className="pill-icon" title="Open share link">
                   <ExternalLink className="w-4 h-4" />
                 </a>
                 <button
                   type="button"
                   onClick={() => handleDelete(course.id, course.title)}
                   disabled={deleting === course.id}
-                  className="pill-secondary !rounded-lg !px-3 !py-2 text-[#d03238] hover:bg-[#d03238] hover:text-white"
+                  className="pill-icon text-danger hover:bg-danger hover:text-white"
                   title="Delete course"
                 >
                   <Trash2 className="w-4 h-4" />
