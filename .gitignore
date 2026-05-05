@@ -144,3 +144,9 @@ opencode.json
 skills-lock.json
 logbook.md
 progress1.md
+
+# macOS
+.DS_Store
+
+# Netlify
+.netlify/
