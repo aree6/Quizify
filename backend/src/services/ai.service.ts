@@ -489,8 +489,7 @@ function sanitizeQuestions(raw: unknown, questionCount: number, context?: string
  * For Gemini: we disable thinking (`thinkingConfig.thinkingBudget: 0`) to guarantee
  * the full output budget is spent on actual JSON.
  *
- * For DeepSeek: thinking is controlled via `THINKING_ENABLED` env var (default: enabled).
- * Output limits are configurable via MAX_OUTPUT_LESSON, MAX_OUTPUT_QUIZ, MAX_OUTPUT_OUTLINE.
+ * For DeepSeek: thinking and output limits are controlled by constants in config/env.ts.
  */
 async function generateJsonGemini(
   prompt: string,
@@ -631,10 +630,7 @@ async function generateJsonDeepSeek(
 }
 
 /**
- * Output budget configured via env vars:
- * - MAX_OUTPUT_LESSON (default: 128K)
- * - MAX_OUTPUT_QUIZ (default: 32K)
- * - MAX_OUTPUT_OUTLINE (default: 16K)
+ * Output budget (set in config/env.ts).
  */
 const LESSON_MAX_OUTPUT_TOKENS = env.ai.maxLessonTokens;
 const QUIZ_MAX_OUTPUT_TOKENS = env.ai.maxQuizTokens;

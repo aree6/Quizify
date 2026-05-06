@@ -17,6 +17,19 @@ function num(key: string, fallback: number): number {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
+// ─── Non-secret AI configuration ───
+// Change these here when you switch provider, model, or tuning.
+// No env vars needed — they don't belong in .env or a hosting dashboard.
+type AiProvider = 'openai' | 'gemini' | 'deepseek' | 'none';
+const AI_PROVIDER: AiProvider = 'deepseek';
+const EMBEDDING_MODEL = 'gemini-embedding-001';
+const GENERATION_MODEL = 'deepseek-v4-flash';
+const THINKING_ENABLED = true;
+const REASONING_EFFORT: 'low' | 'medium' | 'high' = 'low';
+const MAX_OUTPUT_LESSON_TOKENS = 32000;
+const MAX_OUTPUT_QUIZ_TOKENS = 32000;
+const MAX_OUTPUT_OUTLINE_TOKENS = 8000;
+
 export const env = {
   port: num('PORT', 3001),
   corsOrigin: optional('CORS_ORIGIN', '*'),
@@ -29,27 +42,16 @@ export const env = {
   },
 
   ai: {
-    provider: (process.env.AI_PROVIDER ??
-      (process.env.DEEPSEEK_API_KEY ? 'deepseek' : process.env.OPENAI_API_KEY ? 'openai' : process.env.GEMINI_API_KEY ? 'gemini' : 'none')) as
-      | 'openai'
-      | 'gemini'
-      | 'deepseek'
-      | 'none',
+    provider: AI_PROVIDER as AiProvider,
     openaiKey: process.env.OPENAI_API_KEY ?? '',
     geminiKey: process.env.GEMINI_API_KEY ?? '',
     deepseekKey: process.env.DEEPSEEK_API_KEY ?? '',
-    embeddingModel: optional(
-      'EMBEDDING_MODEL',
-      process.env.AI_PROVIDER === 'gemini' || process.env.AI_PROVIDER === 'deepseek' ? 'gemini-embedding-001' : 'text-embedding-3-small',
-    ),
-    generationModel: optional(
-      'GENERATION_MODEL',
-      process.env.AI_PROVIDER === 'gemini' ? 'gemini-2.5-flash' : process.env.AI_PROVIDER === 'deepseek' ? 'deepseek-v4-flash' : 'gpt-4o-mini',
-    ),
-    thinkingEnabled: process.env.THINKING_ENABLED !== 'false',
-    reasoningEffort: optional('REASONING_EFFORT', 'low'),
-    maxLessonTokens: num('MAX_OUTPUT_LESSON', 64_000),
-    maxQuizTokens: num('MAX_OUTPUT_QUIZ', 32_000),
-    maxOutlineTokens: num('MAX_OUTPUT_OUTLINE', 16_000),
+    embeddingModel: EMBEDDING_MODEL,
+    generationModel: GENERATION_MODEL,
+    thinkingEnabled: THINKING_ENABLED as boolean,
+    reasoningEffort: REASONING_EFFORT as 'low' | 'medium' | 'high',
+    maxLessonTokens: MAX_OUTPUT_LESSON_TOKENS as number,
+    maxQuizTokens: MAX_OUTPUT_QUIZ_TOKENS as number,
+    maxOutlineTokens: MAX_OUTPUT_OUTLINE_TOKENS as number,
   },
-} as const;
+};
