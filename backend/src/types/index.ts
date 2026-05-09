@@ -154,3 +154,104 @@ export const DEFAULT_GENERATION_OPTIONS: GenerationOptions = {
   lengthLevel: 'standard',
   customInstructions: '',
 };
+
+export interface TopicPerformance {
+  topic: string;
+  subtopic: string;
+  totalAnswers: number;
+  correctCount: number;
+  percentage: number;
+}
+
+export interface BloomPerformance {
+  bloomLevel: string;
+  totalAnswers: number;
+  correctCount: number;
+  percentage: number;
+}
+
+export interface SoloPerformance {
+  soloLevel: string;
+  totalAnswers: number;
+  correctCount: number;
+  percentage: number;
+}
+
+export interface CrossMatrixEntry {
+  topic: string;
+  bloomLevel: string;
+  totalAnswers: number;
+  correctCount: number;
+  percentage: number;
+}
+
+export interface QuestionAnalyticsEntry {
+  questionId: string;
+  prompt: string;
+  options: string[];
+  correctOptionIndex: number;
+  explanations: string[];
+  metadata: QuestionMetadata;
+  totalAttempts: number;
+  correctCount: number;
+  percentage: number;
+  optionDistribution: number[];
+}
+
+export interface ScoreDistributionEntry {
+  range: string;
+  min: number;
+  max: number;
+  count: number;
+}
+
+export interface StudentAnswerDetail {
+  questionId: string;
+  prompt: string;
+  options: string[];
+  selectedOptionIndex: number;
+  correctOptionIndex: number;
+  isCorrect: boolean;
+  explanations: string[];
+  metadata: QuestionMetadata;
+}
+
+export interface StudentWeakTopic {
+  topic: string;
+  correct: number;
+  total: number;
+  percentage: number;
+}
+
+export interface StudentAnalytics {
+  attemptId: string;
+  studentName: string;
+  score: number;
+  total: number;
+  percentage: number;
+  passed: boolean;
+  submittedAt: string;
+  weakTopics: StudentWeakTopic[];
+  strongestTopic: string | null;
+  weakestBloomLevel: string | null;
+  answers: StudentAnswerDetail[];
+}
+
+export interface CourseAnalytics {
+  courseId: string;
+  totalSubmissions: number;
+  uniqueStudents: number;
+  totalQuestions: number;
+  averageScore: number;
+  highestScore: number;
+  lowestScore: number;
+  passRate: number;
+  passPercentage: number;
+  scoreDistribution: ScoreDistributionEntry[];
+  topicPerformance: TopicPerformance[];
+  bloomPerformance: BloomPerformance[];
+  soloPerformance: SoloPerformance[];
+  crossMatrix: CrossMatrixEntry[];
+  questionAnalytics: QuestionAnalyticsEntry[];
+  studentAnalytics: StudentAnalytics[];
+}
