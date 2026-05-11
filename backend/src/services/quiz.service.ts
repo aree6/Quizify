@@ -107,7 +107,7 @@ export async function submitQuizAttempt(params: {
 }) {
   const { data, error } = await supabase
     .from('mini_courses')
-    .select('id, status, expires_at, pass_percentage, quizzes(id, questions(id, correct_option_index))')
+    .select('id, status, expires_at, pass_percentage, quizzes(id, questions(id, correct_option_index, metadata))')
     .eq('share_token', params.token)
     .single();
 

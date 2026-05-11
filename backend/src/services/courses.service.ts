@@ -117,7 +117,7 @@ export async function generateCoursePreview(params: {
   if (!content) {
     throw new HttpError(
       500,
-      'AI generation failed. Ensure the Gemini API key has available quota and course materials are indexed.',
+      'AI generation failed. API response failed.',
     );
   }
 
@@ -236,12 +236,14 @@ export async function confirmAndSaveCourse(params: {
 }
 
 export async function deleteMiniCourse(id: string): Promise<void> {
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('mini_courses')
     .delete()
-    .eq('id', id);
+    .eq('id', id)
+    .select('id');
 
   if (error) throw new HttpError(500, 'Failed to delete mini-course', { details: error.message });
+  if (!data || data.length === 0) throw new HttpError(404, 'Course not found');
 }
 
 export async function listMiniCourses(): Promise<
