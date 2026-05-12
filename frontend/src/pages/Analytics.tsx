@@ -11,7 +11,6 @@ import {
   TrendingDown,
   TrendingUp,
   Users,
-  Zap,
 } from 'lucide-react';
 import {
   BarChart,
@@ -28,7 +27,6 @@ import type {
   CourseAnalytics,
   CourseSummary,
   CrossMatrixEntry,
-  QuestionAnalyticsEntry,
   SoloPerformanceData,
   StudentAnalyticsData,
   TopicPerformanceData,
@@ -321,65 +319,6 @@ function CrossMatrixTable({ data, topics }: { data: CrossMatrixEntry[]; topics: 
           <span className="w-3 h-3 rounded-sm inline-block" style={{ backgroundColor: 'rgba(208,50,56,0.10)' }} />
           Needs attention (0-39%)
         </span>
-      </div>
-    </div>
-  );
-}
-
-function HardestQuestions({ questions }: { questions: QuestionAnalyticsEntry[] }) {
-  const hardest = questions.filter((q) => q.totalAttempts > 0).slice(0, 5);
-  if (hardest.length === 0) return null;
-
-  return (
-    <div>
-      <div className="flex items-center gap-2 mb-4">
-        <Zap className="w-4 h-4 text-near-black" />
-        <h3 className="text-base font-bold text-near-black">Hardest Questions</h3>
-      </div>
-      <div className="space-y-3">
-        {hardest.map((q) => {
-          const maxIdx = q.optionDistribution.indexOf(Math.max(...q.optionDistribution));
-          const wrongOption =
-            maxIdx !== q.correctOptionIndex && q.optionDistribution[maxIdx] > 0
-              ? maxIdx
-              : null;
-          return (
-            <div key={q.questionId} className="surface-card border border-chip-gray p-4">
-              <div className="flex items-start gap-3 mb-3">
-                <span
-                  className="text-xs font-bold px-2 py-0.5 rounded-full shrink-0 mt-0.5"
-                  style={{ backgroundColor: barColor(q.percentage), color: q.percentage >= 70 ? '#163300' : q.percentage >= 40 ? '#fff5c3' : '#ffe5e7' }}
-                >
-                  {q.percentage}% correct
-                </span>
-                <div>
-                  <p className="text-sm font-semibold text-near-black">{q.prompt}</p>
-                  <p className="text-xs text-body-gray mt-1">
-                    {q.metadata.topic && `${q.metadata.topic}`}
-                    {q.metadata.bloomLevel && ` / ${BLOOM_LABELS[q.metadata.bloomLevel] ?? q.metadata.bloomLevel}`}
-                    {q.metadata.soloLevel && ` / ${SOLO_LABELS[q.metadata.soloLevel] ?? q.metadata.soloLevel}`}
-                  </p>
-                </div>
-              </div>
-              {wrongOption !== null && (
-                <div className="ml-0 p-3 rounded-lg border border-chip-gray">
-                  <p className="text-xs text-body-gray mb-1">
-                    Most common choice: <span className="font-semibold text-near-black">Option {String.fromCharCode(65 + wrongOption)}</span>{' '}
-                    ({q.optionDistribution[wrongOption]} of {q.totalAttempts} students)
-                  </p>
-                  <p className="text-xs text-near-black">
-                    &quot;{q.options[wrongOption] ?? ''}&quot;
-                  </p>
-                  {q.explanations[wrongOption] && (
-                    <p className="text-xs text-body-gray mt-1 italic">
-                      {q.explanations[wrongOption]}
-                    </p>
-                  )}
-                </div>
-              )}
-            </div>
-          );
-        })}
       </div>
     </div>
   );
@@ -828,11 +767,6 @@ export function AnalyticsPage() {
               topics={analytics.topicPerformance.map((t) => t.topic)}
             />
           </div>
-
-          {/* SECTION: Hardest Questions */}
-          {analytics.questionAnalytics.some((q) => q.totalAttempts > 0) && (
-            <HardestQuestions questions={analytics.questionAnalytics} />
-          )}
 
           {/* SECTION: Student Performance */}
           <div>
