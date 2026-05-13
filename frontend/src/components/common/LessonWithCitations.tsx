@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import type { Components } from 'react-markdown';
 import { X, ChevronLeft, ChevronRight, FileText } from 'lucide-react';
 import type { SourceCitation } from '../../types';
@@ -92,7 +93,7 @@ export function LessonWithCitations({ markdown, sources, className }: LessonWith
   return (
     <>
       <div className={className}>
-        <ReactMarkdown components={components}>{rewritten}</ReactMarkdown>
+        <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>{rewritten}</ReactMarkdown>
       </div>
       {activeSource && (
         <SourceModal
