@@ -63,10 +63,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <button
               type="button"
               onClick={handleLogout}
-              className="shrink-0 ml-auto inline-flex items-center gap-2 px-3 py-2 rounded-[999px] text-sm font-semibold text-body-gray hover:text-danger hover:bg-chip-gray transition-colors"
+              title="Logout"
+              className="shrink-0 ml-auto pill-icon text-body-gray hover:text-danger"
             >
               <LogOut className="w-4 h-4" />
-              Logout
             </button>
           </div>
         </div>
