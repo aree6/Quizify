@@ -236,3 +236,33 @@ button,
 .markdown-content pre code { background: none; padding: 0; }
 .markdown-content blockquote { border-left: 3px solid var(--lime); padding-left: 1rem; margin: 0.5rem 0; color: var(--body-gray); }
 .markdown-content hr { border: none; border-top: 1px solid var(--hover-gray); margin: 1rem 0; }
+
+/* Markdown tables */
+.markdown-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.75rem 0;
+  font-size: 0.875rem;
+}
+.markdown-content thead {
+  background: var(--chip-gray);
+}
+.markdown-content th {
+  text-align: left;
+  padding: 0.5rem 0.75rem;
+  font-weight: 600;
+  color: var(--near-black);
+  border-bottom: 2px solid var(--hover-gray);
+  font-size: 0.8125rem;
+}
+.markdown-content td {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--hover-gray);
+  color: var(--body-gray);
+}
+.markdown-content tr:last-child td {
+  border-bottom: none;
+}
+.markdown-content tbody tr:hover {
+  background: var(--chip-gray);
+}
