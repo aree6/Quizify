@@ -5,7 +5,6 @@ import { apiService } from '../services/api';
 import { PageLoading, PageEmpty, PageError } from '../components/common/PageState';
 import { useConfirmDialog } from '../components/common/useConfirmDialog';
 import { useToast } from '../components/common/Toast';
-import { Breadcrumbs } from '../components/common/Breadcrumbs';
 
 type SortKey = 'recent' | 'courseCode' | 'title' | 'questions' | 'attempts';
 
@@ -89,12 +88,6 @@ export function MyCoursesPage() {
 
   return (
     <div>
-      <Breadcrumbs />
-      <div className="mb-8">
-        <h2 className="section-title">My Mini-Courses</h2>
-        <p className="section-subtitle mt-2">Track generated courses and share links with students.</p>
-      </div>
-
       <div className="flex items-center gap-1.5 mb-6">
         <ArrowUpDown className="w-4 h-4 text-body-gray" />
         <div className="relative">

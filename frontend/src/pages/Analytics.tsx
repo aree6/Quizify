@@ -645,12 +645,6 @@ export function AnalyticsPage() {
   return (
     <div>
       <Breadcrumbs />
-      <div className="mb-6">
-        <h2 className="section-title">Analytics</h2>
-        <p className="section-subtitle mt-2">
-          Understand student performance, identify gaps, and take action.
-        </p>
-      </div>
 
       {loadingCourses ? (
         <PageLoading message="Loading courses..." />

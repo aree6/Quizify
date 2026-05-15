@@ -2,7 +2,6 @@ import { Link } from 'react-router-dom';
 import { BarChart3, BookOpen, FileQuestion, FileText, PlusCircle, Users } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { PageEmpty } from '../components/common/PageState';
-import { Breadcrumbs } from '../components/common/Breadcrumbs';
 
 interface DashboardCard {
   title: string;
@@ -42,7 +41,6 @@ export function DashboardPage() {
 
   return (
     <div>
-      <Breadcrumbs />
       <div className="mb-8">
         <h1 className="section-title">Welcome back, {user?.name}</h1>
       </div>
