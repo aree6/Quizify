@@ -7,6 +7,15 @@ import { PageLoading, PageEmpty, PageError } from '../components/common/PageStat
 import { useConfirmDialog } from '../components/common/useConfirmDialog';
 import { useToast } from '../components/common/Toast';
 import { Breadcrumbs } from '../components/common/Breadcrumbs';
+import { SegmentControl } from '../components/common/SegmentControl';
+import type { SegmentOption } from '../components/common/SegmentControl';
+
+type ViewMode = 'view' | 'upload';
+
+const VIEW_OPTIONS: SegmentOption<ViewMode>[] = [
+  { value: 'view', label: 'Your Materials' },
+  { value: 'upload', label: 'Upload Material' },
+];
 
 type MaterialType = 'course_info' | 'slide';
 
@@ -178,7 +187,7 @@ export function MaterialsPage() {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
-  const [viewMode, setViewMode] = useState<'upload' | 'view'>('view');
+  const [viewMode, setViewMode] = useState<ViewMode>('view');
   const [editingCourseCode, setEditingCourseCode] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [courseQuery, setCourseQuery] = useState('');
@@ -442,18 +451,9 @@ export function MaterialsPage() {
   return (
     <div>
       <Breadcrumbs />
-      <div className="mb-8">
-        <h2 className="section-title">Materials Library</h2>
-        <p className="section-subtitle mt-2">Upload course materials and manage them by course and chapter.</p>
-      </div>
 
-      <div className="flex gap-3 mb-6 justify-center">
-        <button type="button" onClick={() => setViewMode('view')} className={viewMode === 'view' ? 'chip-active' : 'chip'}>
-          View Materials
-        </button>
-        <button type="button" onClick={() => setViewMode('upload')} className={viewMode === 'upload' ? 'chip-active' : 'chip'}>
-          Upload Material
-        </button>
+      <div className="flex justify-center mb-6">
+        <SegmentControl options={VIEW_OPTIONS} value={viewMode} onChange={setViewMode} />
       </div>
 
       {viewMode === 'upload' && (
