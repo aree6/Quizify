@@ -208,16 +208,17 @@ const SCORE_BUCKETS = [
   { label: '0-20%', min: 0, max: 20 },
 ];
 
-function parseMetadata(raw: unknown): QuestionMetadata {
-  if (raw && typeof raw === 'object') {
+function parseMetadata(raw: unknown, fallback?: QuestionMetadata): QuestionMetadata {
+  if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
     const m = raw as Record<string, unknown>;
     return {
-      topic: String(m.topic ?? ''),
-      subtopic: String(m.subtopic ?? ''),
-      bloomLevel: String(m.bloomLevel ?? 'understand'),
-      soloLevel: String(m.soloLevel ?? 'multistructural'),
+      topic: String(m.topic ?? fallback?.topic ?? ''),
+      subtopic: String(m.subtopic ?? fallback?.subtopic ?? ''),
+      bloomLevel: String(m.bloomLevel ?? fallback?.bloomLevel ?? 'understand'),
+      soloLevel: String(m.soloLevel ?? fallback?.soloLevel ?? 'multistructural'),
     };
   }
+  if (fallback) return fallback;
   return { topic: '', subtopic: '', bloomLevel: 'understand', soloLevel: 'multistructural' };
 }
 
@@ -334,11 +335,12 @@ export async function getCourseAnalytics(courseId: string) {
     const raw = a.submitted_answers as unknown;
     if (Array.isArray(raw)) {
       for (const entry of raw as SubmittedAnswer[]) {
+        const qMeta = questionMap.get(entry.questionId)?.metadata;
         allAnswers.push({
           questionId: entry.questionId,
           isCorrect: entry.isCorrect,
           selectedOptionIndex: entry.selectedOptionIndex,
-          metadata: parseMetadata(entry.metadata),
+          metadata: parseMetadata(entry.metadata, qMeta),
         });
       }
     }
@@ -445,8 +447,8 @@ export async function getCourseAnalytics(courseId: string) {
     let bloomCorrectMap = new Map<string, { correct: number; total: number }>();
 
     const answerDetails = answers.map((entry) => {
-      const m = parseMetadata(entry.metadata);
       const qInfo = questionMap.get(entry.questionId);
+      const m = parseMetadata(entry.metadata, qInfo?.metadata);
       const topic = m.topic || 'General';
       const bloom = m.bloomLevel || 'understand';
 
