@@ -33,7 +33,7 @@ const MAX_OUTPUT_OUTLINE_TOKENS = 8000;
 export const env = {
   port: num('PORT', 3001),
   corsOrigin: optional('CORS_ORIGIN', '*'),
-  defaultPassPercentage: Math.min(100, Math.max(0, num('DEFAULT_PASS_PERCENTAGE', 70))),
+  defaultPassPercentage: Math.min(100, Math.max(0, num('DEFAULT_PASS_PERCENTAGE', 40))),
 
   supabase: {
     url: required('SUPABASE_URL'),

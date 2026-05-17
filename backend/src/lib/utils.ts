@@ -13,7 +13,7 @@ export function randomToken(bytes = 8): string {
   return randomBytes(bytes).toString('hex');
 }
 
-export function normalizePassPercentage(value: unknown, fallback = 70): number {
+export function normalizePassPercentage(value: unknown, fallback = 40): number {
   const parsed = Number(value);
   if (!Number.isFinite(parsed)) return fallback;
   return Math.min(100, Math.max(0, Math.round(parsed)));
