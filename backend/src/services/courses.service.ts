@@ -159,6 +159,7 @@ export async function confirmAndSaveCourse(params: {
   questions: GeneratedQuestion[];
   sources: SourceCitation[];
   lecturerName: string;
+  passPercentage?: number;
 }): Promise<{
   id: string;
   title: string;
@@ -171,7 +172,9 @@ export async function confirmAndSaveCourse(params: {
 }> {
   const courseCode = params.courseCode.trim().toUpperCase();
   const topics = params.topics.map((t) => t.trim()).filter(Boolean);
-  const passPercentage = env.defaultPassPercentage;
+  const passPercentage = typeof params.passPercentage === 'number'
+    ? Math.min(100, Math.max(1, Math.round(params.passPercentage)))
+    : env.defaultPassPercentage;
   const expiresAt = new Date(Date.now() + ONE_MONTH_MS).toISOString();
 
   const shareToken = await generateUniqueShareToken(courseCode);

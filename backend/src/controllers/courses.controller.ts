@@ -150,7 +150,7 @@ export async function previewCourse(req: Request, res: Response): Promise<void> 
 }
 
 export async function confirmCourse(req: Request, res: Response): Promise<void> {
-  const { title, courseCode, lesson, topics, questions, sources, lecturerName } = req.body as {
+  const { title, courseCode, lesson, topics, questions, sources, lecturerName, passPercentage } = req.body as {
     title?: string;
     courseCode?: string;
     lesson?: string;
@@ -158,6 +158,7 @@ export async function confirmCourse(req: Request, res: Response): Promise<void> 
     questions?: GeneratedQuestion[];
     sources?: SourceCitation[];
     lecturerName?: string;
+    passPercentage?: number;
   };
 
   if (!title || !courseCode || !lesson || !Array.isArray(questions) || questions.length === 0) {
@@ -172,6 +173,7 @@ export async function confirmCourse(req: Request, res: Response): Promise<void> 
     questions,
     sources: Array.isArray(sources) ? sources : [],
     lecturerName: lecturerName ?? 'Lecturer',
+    passPercentage: typeof passPercentage === 'number' ? passPercentage : undefined,
   });
 
   res.status(201).json({ course });
