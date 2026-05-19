@@ -89,7 +89,7 @@ CREATE TABLE public.mini_courses (
     sources jsonb NOT NULL DEFAULT '[]'::jsonb,
     status text NOT NULL DEFAULT 'Ready' CHECK (status IN ('Generating', 'Ready', 'Shared')),
     share_token text UNIQUE NOT NULL,
-    pass_percentage integer NOT NULL DEFAULT 70 CHECK (pass_percentage BETWEEN 1 AND 100),
+    pass_percentage integer NOT NULL DEFAULT 40 CHECK (pass_percentage BETWEEN 1 AND 100),
     expires_at timestamptz,
     created_by_name text,
     created_at timestamptz NOT NULL DEFAULT NOW(),
