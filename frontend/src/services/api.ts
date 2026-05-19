@@ -46,6 +46,7 @@ export const apiService = {
     questions: Array<{ prompt: string; options: string[]; correct: number; explanations: string[]; metadata: { topic: string; subtopic: string; bloomLevel: string; soloLevel: string } }>;
     sources: SourceCitation[];
     lecturerName?: string;
+    passPercentage?: number;
   }) {
     const { data } = await http.post<{ course: CourseSummary }>('/api/courses/confirm', payload);
     return data;

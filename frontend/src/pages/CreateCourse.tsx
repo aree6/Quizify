@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Search, ChevronDown, ChevronRight, Loader2, ArrowLeft, Check, X } from 'lucide-react';
+import { Search, ChevronDown, ChevronRight, Loader2, ArrowLeft, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { apiService } from '../services/api';
 import { LessonWithCitations } from '../components/common/LessonWithCitations';
@@ -7,7 +7,24 @@ import { PromptBuilder } from '../components/common/PromptBuilder';
 import { PageError } from '../components/common/PageState';
 import { Breadcrumbs } from '../components/common/Breadcrumbs';
 import { DEFAULT_GENERATION_OPTIONS } from '../types';
-import type { CoursePreview, GenerationOptions } from '../types';
+import type {
+  BloomLevel,
+  CoursePreview,
+  GeneratedQuestion,
+  GenerationOptions,
+  SoloLevel,
+  QuestionMetadata,
+} from '../types';
+
+const BLOOM_LEVELS: BloomLevel[] = ['remember', 'understand', 'apply', 'analyze', 'evaluate', 'create'];
+const SOLO_LEVELS: SoloLevel[] = ['unistructural', 'multistructural', 'relational', 'extended_abstract'];
+
+const SOLO_UI_LABELS: Record<SoloLevel, string> = {
+  unistructural: 'Foundational',
+  multistructural: 'Intermediate',
+  relational: 'Advanced',
+  extended_abstract: 'Challenge',
+};
 
 interface AvailableCourse {
   code: string;
@@ -185,7 +202,7 @@ function TopicSelector({
   );
 }
 
-/* ── Preview panel: shows generated lesson + quiz before confirming ── */
+/* ── Editable preview panel: shows generated lesson + editable quiz before confirming ── */
 function PreviewPanel({
   preview,
   onConfirm,
@@ -193,11 +210,49 @@ function PreviewPanel({
   confirming,
 }: {
   preview: CoursePreview;
-  onConfirm: () => void;
+  onConfirm: (questions: GeneratedQuestion[], passPercentage: number) => void;
   onBack: () => void;
   confirming: boolean;
 }) {
+  const [editableQuestions, setEditableQuestions] = useState<GeneratedQuestion[]>(
+    () => structuredClone(preview.questions),
+  );
+  const [passPercentage, setPassPercentage] = useState(40);
   const optionLabels = ['A', 'B', 'C', 'D'];
+
+  const updateQuestion = (idx: number, patch: Partial<GeneratedQuestion>) => {
+    setEditableQuestions((prev) =>
+      prev.map((q, i) => (i === idx ? { ...q, ...patch } : q)),
+    );
+  };
+
+  const updateOption = (qIdx: number, oIdx: number, value: string) => {
+    setEditableQuestions((prev) =>
+      prev.map((q, i) =>
+        i === qIdx
+          ? { ...q, options: q.options.map((o, j) => (j === oIdx ? value : o)) }
+          : q,
+      ),
+    );
+  };
+
+  const updateExplanation = (qIdx: number, eIdx: number, value: string) => {
+    setEditableQuestions((prev) =>
+      prev.map((q, i) =>
+        i === qIdx
+          ? { ...q, explanations: q.explanations.map((e, j) => (j === eIdx ? value : e)) }
+          : q,
+      ),
+    );
+  };
+
+  const updateMetadata = (qIdx: number, patch: Partial<QuestionMetadata>) => {
+    setEditableQuestions((prev) =>
+      prev.map((q, i) =>
+        i === qIdx ? { ...q, metadata: { ...q.metadata, ...patch } } : q,
+      ),
+    );
+  };
 
   return (
     <div className="space-y-6">
@@ -221,7 +276,7 @@ function PreviewPanel({
         </div>
       </div>
 
-      {/* Lesson content — [S#] markers are clickable and open a source modal. */}
+      {/* Lesson content */}
       <div className="surface-card p-6">
         <h4 className="text-sm font-semibold text-near-black mb-3">Lesson Content</h4>
         <LessonWithCitations
@@ -231,63 +286,171 @@ function PreviewPanel({
         />
       </div>
 
-      {/* Quiz questions */}
+      {/* Editable Quiz Questions */}
       <div className="surface-card p-6">
-        <h4 className="text-sm font-semibold text-near-black mb-4">Quiz Questions</h4>
-        <div className="space-y-5">
-          {preview.questions.map((q, idx) => (
-            <div key={idx} className="border border-hover-gray rounded-lg p-4">
-              <p className="text-sm font-medium text-near-black mb-2">
-                {idx + 1}. {q.prompt}
-              </p>
-              {/* Metadata chips */}
-              <div className="flex flex-wrap gap-1.5 mb-3">
-                <span className="px-2 py-0.5 text-[10px] rounded-full bg-chip-gray text-body-gray font-medium uppercase tracking-wide">
-                  {q.metadata.bloomLevel}
-                </span>
-                <span className="px-2 py-0.5 text-[10px] rounded-full bg-chip-gray text-body-gray font-medium uppercase tracking-wide">
-                  {q.metadata.soloLevel.replace('_', '-')}
-                </span>
-                {q.metadata.topic && (
-                  <span className="px-2 py-0.5 text-[10px] rounded-full bg-light-mint text-positive font-medium">
-                    {q.metadata.topic}
-                  </span>
-                )}
+        <h4 className="text-sm font-semibold text-near-black mb-4">Quiz Questions (Editable)</h4>
+        <div className="space-y-6">
+          {editableQuestions.map((q, idx) => (
+            <div key={idx} className="border border-hover-gray rounded-lg p-4 space-y-3">
+              {/* Question number + prompt */}
+              <div>
+                <label className="block text-xs font-semibold text-body-gray mb-1">
+                  Question {idx + 1}
+                </label>
+                <input
+                  className="field text-sm"
+                  value={q.prompt}
+                  onChange={(e) => updateQuestion(idx, { prompt: e.target.value })}
+                />
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {q.options.map((opt, oi) => (
-                  <div
-                    key={oi}
-                    className={`text-sm px-3 py-2 rounded-md ${
-                      oi === q.correct
-                        ? 'bg-light-mint text-positive font-medium'
-                        : 'bg-chip-gray/60 text-body-gray'
-                    }`}
+
+              {/* Metadata: Bloom + SOLO + correct answer */}
+              <div className="flex flex-wrap gap-3">
+                <div className="flex-1 min-w-[140px]">
+                  <label className="block text-xs font-semibold text-body-gray mb-1">
+                    Bloom Level
+                  </label>
+                  <select
+                    className="field !py-1.5 text-xs"
+                    value={q.metadata.bloomLevel}
+                    onChange={(e) => updateMetadata(idx, { bloomLevel: e.target.value as BloomLevel })}
                   >
-                    <span className="font-semibold mr-1.5">{optionLabels[oi]}.</span>
-                    {opt}
-                    {oi === q.correct && <Check className="inline w-3.5 h-3.5 ml-1" />}
-                  </div>
-                ))}
+                    {BLOOM_LEVELS.map((level) => (
+                      <option key={level} value={level}>
+                        {level.charAt(0).toUpperCase() + level.slice(1)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex-1 min-w-[140px]">
+                  <label className="block text-xs font-semibold text-body-gray mb-1">
+                    SOLO Level
+                  </label>
+                  <select
+                    className="field !py-1.5 text-xs"
+                    value={q.metadata.soloLevel}
+                    onChange={(e) => updateMetadata(idx, { soloLevel: e.target.value as SoloLevel })}
+                  >
+                    {SOLO_LEVELS.map((level) => (
+                      <option key={level} value={level}>
+                        {SOLO_UI_LABELS[level]}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex-1 min-w-[140px]">
+                  <label className="block text-xs font-semibold text-body-gray mb-1">
+                    Correct Answer
+                  </label>
+                  <select
+                    className="field !py-1.5 text-xs"
+                    value={q.correct}
+                    onChange={(e) => updateQuestion(idx, { correct: Number(e.target.value) })}
+                  >
+                    {optionLabels.map((label, i) => (
+                      <option key={i} value={i}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
-              {/* Explanations */}
-              <div className="mt-3 space-y-1.5">
-                {q.explanations.map((exp, ei) => (
-                  <div
-                    key={ei}
-                    className={`text-xs px-2.5 py-1.5 rounded-md ${
-                      ei === q.correct
-                        ? 'bg-light-mint text-positive'
-                        : 'bg-chip-gray/60 text-body-gray'
-                    }`}
-                  >
-                    <span className="font-semibold mr-1">{optionLabels[ei]}:</span>
-                    {exp}
-                  </div>
-                ))}
+
+              {/* Options (editable) */}
+              <div>
+                <label className="block text-xs font-semibold text-body-gray mb-1.5">Options</label>
+                <div className="space-y-2">
+                  {q.options.map((opt, oi) => (
+                    <div key={oi} className="flex items-center gap-2">
+                      <span
+                        className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
+                          oi === q.correct
+                            ? 'bg-lime text-dark-green'
+                            : 'bg-chip-gray text-body-gray'
+                        }`}
+                      >
+                        {optionLabels[oi]}
+                      </span>
+                      <input
+                        className="field flex-1 text-xs !py-2"
+                        value={opt}
+                        onChange={(e) => updateOption(idx, oi, e.target.value)}
+                        placeholder={`Option ${optionLabels[oi]}`}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Explanations (editable) */}
+              <div>
+                <label className="block text-xs font-semibold text-body-gray mb-1.5">
+                  Explanations
+                </label>
+                <div className="space-y-2">
+                  {q.explanations.map((exp, ei) => (
+                    <div
+                      key={ei}
+                      className={`p-2 rounded-md ${
+                        ei === q.correct
+                          ? 'bg-light-mint'
+                          : 'bg-chip-gray/60'
+                      }`}
+                    >
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <span className="text-xs font-semibold text-body-gray">
+                          {optionLabels[ei]}
+                        </span>
+                        <span className={`text-[10px] uppercase tracking-wide ${
+                          ei === q.correct ? 'text-positive font-semibold' : 'text-muted-gray'
+                        }`}>
+                          {ei === q.correct ? 'Correct' : 'Incorrect'}
+                        </span>
+                      </div>
+                      <input
+                        className="field text-xs !py-1.5 bg-white"
+                        value={exp}
+                        onChange={(e) => updateExplanation(idx, ei, e.target.value)}
+                        placeholder={`Explanation for option ${optionLabels[ei]}`}
+                      />
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* Pass percentage */}
+      <div className="surface-card p-4">
+        <div className="flex items-center gap-4">
+          <div>
+            <label className="block text-sm font-semibold text-near-black mb-1">Pass Percentage</label>
+            <p className="text-xs text-body-gray mb-1">Set the minimum score required to pass this quiz.</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <input
+              type="range"
+              min={1}
+              max={100}
+              value={passPercentage}
+              onChange={(e) => setPassPercentage(Number(e.target.value))}
+              className="w-32 accent-lime"
+            />
+            <input
+              type="number"
+              className="field w-20 text-center !py-1.5 text-sm"
+              min={1}
+              max={100}
+              value={passPercentage}
+              onChange={(e) => {
+                const v = Math.min(100, Math.max(1, Number(e.target.value) || 1));
+                setPassPercentage(v);
+              }}
+            />
+            <span className="text-sm text-body-gray">%</span>
+          </div>
         </div>
       </div>
 
@@ -296,7 +459,12 @@ function PreviewPanel({
         <button type="button" onClick={onBack} className="pill-secondary" disabled={confirming}>
           <X className="w-4 h-4 mr-1.5 inline" /> Discard
         </button>
-        <button type="button" onClick={onConfirm} className="pill-primary" disabled={confirming}>
+        <button
+          type="button"
+          onClick={() => onConfirm(editableQuestions, passPercentage)}
+          className="pill-primary"
+          disabled={confirming}
+        >
           {confirming ? 'Saving…' : 'Confirm & Create Course'}
         </button>
       </div>
@@ -320,7 +488,7 @@ export function CreateCoursePage() {
 
   // Form
   const [questionCount, setQuestionCount] = useState(15);
-  // Lecturer-selected pedagogy options (Bloom / SOLO / length / custom instructions).
+  // Lecturer-selected pedagogy options (Bloom / SOLO / length / custom).
   const [options, setOptions] = useState<GenerationOptions>(DEFAULT_GENERATION_OPTIONS);
 
   // Preview state
@@ -399,8 +567,8 @@ export function CreateCoursePage() {
     }
   };
 
-  // Step 2: Confirm and save to DB
-  const onConfirm = async () => {
+  // Step 2: Confirm and save to DB (with edited questions + pass percentage)
+  const onConfirm = async (editedQuestions: GeneratedQuestion[], passPercentage: number) => {
     if (!preview) return;
     setError('');
     setConfirming(true);
@@ -411,9 +579,10 @@ export function CreateCoursePage() {
         courseCode: preview.courseCode,
         topics: preview.topics,
         lesson: preview.lesson,
-        questions: preview.questions,
+        questions: editedQuestions,
         sources: preview.sources,
         lecturerName: user?.name || 'Lecturer',
+        passPercentage,
       });
       setCreatedLink(`${window.location.origin}${res.course.shareUrl}`);
       setPreview(null);
@@ -428,11 +597,6 @@ export function CreateCoursePage() {
   if (preview) {
     return (
       <div>
-        <div className="mb-8">
-          <h2 className="section-title">Preview Mini-Course</h2>
-          <p className="section-subtitle mt-2">Review the generated content before publishing.</p>
-        </div>
-        {error && <PageError error={error} className="mb-4" />}
         <PreviewPanel
           preview={preview}
           onConfirm={onConfirm}
@@ -446,10 +610,6 @@ export function CreateCoursePage() {
   return (
     <div>
       <Breadcrumbs />
-      <div className="mb-8">
-        <h2 className="section-title">Create Mini-Course</h2>
-        <p className="section-subtitle mt-2">Select topics from indexed course materials to generate a lesson and quiz.</p>
-      </div>
 
       <div className="surface-card p-6 sm:p-8 space-y-6">
         {/* Course + Question count */}
