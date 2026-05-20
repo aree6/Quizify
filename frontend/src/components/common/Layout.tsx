@@ -35,7 +35,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
     <div className="app-shell min-h-screen">
       <header className="sticky top-0 z-50 bg-white">
         <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8 py-2 sm:py-3">
-          <div className="flex items-center gap-0 sm:gap-1 overflow-x-auto pb-1 scrollbar-hide">
+          <div className="flex items-center justify-center gap-1  overflow-x-auto pb-1 scrollbar-hide">
             <div className="shrink-0 sm:mr-4">
               <img src={logoSvg} alt="Quizify" className="h-6 w-6 sm:h-8 sm:w-8 scale-125" />
             </div>
@@ -64,9 +64,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
               type="button"
               onClick={handleLogout}
               title="Logout"
-              className="shrink-0 ml-auto pill-icon text-body-gray hover:text-danger"
+              className="shrink-0 flex flex-col items-center gap-0 px-1 py-3 sm:inline-flex sm:flex-row sm:items-center sm:gap-2 sm:px-3 sm:py-2 rounded-lg text-[8px] sm:text-sm font-semibold transition-colors text-body-gray hover:text-near-black hover:bg-chip-gray"
             >
-              <LogOut className="w-4 h-4" />
+              <LogOut className="w-5 h-5 sm:w-4 sm:h-4" />
+              <span className="leading-tight">Logout</span>
             </button>
           </div>
         </div>
