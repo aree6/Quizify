@@ -129,7 +129,7 @@ const QUIZ_SYSTEM_PROMPT = [
   '- metadata.bloomLevel: one of the ENABLED Bloom levels.',
   '- metadata.soloLevel: one of the ENABLED SOLO levels.',
   '- metadata.topic: pick from the Topics covered list.',
-  '- Distribute questions across ENABLED Bloom and SOLO levels.',
+  '- Distribute questions evenly across ALL ENABLED Bloom and SOLO levels. Do NOT skip any enabled level.',
 ].join('\n');
 
 /* ─── Pedagogy → prompt directives ───────────────────────────────────────────
@@ -233,6 +233,7 @@ function buildDirectivesBlock(
     if (options.enabledSoloLevels.length > 0) {
       lines.push(`- ENABLED SOLO levels: ${options.enabledSoloLevels.join(', ').toUpperCase()}.`);
       lines.push(`  ${options.enabledSoloLevels.map((s) => SOLO_DIRECTIVES[s]).join(' ')}`);
+      lines.push('  Distribute questions evenly across these SOLO complexity levels. Every ENABLED SOLO level MUST appear.');
     }
     if (options.enabledBloomLevels.length > 0) {
       lines.push(`- ENABLED Bloom levels for quiz: ${options.enabledBloomLevels.join(', ').toUpperCase()}.`);
@@ -334,11 +335,15 @@ function buildSimpleQuizPrompt(p: {
       : p.lesson;
   const enabledBloom = p.options.enabledBloomLevels.join(', ');
   const enabledSolo = p.options.enabledSoloLevels.join(', ');
+  const soloDirectives = p.options.enabledSoloLevels
+    .map((s) => SOLO_DIRECTIVES[s])
+    .join(' ');
   return [
     'Create MCQs from the lesson below. Return JSON only.',
     `Each question needs: prompt, options[4], correctOptionIndex(number), explanations[4], metadata{topic,subtopic,bloomLevel,soloLevel}.`,
     `Enabled Bloom levels: ${enabledBloom}. Enabled SOLO levels: ${enabledSolo}.`,
-    `Generate ${p.questionCount} questions.`,
+    `${soloDirectives}`,
+    `Distribute questions evenly across ALL enabled SOLO and Bloom levels. Generate ${p.questionCount} questions.`,
     'Lesson:',
     truncated,
   ].join('\n\n');
