@@ -84,9 +84,7 @@ export async function getPublicCourse(token: string) {
       explanations: Array.isArray(q.explanations) && q.explanations.length === 4
         ? q.explanations
         : ['', '', '', ''],
-      metadata: q.metadata && typeof q.metadata === 'object'
-        ? (q.metadata as QuestionMetadata)
-        : { topic: '', subtopic: '', bloomLevel: 'understand', soloLevel: 'multistructural' },
+      metadata: parseMetadata(q.metadata),
     }));
 
   return {
@@ -105,39 +103,60 @@ export async function submitQuizAttempt(params: {
   studentName: string;
   answers: Array<{ questionId: string; selectedOptionIndex: number }>;
 }) {
-  const { data, error } = await supabase
+  const { data: courseData, error } = await supabase
     .from('mini_courses')
-    .select('id, status, expires_at, pass_percentage, quizzes(id, questions(id, correct_option_index, metadata))')
+    .select('id, status, expires_at, pass_percentage, quizzes(id)')
     .eq('share_token', params.token)
     .single();
 
-  if (error || !data) throw new HttpError(404, 'Course not found');
+  if (error || !courseData) throw new HttpError(404, 'Course not found');
 
-  const course = data as StoredCourse;
+  const course = courseData as StoredCourse;
   ensureCourseIsLive(course);
 
   const quiz = course.quizzes[0];
   if (!quiz) throw new HttpError(400, 'Quiz not found for course');
 
+  const { data: qData } = await supabase
+    .from('questions')
+    .select('id, correct_option_index, metadata')
+    .eq('quiz_id', quiz.id);
+
+  const questionMap = new Map<string, { correctOptionIndex: number; metadata: QuestionMetadata }>();
+  for (const q of (qData ?? []) as QuestionRow[]) {
+    const meta = parseMetadata(q.metadata);
+    console.log(`[submit] question ${q.id.slice(0, 8)} raw_meta_type=${typeof q.metadata} raw_meta=${JSON.stringify(q.metadata)} parsed=${JSON.stringify(meta)}`);
+    questionMap.set(q.id, {
+      correctOptionIndex: q.correct_option_index,
+      metadata: meta,
+    });
+  }
+
   const answerMap = new Map(params.answers.map((a) => [a.questionId, a.selectedOptionIndex]));
   let score = 0;
 
-  const evaluatedAnswers = quiz.questions.map((q) => {
-    const selected = Number(answerMap.get(q.id));
-    const isCorrect = Number.isInteger(selected) && selected === q.correct_option_index;
-    if (isCorrect) score += 1;
-    return {
-      questionId: q.id,
-      selectedOptionIndex: selected,
-      correctOptionIndex: q.correct_option_index ?? -1,
-      isCorrect,
-      metadata: q.metadata && typeof q.metadata === 'object'
-        ? (q.metadata as QuestionMetadata)
-        : { topic: '', subtopic: '', bloomLevel: 'understand', soloLevel: 'multistructural' },
-    };
-  });
+  const evaluatedAnswers: Array<{
+    questionId: string;
+    selectedOptionIndex: number;
+    correctOptionIndex: number;
+    isCorrect: boolean;
+    metadata: QuestionMetadata;
+  }> = [];
 
-  const total = quiz.questions.length;
+  for (const [qId, answerQ] of questionMap) {
+    const selected = Number(answerMap.get(qId));
+    const isCorrect = Number.isInteger(selected) && selected === answerQ.correctOptionIndex;
+    if (isCorrect) score += 1;
+    evaluatedAnswers.push({
+      questionId: qId,
+      selectedOptionIndex: selected,
+      correctOptionIndex: answerQ.correctOptionIndex ?? -1,
+      isCorrect,
+      metadata: answerQ.metadata,
+    });
+  }
+
+  const total = questionMap.size;
   const percentage = total > 0 ? Math.round((score / total) * 100) : 0;
   const passPercentage = course.pass_percentage ?? env.defaultPassPercentage;
   const passed = percentage >= passPercentage;
@@ -208,18 +227,40 @@ const SCORE_BUCKETS = [
   { label: '0-20%', min: 0, max: 20 },
 ];
 
+function extractMetaFromObject(m: Record<string, unknown>): Partial<QuestionMetadata> {
+  return {
+    topic: typeof m.topic === 'string' ? m.topic : '',
+    subtopic: typeof m.subtopic === 'string' ? m.subtopic : '',
+    bloomLevel: typeof m.bloomLevel === 'string' ? m.bloomLevel : '',
+    soloLevel: typeof m.soloLevel === 'string' ? m.soloLevel : '',
+  };
+}
+
 function parseMetadata(raw: unknown, fallback?: QuestionMetadata): QuestionMetadata {
+  let parsed: Partial<QuestionMetadata> | null = null;
+
   if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
-    const m = raw as Record<string, unknown>;
-    return {
-      topic: String(m.topic ?? fallback?.topic ?? ''),
-      subtopic: String(m.subtopic ?? fallback?.subtopic ?? ''),
-      bloomLevel: String(m.bloomLevel ?? fallback?.bloomLevel ?? 'understand'),
-      soloLevel: String(m.soloLevel ?? fallback?.soloLevel ?? 'multistructural'),
-    };
+    parsed = extractMetaFromObject(raw as Record<string, unknown>);
+  } else if (typeof raw === 'string') {
+    try {
+      const obj = JSON.parse(raw);
+      if (obj && typeof obj === 'object' && !Array.isArray(obj)) {
+        parsed = extractMetaFromObject(obj as Record<string, unknown>);
+      }
+    } catch { /* raw was not valid JSON — ignore */ }
   }
-  if (fallback) return fallback;
-  return { topic: '', subtopic: '', bloomLevel: 'understand', soloLevel: 'multistructural' };
+
+  if (!parsed || !parsed.topic) {
+    if (fallback) return fallback;
+    return { topic: '', subtopic: '', bloomLevel: 'understand', soloLevel: 'multistructural' };
+  }
+
+  const topic = parsed.topic || fallback?.topic || '';
+  const subtopic = parsed.subtopic || fallback?.subtopic || '';
+  const bloomLevel = parsed.bloomLevel || fallback?.bloomLevel || 'understand';
+  const soloLevel = parsed.soloLevel || fallback?.soloLevel || 'multistructural';
+
+  return { topic, subtopic, bloomLevel, soloLevel };
 }
 
 function buildOptionDistribution(
@@ -293,12 +334,14 @@ export async function getCourseAnalytics(courseId: string) {
 
     for (const q of (qData ?? []) as QuestionRow[]) {
       const opts = [q.option_a, q.option_b, q.option_c, q.option_d].filter((o): o is string => o !== null);
+      const meta = parseMetadata(q.metadata);
+      console.log(`[analytics] question ${q.id.slice(0, 8)} raw_meta_type=${typeof q.metadata} raw_meta=${JSON.stringify(q.metadata)} parsed=${JSON.stringify(meta)}`);
       questionMap.set(q.id, {
         prompt: q.prompt,
         options: opts,
         correctOptionIndex: q.correct_option_index,
         explanations: Array.isArray(q.explanations) ? q.explanations : [],
-        metadata: parseMetadata(q.metadata),
+        metadata: meta,
       });
     }
   }
