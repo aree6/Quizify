@@ -445,6 +445,9 @@ function StudentDiagnostic({ student }: { student: StudentAnalyticsData }) {
                 {a.metadata.bloomLevel && (
                   <span className="text-xs px-1.5 py-0.5 rounded-full bg-chip-gray text-body-gray">{BLOOM_LABELS[a.metadata.bloomLevel]}</span>
                 )}
+                {a.metadata.soloLevel && (
+                  <span className="text-xs px-1.5 py-0.5 rounded-full bg-chip-gray text-body-gray">{SOLO_LABELS[a.metadata.soloLevel]}</span>
+                )}
               </div>
             </div>
           ))}
