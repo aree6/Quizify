@@ -344,4 +344,14 @@ ALTER TABLE public.questions
 ALTER TABLE public.questions
     ADD COLUMN IF NOT EXISTS metadata jsonb;
 
+ALTER TABLE public.mini_courses
+    ADD COLUMN IF NOT EXISTS creator_email text;
+
+CREATE INDEX IF NOT EXISTS idx_mini_courses_creator_email ON public.mini_courses (creator_email);
+
+ALTER TABLE public.quiz_attempts
+    ADD COLUMN IF NOT EXISTS student_email text;
+
+CREATE INDEX IF NOT EXISTS idx_quiz_attempts_student_email ON public.quiz_attempts (student_email);
+
 SELECT 'Schema setup complete!' as status;
