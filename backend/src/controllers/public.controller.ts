@@ -28,6 +28,11 @@ export async function submitQuiz(req: Request, res: Response): Promise<void> {
     throw new HttpError(400, 'Answers are required');
   }
 
-  const result = await submitQuizAttempt({ token, studentName, answers });
+  const result = await submitQuizAttempt({
+    token,
+    studentName,
+    answers,
+    studentEmail: req.authUser?.email,
+  });
   res.json(result);
 }

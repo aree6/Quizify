@@ -174,6 +174,7 @@ export async function confirmCourse(req: Request, res: Response): Promise<void> 
     sources: Array.isArray(sources) ? sources : [],
     lecturerName: lecturerName ?? 'Lecturer',
     passPercentage: typeof passPercentage === 'number' ? passPercentage : undefined,
+    creatorEmail: req.authUser?.email,
   });
 
   res.status(201).json({ course });
@@ -212,8 +213,12 @@ export async function reindexOutline(req: Request, res: Response): Promise<void>
   });
 }
 
-export async function getCourses(_req: Request, res: Response): Promise<void> {
-  const courses = await listMiniCourses();
+export async function getCourses(req: Request, res: Response): Promise<void> {
+  const authUser = req.authUser;
+  const isAdmin = authUser?.role === 'Admin';
+  const courses = await listMiniCourses(
+    isAdmin || !authUser ? undefined : { creatorEmail: authUser.email },
+  );
   res.json({ courses });
 }
 
