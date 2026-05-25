@@ -160,6 +160,7 @@ export async function confirmAndSaveCourse(params: {
   sources: SourceCitation[];
   lecturerName: string;
   passPercentage?: number;
+  creatorEmail?: string;
 }): Promise<{
   id: string;
   title: string;
@@ -179,20 +180,26 @@ export async function confirmAndSaveCourse(params: {
 
   const shareToken = await generateUniqueShareToken(courseCode);
 
+  const insertRow: Record<string, unknown> = {
+    title: params.title,
+    course_code: courseCode,
+    topics,
+    lesson_content: params.lesson,
+    sources: params.sources,
+    status: 'Ready',
+    share_token: shareToken,
+    pass_percentage: passPercentage,
+    expires_at: expiresAt,
+    created_by_name: params.lecturerName,
+  };
+
+  if (params.creatorEmail) {
+    insertRow.creator_email = params.creatorEmail;
+  }
+
   const { data: miniCourse, error: courseError } = await supabase
     .from('mini_courses')
-    .insert({
-      title: params.title,
-      course_code: courseCode,
-      topics,
-      lesson_content: params.lesson,
-      sources: params.sources,
-      status: 'Ready',
-      share_token: shareToken,
-      pass_percentage: passPercentage,
-      expires_at: expiresAt,
-      created_by_name: params.lecturerName,
-    })
+    .insert(insertRow)
     .select('id, title, share_token, status, created_at, pass_percentage, expires_at')
     .single();
 
@@ -249,7 +256,9 @@ export async function deleteMiniCourse(id: string): Promise<void> {
   if (!data || data.length === 0) throw new HttpError(404, 'Course not found');
 }
 
-export async function listMiniCourses(): Promise<
+export async function listMiniCourses(opts?: {
+  creatorEmail?: string;
+}): Promise<
   Array<{
     id: string;
     title: string;
@@ -263,10 +272,16 @@ export async function listMiniCourses(): Promise<
     createdAt: string;
   }>
 > {
-  const { data, error } = await supabase
+  let query = supabase
     .from('mini_courses')
-    .select('id, title, course_code, topics, status, share_token, created_at, quizzes(question_count), quiz_attempts(id)')
+    .select('id, title, course_code, topics, status, share_token, created_at, creator_email, quizzes(question_count), quiz_attempts(id)')
     .order('created_at', { ascending: false });
+
+  if (opts?.creatorEmail) {
+    query = query.eq('creator_email', opts.creatorEmail);
+  }
+
+  const { data, error } = await query;
 
   if (error) throw new HttpError(500, 'Failed to fetch courses');
 
@@ -278,6 +293,7 @@ export async function listMiniCourses(): Promise<
     status: string;
     share_token: string;
     created_at: string;
+    creator_email?: string;
     quizzes: Array<{ question_count: number }> | null;
     quiz_attempts: Array<{ id: string }> | null;
   }) => ({
