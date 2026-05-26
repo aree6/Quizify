@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useParams, Outlet } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ToastProvider } from './components/common/Toast';
 import { LoginPage } from './pages/Login';
@@ -11,91 +11,99 @@ import { QuizPage } from './pages/Quiz';
 import { Layout } from './components/common/Layout';
 import { RequireRole } from './components/auth/RequireRole';
 
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuth();
-  
+function RoleRedirect() {
+  const { user, isAuthenticated, isLoading } = useAuth();
+
   if (isLoading) {
     return <div className="loading-screen">Loading...</div>;
   }
-  
-  return isAuthenticated ? <>{children}</> : <Navigate to="/login" />;
+
+  if (!isAuthenticated || !user) {
+    return <Navigate to="/login" />;
+  }
+
+  return <Navigate to={`/${user.role.toLowerCase()}/dashboard`} />;
+}
+
+function RoleLayout() {
+  const { role } = useParams();
+  const { user, isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) {
+    return <div className="loading-screen">Loading...</div>;
+  }
+
+  if (!isAuthenticated || !user) {
+    return <Navigate to="/login" />;
+  }
+
+  if (role?.toLowerCase() !== user.role.toLowerCase()) {
+    return <Navigate to={`/${user.role.toLowerCase()}/dashboard`} />;
+  }
+
+  return (
+    <Layout>
+      <Outlet />
+    </Layout>
+  );
 }
 
 function AppRoutes() {
   const { isAuthenticated, isLoading } = useAuth();
-  
+
   if (isLoading) {
     return <div className="loading-screen">Loading...</div>;
   }
-  
+
   return (
     <Routes>
-      <Route 
-        path="/login" 
-        element={isAuthenticated ? <Navigate to="/dashboard" /> : <LoginPage />} 
-      />
       <Route
-        path="/dashboard"
-        element={
-          <ProtectedRoute>
-            <RequireRole roles={['Lecturer', 'Admin', 'Student']} fallback={<Navigate to="/login" />}>
-              <Layout>
-                <DashboardPage />
-              </Layout>
-            </RequireRole>
-          </ProtectedRoute>
-        }
+        path="/login"
+        element={isAuthenticated ? <RoleRedirect /> : <LoginPage />}
       />
-      <Route
-        path="/materials"
-        element={
-          <ProtectedRoute>
-            <RequireRole roles={['Lecturer', 'Admin']} fallback={<Navigate to="/dashboard" />}>
-              <Layout>
-                <MaterialsPage />
-              </Layout>
-            </RequireRole>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/create-course"
-        element={
-          <ProtectedRoute>
-            <RequireRole roles={['Lecturer', 'Admin']} fallback={<Navigate to="/dashboard" />}>
-              <Layout>
-                <CreateCoursePage />
-              </Layout>
-            </RequireRole>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/my-courses"
-        element={
-          <ProtectedRoute>
-            <RequireRole roles={['Lecturer', 'Admin']} fallback={<Navigate to="/dashboard" />}>
-              <Layout>
-                <MyCoursesPage />
-              </Layout>
-            </RequireRole>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/analytics"
-        element={
-          <ProtectedRoute>
-            <RequireRole roles={['Lecturer', 'Admin']} fallback={<Navigate to="/dashboard" />}>
-              <Layout>
-                <AnalyticsPage />
-              </Layout>
-            </RequireRole>
-          </ProtectedRoute>
-        }
-      />
+
       <Route path="/quiz" element={<QuizPage />} />
-      <Route path="*" element={<Navigate to="/dashboard" />} />
+
+      <Route path="/" element={<RoleRedirect />} />
+      <Route path="/dashboard" element={<RoleRedirect />} />
+
+      <Route path="/:role" element={<RoleLayout />}>
+        <Route path="dashboard" element={<DashboardPage />} />
+        <Route
+          path="materials"
+          element={
+            <RequireRole roles={['Lecturer', 'Admin']}>
+              <MaterialsPage />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="create-course"
+          element={
+            <RequireRole roles={['Lecturer']}>
+              <CreateCoursePage />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="my-courses"
+          element={
+            <RequireRole roles={['Lecturer']}>
+              <MyCoursesPage />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="analytics"
+          element={
+            <RequireRole roles={['Lecturer']}>
+              <AnalyticsPage />
+            </RequireRole>
+          }
+        />
+      </Route>
+
+      <Route path="*" element={<RoleRedirect />} />
     </Routes>
   );
 }

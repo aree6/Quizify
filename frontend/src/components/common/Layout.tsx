@@ -11,20 +11,33 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import logoSvg from '../../assets/logo.svg';
 
-const navItems = [
-  { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['Lecturer', 'Admin', 'Student'] },
-  { path: '/materials', label: 'Materials', icon: FileText, roles: ['Lecturer', 'Admin'] },
-  { path: '/create-course', label: 'Create Course', icon: PlusCircle, roles: ['Lecturer', 'Admin'] },
-  { path: '/my-courses', label: 'My Courses', icon: BookOpen, roles: ['Lecturer', 'Admin'] },
-  { path: '/analytics', label: 'Analytics', icon: BarChart3, roles: ['Lecturer', 'Admin'] },
-  { path: '/quiz', label: 'Take Quiz', icon: FileQuestion, roles: ['Student'] },
+interface NavItem {
+  path: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  roles: string[];
+  absolute?: boolean;
+}
+
+const navItems: NavItem[] = [
+  { path: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['Lecturer', 'Admin', 'Student'] },
+  { path: 'materials', label: 'Materials', icon: FileText, roles: ['Lecturer', 'Admin'] },
+  { path: 'create-course', label: 'Create Course', icon: PlusCircle, roles: ['Lecturer'] },
+  { path: 'my-courses', label: 'My Courses', icon: BookOpen, roles: ['Lecturer'] },
+  { path: 'analytics', label: 'Analytics', icon: BarChart3, roles: ['Lecturer'] },
+  { path: '/quiz', label: 'Take Quiz', icon: FileQuestion, roles: ['Student'], absolute: true },
 ];
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
-  const links = navItems.filter((item) => user && item.roles.includes(user.role));
+  const links = navItems
+    .filter((item) => user && item.roles.includes(user.role))
+    .map((item) => ({
+      ...item,
+      path: item.absolute ? item.path : `/${(user!.role).toLowerCase()}/${item.path}`,
+    }));
 
   const handleLogout = async () => {
     await logout();

@@ -1,3 +1,4 @@
+import { Navigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
 type Role = 'Lecturer' | 'Admin' | 'Student';
@@ -8,7 +9,7 @@ interface RequireRoleProps {
   fallback?: React.ReactNode;
 }
 
-export function RequireRole({ roles, children, fallback = null }: RequireRoleProps) {
+export function RequireRole({ roles, children, fallback }: RequireRoleProps) {
   const { user, isAuthenticated, isLoading } = useAuth();
 
   if (isLoading) {
@@ -16,11 +17,14 @@ export function RequireRole({ roles, children, fallback = null }: RequireRolePro
   }
 
   if (!isAuthenticated || !user) {
-    return <>{fallback}</>;
+    return <Navigate to="/login" />;
   }
 
   if (!roles.includes(user.role as Role)) {
-    return <>{fallback}</>;
+    if (fallback !== undefined) {
+      return <>{fallback}</>;
+    }
+    return <Navigate to={`/${user.role.toLowerCase()}/dashboard`} />;
   }
 
   return <>{children}</>;
