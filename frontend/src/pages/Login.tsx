@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Mail, Lock, GraduationCap, Shield, User } from 'lucide-react';
+import { GraduationCap, Shield, User } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { getSelectedRole, setSelectedRole } from '../services/auth';
 import { PageError } from '../components/common/PageState';
@@ -11,26 +10,28 @@ type UserRole = 'Lecturer' | 'Admin' | 'Student';
 const ROLE_MOCK_USERS: Record<UserRole, { email: string; name: string }> = {
   Lecturer: { email: 'lecturer@utm.my', name: 'Dr. Ahmad' },
   Admin: { email: 'admin@utm.my', name: 'Admin User' },
-  Student: { email: 'student@utm.my', name: 'Ali Student' },
+  Student: { email: 'student@graduate.utm.my', name: 'Student' },
+};
+
+const ROLE_INFO: Record<UserRole, { label: string; icon: typeof GraduationCap; hint: string }> = {
+  Lecturer: { label: 'Lecturer', icon: GraduationCap, hint: 'Sign in with your @utm.my email' },
+  Admin: { label: 'Admin', icon: Shield, hint: 'Sign in with your @utm.my email' },
+  Student: { label: 'Student', icon: User, hint: 'Sign in with your @graduate.utm.my email' },
 };
 
 export function LoginPage() {
-  const { login, loginWithGoogle } = useAuth();
-  const navigate = useNavigate();
+  const { loginWithGoogle } = useAuth();
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedRole, setSelectedRoleLocal] = useState<UserRole>(() => (getSelectedRole() as UserRole) || 'Lecturer');
+  const [selectedRole, setSelectedRoleState] = useState<UserRole>(
+    () => (getSelectedRole() as UserRole) || 'Lecturer',
+  );
 
-  const roleIcons: Record<UserRole, typeof GraduationCap> = {
-    Lecturer: GraduationCap,
-    Admin: Shield,
-    Student: User,
-  };
-
-  const RoleIcon = roleIcons[selectedRole];
+  const roleInfo = ROLE_INFO[selectedRole];
+  const RoleIcon = roleInfo.icon;
 
   const handleRoleChange = (role: UserRole) => {
-    setSelectedRoleLocal(role);
+    setSelectedRoleState(role);
     setSelectedRole(role);
   };
 
@@ -38,24 +39,9 @@ export function LoginPage() {
     try {
       setError('');
       setIsLoading(true);
-      handleRoleChange(selectedRole);
       await loginWithGoogle({ role: selectedRole });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Google login failed');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handlePasswordLogin = async (email: string, password: string) => {
-    try {
-      setError('');
-      setIsLoading(true);
-      handleRoleChange(selectedRole);
-      await login({ email, password, role: selectedRole });
-      navigate('/dashboard');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login failed');
     } finally {
       setIsLoading(false);
     }
@@ -87,7 +73,7 @@ export function LoginPage() {
 
         <div className="surface-card p-6 sm:p-8">
           <div className="mb-6">
-            <label className="block text-sm font-semibold text-near-black mb-2">Login role</label>
+            <label className="block text-sm font-semibold text-near-black mb-2">I am a...</label>
             <div className="relative">
               <RoleIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-body-gray pointer-events-none" />
               <select
@@ -100,44 +86,17 @@ export function LoginPage() {
                 <option value="Student">Student</option>
               </select>
             </div>
+            <p className="text-xs text-muted-gray mt-2 ml-1">{roleInfo.hint}</p>
           </div>
 
-          <button type="button" onClick={handleGoogleLogin} disabled={isLoading} className="pill-primary w-full mb-4">
-            Continue with Google as {selectedRole}
-          </button>
-
-          <div className="flex items-center gap-3 my-5">
-            <div className="h-px bg-chip-gray flex-1" />
-            <span className="text-xs text-muted-gray">or</span>
-            <div className="h-px bg-chip-gray flex-1" />
-          </div>
-
-          <form
-            className="space-y-3"
-            onSubmit={(event) => {
-              event.preventDefault();
-              const form = event.currentTarget;
-              const email = (form.elements.namedItem('email') as HTMLInputElement).value;
-              const password = (form.elements.namedItem('password') as HTMLInputElement).value;
-              handlePasswordLogin(email, password);
-            }}
+          <button
+            type="button"
+            onClick={handleGoogleLogin}
+            disabled={isLoading}
+            className="pill-primary w-full"
           >
-            <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-body-gray" />
-              <input name="email" type="email" required placeholder="Email" className="field pl-10" />
-            </div>
-
-            <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-body-gray" />
-              <input name="password" type="password" required placeholder="Password" className="field pl-10" />
-            </div>
-
-            <button type="submit" disabled={isLoading} className="pill-dark w-full">
-              {isLoading ? 'Signing in...' : 'Sign in'}
-            </button>
-          </form>
-
-          <p className="text-xs text-muted-gray mt-5 text-center">Demo: lecturer@utm.my / password123</p>
+            {isLoading ? 'Redirecting...' : `Continue with Google as ${roleInfo.label}`}
+          </button>
 
           {error && <PageError error={error} className="mt-4" />}
         </div>

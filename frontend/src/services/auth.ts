@@ -1,23 +1,8 @@
-import type { LoginCredentials, AuthResponse, User } from '../types';
+import type { AuthResponse, User } from '../types';
 import { supabase } from './supabase';
 
 const VALID_ROLES = ['Lecturer', 'Admin', 'Student'] as const;
 type Role = typeof VALID_ROLES[number];
-
-const MOCK_USERS: Record<string, { password: string; user: User }> = {
-  'lecturer@utm.my': {
-    password: 'password123',
-    user: { userId: '1', name: 'Dr. Ahmad', email: 'lecturer@utm.my', role: 'Lecturer' },
-  },
-  'admin@utm.my': {
-    password: 'admin123',
-    user: { userId: '2', name: 'Admin User', email: 'admin@utm.my', role: 'Admin' },
-  },
-  'student@utm.my': {
-    password: 'student123',
-    user: { userId: '3', name: 'Ali Student', email: 'student@utm.my', role: 'Student' },
-  },
-};
 
 const isSupabaseConfigured = () => {
   return import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -39,6 +24,29 @@ export function clearSelectedRole(): void {
   localStorage.removeItem('selectedRole');
 }
 
+function deriveNameFromEmail(email: string): string {
+  const prefix = email.split('@')[0];
+  if (!prefix) return 'User';
+  return prefix.charAt(0).toUpperCase() + prefix.slice(1);
+}
+
+function resolveRole(email: string): Role {
+  if (email.endsWith('@graduate.utm.my')) {
+    return 'Student';
+  }
+  if (email.endsWith('@utm.my')) {
+    const selected = getSelectedRole();
+    if (selected === 'Admin' || selected === 'Lecturer') return selected;
+    return 'Lecturer';
+  }
+  return getSelectedRole();
+}
+
+function resolveName(supabaseName: string | undefined | null, email: string): string {
+  if (supabaseName && supabaseName.trim().length > 0) return supabaseName.trim();
+  return deriveNameFromEmail(email);
+}
+
 function buildUser(params: {
   userId: string;
   name: string;
@@ -49,92 +57,44 @@ function buildUser(params: {
     role?: string;
   };
 }): User {
-  const role = (params.supabaseMeta?.role && VALID_ROLES.includes(params.supabaseMeta.role as Role))
-    ? (params.supabaseMeta.role as Role)
-    : getSelectedRole();
+  const email = params.supabaseMeta?.email || params.email;
+  const role = resolveRole(email);
+  const name = resolveName(params.supabaseMeta?.name, email);
 
   return {
     userId: params.userId,
-    name: params.name,
-    email: params.email,
+    name: name || params.name || deriveNameFromEmail(email),
+    email,
     role,
   };
 }
 
 class AuthService {
-  async login(credentials: LoginCredentials): Promise<AuthResponse> {
-    if (!isSupabaseConfigured()) {
-      const mockUser = MOCK_USERS[credentials.email];
-      if (!mockUser || mockUser.password !== credentials.password) {
-        throw new Error('Invalid email or password');
-      }
-      const role = getSelectedRole();
-      const user: User = {
-        userId: mockUser.user.userId,
-        name: mockUser.user.name,
-        email: mockUser.user.email,
-        role,
-      };
-      return {
-        user,
-        token: 'mock-token-' + Date.now(),
-      };
-    }
-
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: credentials.email,
-      password: credentials.password,
-    });
-
-    if (error) throw new Error(error.message);
-
-    const user = buildUser({
-      userId: data.user.id,
-      name: data.user.user_metadata?.name || data.user.email?.split('@')[0] || 'User',
-      email: data.user.email || '',
-      supabaseMeta: {
-        name: data.user.user_metadata?.name,
-        email: data.user.email || '',
-        role: data.user.user_metadata?.role,
-      },
-    });
-
-    return {
-      user,
-      token: data.session.access_token,
-    };
-  }
-
   async loginWithGoogle(_opts?: { role?: Role }): Promise<AuthResponse> {
-    const role = getSelectedRole();
     await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
         redirectTo: `${window.location.origin}/dashboard`,
-        queryParams: { role },
       },
     });
     return {
-      user: { userId: '', name: 'Google User', email: '', role },
+      user: { userId: '', name: 'Signing in...', email: '', role: getSelectedRole() },
       token: '',
     };
   }
 
   async validateToken(token: string): Promise<User> {
     if (!isSupabaseConfigured()) {
-      if (token.startsWith('mock-token-')) {
-        const mockUser = MOCK_USERS['lecturer@utm.my'].user;
-        const role = getSelectedRole();
-        return { ...mockUser, role };
-      }
       if (token.startsWith('dev-token-')) {
         const devUserStr = localStorage.getItem('devUser');
         if (devUserStr) {
           const devUser = JSON.parse(devUserStr) as User;
-          if (devUser.role && VALID_ROLES.includes(devUser.role as Role)) {
-            return devUser;
+          if (devUser.email) {
+            const role = resolveRole(devUser.email);
+            const name = resolveName(devUser.name, devUser.email);
+            return { ...devUser, role, name };
           }
-          return { ...devUser, role: getSelectedRole() };
+          return devUser;
         }
       }
       throw new Error('Invalid token');
@@ -160,24 +120,6 @@ class AuthService {
   async logout(): Promise<void> {
     if (!isSupabaseConfigured()) return;
     await supabase.auth.signOut();
-  }
-
-  async getCurrentUser(): Promise<User | null> {
-    if (!isSupabaseConfigured()) return null;
-
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return null;
-
-    return buildUser({
-      userId: user.id,
-      name: user.user_metadata?.name || user.email?.split('@')[0] || 'User',
-      email: user.email || '',
-      supabaseMeta: {
-        name: user.user_metadata?.name,
-        email: user.email || '',
-        role: user.user_metadata?.role,
-      },
-    });
   }
 }
 

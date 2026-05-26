@@ -1,10 +1,9 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
-import type { AuthState, LoginCredentials, User } from '../types';
+import type { AuthState, User } from '../types';
 import { authService, clearSelectedRole } from '../services/auth';
 import { supabase } from '../services/supabase';
 
 interface AuthContextType extends AuthState {
-  login: (credentials: LoginCredentials) => Promise<void>;
   loginWithGoogle: (opts?: { role?: 'Lecturer' | 'Admin' | 'Student' }) => Promise<void>;
   logout: () => Promise<void>;
 }
@@ -92,12 +91,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  const login = async (credentials: LoginCredentials) => {
-    const response = await authService.login(credentials);
-    localStorage.setItem('authToken', response.token);
-    setState({ user: response.user, isAuthenticated: true, isLoading: false });
-  };
-
   const loginWithGoogle = async (opts?: { role?: 'Lecturer' | 'Admin' | 'Student' }) => {
     const response = await authService.loginWithGoogle(opts);
     if (response.token) {
@@ -115,7 +108,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ ...state, login, loginWithGoogle, logout }}>
+    <AuthContext.Provider value={{ ...state, loginWithGoogle, logout }}>
       {children}
     </AuthContext.Provider>
   );
