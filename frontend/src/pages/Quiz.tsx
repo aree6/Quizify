@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Check, X } from 'lucide-react';
 import { apiService } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import { CollapsibleLesson } from '../components/common/CollapsibleLesson';
 import { SegmentControl } from '../components/common/SegmentControl';
 import type { SegmentOption } from '../components/common/SegmentControl';
@@ -30,17 +31,24 @@ function parseTitleParts(fullTitle: string): { courseName: string; entries: stri
 export function QuizPage() {
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token') || '';
+  const { user, isAuthenticated } = useAuth();
 
   const [course, setCourse] = useState<PublicCourse | null>(null);
   const [view, setView] = useState<QuizView>('course');
-  const [studentName, setStudentName] = useState('');
-  const [nameConfirmed, setNameConfirmed] = useState(false);
+  const [studentName, setStudentName] = useState(user?.name || '');
+  const [nameConfirmed, setNameConfirmed] = useState(isAuthenticated);
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [result, setResult] = useState<QuizSubmissionResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (user?.name && !studentName) {
+      setStudentName(user.name);
+    }
+  }, [user]);
 
   useEffect(() => {
     if (!token) {
