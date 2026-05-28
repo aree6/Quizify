@@ -7,6 +7,7 @@ import type {
   PublicCourse,
   QuizSubmissionResult,
   SourceCitation,
+  StudentAttempt,
 } from '../types';
 import { API_BASE_URL, http } from './http';
 
@@ -93,6 +94,13 @@ export const apiService = {
   async getAnalytics(courseId: string) {
     const { data } = await http.get<CourseAnalytics>(
       `/api/analytics/${encodeURIComponent(courseId)}`,
+    );
+    return data;
+  },
+
+  async getStudentAttempts() {
+    const { data } = await http.get<{ attempts: StudentAttempt[] }>(
+      '/api/students/attempts',
     );
     return data;
   },

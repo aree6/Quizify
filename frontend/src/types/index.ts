@@ -11,12 +11,6 @@ export interface AuthState {
   isLoading: boolean;
 }
 
-export interface LoginCredentials {
-  email: string;
-  password: string;
-  role?: 'Lecturer' | 'Admin' | 'Student';
-}
-
 export interface AuthResponse {
   user: User;
   token: string;
@@ -191,6 +185,19 @@ export interface QuizSubmissionResult {
   passed: boolean;
   passPercentage: number;
   answers: SubmissionAnswer[];
+}
+
+export interface StudentAttempt {
+  id: string;
+  courseId: string;
+  courseTitle: string;
+  shareToken: string;
+  score: number;
+  totalQuestions: number;
+  percentage: number;
+  passed: boolean;
+  passPercentage: number;
+  submittedAt: string;
 }
 
 export interface TopicPerformanceData {

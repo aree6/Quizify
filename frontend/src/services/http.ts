@@ -8,16 +8,20 @@ export const http: AxiosInstance = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
+http.interceptors.request.use((config) => {
+  const token = localStorage.getItem('authToken');
+  if (token && !token.startsWith('mock-token-') && !token.startsWith('dev-token-')) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
 interface ApiErrorBody {
   message?: string;
   details?: string;
   hint?: string;
 }
 
-/**
- * Normalizes Axios errors into a `new Error(...)` whose message combines
- * message/details/hint, matching how the backend returns structured errors.
- */
 http.interceptors.response.use(
   (response) => response,
   (error: AxiosError<ApiErrorBody>) => {
