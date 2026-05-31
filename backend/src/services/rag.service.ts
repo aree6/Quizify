@@ -94,7 +94,7 @@ export async function ingestMaterial(params: {
   mimeType: string;
   storagePath: string;
   buffer: Buffer;
-}): Promise<{ chunkCount: number }> {
+}): Promise<{ chunkCount: number; indexed: boolean }> {
   const rawText = await extractText(params);
   const normalized = rawText.replace(/\s+/g, ' ').trim();
   if (!normalized) throw new Error('Could not extract text from file.');
@@ -104,7 +104,10 @@ export async function ingestMaterial(params: {
 
   await supabase.from('material_chunks').delete().eq('material_id', params.materialId);
 
+  // Embed BEFORE storing chunks so we know whether indexing succeeded
   const embeddings = await embedTexts(chunks);
+  const indexed = embeddings !== null;
+
   const rows = chunks.map((chunk, index) => ({
     material_id: params.materialId,
     course_code: params.courseCode,
@@ -112,17 +115,21 @@ export async function ingestMaterial(params: {
     chapter: params.chapter,
     chunk_index: index,
     chunk_text: chunk,
-    embedding: embeddings ? toVectorString(embeddings[index]!) : null,
+    embedding: indexed ? toVectorString(embeddings[index]!) : null,
   }));
 
   const { error: chunkError } = await supabase.from('material_chunks').insert(rows);
   if (chunkError) throw new Error('Failed to store material chunks.');
 
+  // Only mark Active when embeddings exist; otherwise Failed so the UI shows it as unindexed
+  const status = indexed ? 'Active' : 'Failed';
+  const errorMessage = indexed ? null : 'Text extraction succeeded but embedding generation failed. Check your AI provider API key.';
+
   const { error: updateError } = await supabase
     .from('materials')
     .update({
-      status: 'Active',
-      error_message: null,
+      status,
+      error_message: errorMessage,
       chunk_count: chunks.length,
       file_name: params.fileName,
       storage_path: params.storagePath,
@@ -139,6 +146,71 @@ export async function ingestMaterial(params: {
       console.error(`[rag] Outline extraction failed for ${params.courseCode}:`, err.message);
     });
   }
+
+  return { chunkCount: chunks.length, indexed };
+}
+
+/**
+ * Re-run embedding generation for a material that has chunks but null
+ * embeddings (e.g. after uploading with a missing or expired API key).
+ * Updates the material status to Active on success, leaves it Failed on
+ * (repeated) failure.
+ */
+export async function reindexMaterial(materialId: string): Promise<{ chunkCount: number }> {
+  const { data: material } = await supabase
+    .from('materials')
+    .select('id, status')
+    .eq('id', materialId)
+    .single();
+
+  if (!material) throw new Error('Material not found');
+  if (material.status === 'Deleted') throw new Error('Cannot re-index a deleted material');
+  if (material.status === 'Processing') throw new Error('Material is currently being processed. Try again later.');
+
+  const { data: rawChunks, error } = await supabase
+    .from('material_chunks')
+    .select('id, chunk_text, chunk_index')
+    .eq('material_id', materialId)
+    .order('chunk_index', { ascending: true });
+
+  if (error) throw new Error('Failed to fetch chunks');
+  if (!rawChunks || rawChunks.length === 0) throw new Error('No chunks available for indexing');
+
+  const chunks = rawChunks as Array<{ id: string; chunk_text: string; chunk_index: number }>;
+  const texts = chunks.map((c) => c.chunk_text);
+  const embeddings = await embedTexts(texts);
+
+  if (!embeddings) {
+    await supabase
+      .from('materials')
+      .update({ status: 'Failed', error_message: 'Embedding generation failed. Check your AI provider API key.', updated_at: new Date().toISOString() })
+      .eq('id', materialId);
+    throw new Error('Embedding generation failed. Check your AI provider API key.');
+  }
+
+  // Clear existing embeddings so a partial failure leaves a clean slate
+  await supabase
+    .from('material_chunks')
+    .update({ embedding: null })
+    .eq('material_id', materialId);
+
+  const updates = chunks.map(async (chunk, i) => {
+    const vec = embeddings[i];
+    if (!vec) throw new Error(`Missing embedding at index ${i}`);
+    if (!chunk.id) throw new Error(`Missing id at index ${i}`);
+    const { error: updateError } = await supabase
+      .from('material_chunks')
+      .update({ embedding: toVectorString(vec) })
+      .eq('id', chunk.id);
+    if (updateError) throw new Error('Failed to update chunk embedding');
+  });
+
+  await Promise.all(updates);
+
+  await supabase
+    .from('materials')
+    .update({ status: 'Active', error_message: null, updated_at: new Date().toISOString() })
+    .eq('id', materialId);
 
   return { chunkCount: chunks.length };
 }

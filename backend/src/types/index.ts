@@ -16,6 +16,8 @@ export interface MaterialRow {
   error_message: string | null;
   uploaded_at: string;
   updated_at: string;
+  /** Whether at least one chunk has a non-null embedding. */
+  has_embeddings?: boolean;
 }
 
 export interface ChapterOutline {
