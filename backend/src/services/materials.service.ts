@@ -98,7 +98,64 @@ export async function selectMaterials(params: {
   const { data, error } = await query;
   if (error) throw new HttpError(500, 'Failed to fetch materials');
 
-  return (data as MaterialRow[] | null)?.map(withDefaults) ?? [];
+  const materials = (data as MaterialRow[] | null)?.map(withDefaults) ?? [];
+
+  // Batch-check which materials actually have at least one non-null embedding
+  if (materials.length > 0) {
+    const ids = materials.map((m) => m.id);
+    const { data: chunks } = await supabase
+      .from('material_chunks')
+      .select('material_id')
+      .in('material_id', ids)
+      .not('embedding', 'is', null);
+
+    const set = new Set((chunks ?? []).map((r: { material_id: string }) => r.material_id));
+    materials.forEach((m) => {
+      m.has_embeddings = set.has(m.id);
+    });
+  }
+
+  return materials;
+}
+
+/** Find materials that are Active but have no chunks with non-null embeddings,
+ *  and reset them to Failed so the user can re-index them from the UI. */
+export async function repairIndexStatus(): Promise<{ repaired: number }> {
+  const { data: broken, error } = await supabase
+    .from('materials')
+    .select('id')
+    .eq('status', 'Active');
+
+  if (error) throw new HttpError(500, 'Failed to scan materials', { details: error.message });
+
+  if (!broken || broken.length === 0) return { repaired: 0 };
+
+  const ids = broken.map((r: { id: string }) => r.id);
+
+  // Find which of these Active materials have at least one non-null embedding
+  const { data: valid } = await supabase
+    .from('material_chunks')
+    .select('material_id')
+    .in('material_id', ids)
+    .not('embedding', 'is', null);
+
+  const validSet = new Set((valid ?? []).map((r: { material_id: string }) => r.material_id));
+  const toRepair = ids.filter((id) => !validSet.has(id));
+
+  if (toRepair.length === 0) return { repaired: 0 };
+
+  const { error: updateError } = await supabase
+    .from('materials')
+    .update({
+      status: 'Failed',
+      error_message: 'Material has no indexed embeddings. Click retry to re-index.',
+      updated_at: new Date().toISOString(),
+    })
+    .in('id', toRepair);
+
+  if (updateError) throw new HttpError(500, 'Failed to repair materials', { details: updateError.message });
+
+  return { repaired: toRepair.length };
 }
 
 export async function getMaterialById(id: string): Promise<MaterialRow> {

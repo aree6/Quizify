@@ -2,7 +2,7 @@ import type { Request, Response } from 'express';
 import { supabase } from '../lib/supabase.js';
 import { HttpError } from '../middleware/error-handler.js';
 import { pathParam } from '../middleware/async-handler.js';
-import { ingestMaterial } from '../services/rag.service.js';
+import { ingestMaterial, reindexMaterial as reindexChunks } from '../services/rag.service.js';
 import {
   buildStoragePath,
   deleteMaterials,
@@ -12,6 +12,7 @@ import {
   insertMaterial,
   moveFileInStorage,
   removeFileFromStorage,
+  repairIndexStatus,
   selectMaterials,
   softReplaceMaterial,
   updateMaterialRow,
@@ -105,7 +106,7 @@ export async function uploadMaterial(req: Request, res: Response): Promise<void>
   }
 
   try {
-    const result = await ingestMaterial({
+    await ingestMaterial({
       materialId,
       courseCode,
       chapter,
@@ -116,9 +117,9 @@ export async function uploadMaterial(req: Request, res: Response): Promise<void>
       buffer: file.buffer,
     });
 
-    res.status(201).json({
-      material: { ...material, status: 'Active', chunk_count: result.chunkCount },
-    });
+    // Re-fetch so the response reflects the true DB status (Active or Failed)
+    const updated = await getMaterialById(materialId);
+    res.status(201).json({ material: updated });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'RAG processing failed';
     await supabase
@@ -248,4 +249,27 @@ export async function deleteChapterMaterials(req: Request, res: Response): Promi
   const rows = (data ?? []) as Array<{ id: string; storage_path: string }>;
   await deleteMaterials(rows);
   res.json({ success: true, deleted: rows.length });
+}
+
+export async function reindexMaterial(req: Request, res: Response): Promise<void> {
+  const id = pathParam(req.params.id);
+  if (!id) throw new HttpError(400, 'id is required');
+
+  try {
+    await reindexChunks(id);
+    const updated = await getMaterialById(id);
+    res.json({ material: updated });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Re-indexing failed';
+    throw new HttpError(500, message);
+  }
+}
+
+/**
+ * Scan all Active materials and mark those that have no non-null embedding
+ * as Failed, so the user can retry indexing from the UI.
+ */
+export async function repairIndex(_req: Request, res: Response): Promise<void> {
+  const { repaired } = await repairIndexStatus();
+  res.json({ repaired });
 }
