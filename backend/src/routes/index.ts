@@ -9,6 +9,8 @@ import {
   deleteMaterial,
   listMaterials,
   patchMaterial,
+  reindexMaterial,
+  repairIndex,
   uploadMaterial,
 } from '../controllers/materials.controller.js';
 import {
@@ -26,7 +28,7 @@ import { studentAttempts } from '../controllers/students.controller.js';
 
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 25 * 1024 * 1024 },
+  limits: { fileSize: 10 * 1024 * 1024 },
 });
 
 export const router = Router();
@@ -41,6 +43,8 @@ router.patch('/api/materials/:id', requireAuth, asyncHandler(patchMaterial));
 router.delete('/api/materials/:id', requireAuth, asyncHandler(deleteMaterial));
 router.delete('/api/materials/course/:courseCode', requireAuth, asyncHandler(deleteCourseMaterials));
 router.delete('/api/materials/course/:courseCode/chapter', requireAuth, asyncHandler(deleteChapterMaterials));
+router.post('/api/materials/:id/reindex', requireAuth, asyncHandler(reindexMaterial));
+router.post('/api/materials/repair', requireAuth, asyncHandler(repairIndex));
 
 // Courses (require auth)
 router.get('/api/courses', requireAuth, asyncHandler(getCourses));
