@@ -182,6 +182,18 @@ export const apiService = {
     );
     return data;
   },
+
+  async reindexMaterial(materialId: string) {
+    const { data } = await http.post<{ material: Material }>(
+      `/api/materials/${encodeURIComponent(materialId)}/reindex`,
+    );
+    return data;
+  },
+
+  async repairMaterials() {
+    const { data } = await http.post<{ repaired: number }>('/api/materials/repair');
+    return data;
+  },
 };
 
 export { API_BASE_URL };
