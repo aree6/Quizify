@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { AlertCircle, CheckCircle, ChevronDown, ChevronRight, Edit2, Loader, Search, Trash2, Upload, X } from 'lucide-react';
+import { AlertCircle, CheckCircle, ChevronDown, ChevronRight, Edit2, Loader, RefreshCw, Search, Trash2, Upload, X } from 'lucide-react';
 import { apiService } from '../services/api';
 import { COURSE_OPTIONS, findCourseByCode } from '../constants/courses';
 import type { Material } from '../types';
@@ -19,10 +19,12 @@ const VIEW_OPTIONS: SegmentOption<ViewMode>[] = [
 
 type MaterialType = 'course_info' | 'slide';
 
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+
 interface QueueItem {
   id: string;
   file: File;
-  status: 'pending' | 'uploading' | 'success' | 'error';
+  status: 'pending' | 'uploading' | 'success' | 'error' | 'index_failed';
   error?: string;
   fileName: string;
   materialType: MaterialType;
@@ -136,27 +138,47 @@ function getCourseDisplay(courseCode: string) {
 function queueFromFiles(files: FileList | null): QueueItem[] {
   if (!files) return [];
 
-  return Array.from(files)
-    .filter((file) => /\.(pdf|pptx)$/i.test(file.name))
-    .map((file) => {
-      const rel = (file as File & { webkitRelativePath?: string }).webkitRelativePath || '';
-      const folderRoot = rel.includes('/') ? rel.split('/')[0] : 'Manual Selection';
-      const suggestedCourseCode = fuzzySuggestCourseCode(`${folderRoot} ${file.name}`);
-      const inferred = inferChapterAndItem(file.name);
-      const inferredType = inferMaterialType(file.name);
+  const items: QueueItem[] = [];
 
-      return {
+  Array.from(files).forEach((file) => {
+    if (!/\.(pdf|pptx)$/i.test(file.name)) return;
+
+    if (file.size > MAX_FILE_SIZE) {
+      items.push({
         id: `${file.name}-${file.lastModified}-${Math.random().toString(36).slice(2, 8)}`,
         file,
-        status: 'pending' as const,
+        status: 'error',
+        error: `File exceeds the 10 MB limit (${formatBytes(file.size)}).`,
         fileName: inferFileName(file.name),
-        materialType: inferredType,
-        chapterLabel: inferredType === 'course_info' ? 'Course Information' : inferred.chapterLabel,
-        chapterItemLabel: inferredType === 'course_info' ? '' : inferred.chapterItemLabel,
-        courseCode: suggestedCourseCode,
-        folderRoot,
-      };
+        materialType: 'slide',
+        chapterLabel: 'Chapter 1',
+        chapterItemLabel: '1.0',
+        courseCode: '',
+        folderRoot: 'Manual Selection',
+      });
+      return;
+    }
+
+    const rel = (file as File & { webkitRelativePath?: string }).webkitRelativePath || '';
+    const folderRoot = rel.includes('/') ? rel.split('/')[0] : 'Manual Selection';
+    const suggestedCourseCode = fuzzySuggestCourseCode(`${folderRoot} ${file.name}`);
+    const inferred = inferChapterAndItem(file.name);
+    const inferredType = inferMaterialType(file.name);
+
+    items.push({
+      id: `${file.name}-${file.lastModified}-${Math.random().toString(36).slice(2, 8)}`,
+      file,
+      status: 'pending',
+      fileName: inferFileName(file.name),
+      materialType: inferredType,
+      chapterLabel: inferredType === 'course_info' ? 'Course Information' : inferred.chapterLabel,
+      chapterItemLabel: inferredType === 'course_info' ? '' : inferred.chapterItemLabel,
+      courseCode: suggestedCourseCode,
+      folderRoot,
     });
+  });
+
+  return items;
 }
 
 function normalizeChapterLabel(raw: string) {
@@ -175,10 +197,26 @@ function chapterOptions(max = 13) {
   return options;
 }
 
-function statusBadgeClass(status: Material['status']) {
-  if (status === 'Active') return 'status-badge status-active';
+function statusBadgeClass(status: Material['status'], material?: Material) {
+  if (status === 'Active') {
+    if (material?.has_embeddings === false) return 'status-badge status-processing';
+    return 'status-badge status-active';
+  }
   if (status === 'Processing') return 'status-badge status-processing';
   return 'status-badge status-failed';
+}
+
+function statusLabel(status: Material['status'], material?: Material): string {
+  if (status === 'Active') {
+    if (material?.has_embeddings === false) return 'Needs Index';
+    return 'Indexed';
+  }
+  if (status === 'Processing') return 'Processing';
+  if (status === 'Failed') {
+    if (material?.error_message?.toLowerCase().includes('embedding')) return 'Unindexed';
+    return 'Failed';
+  }
+  return status;
 }
 
 export function MaterialsPage() {
@@ -205,6 +243,7 @@ export function MaterialsPage() {
   const folderInputRef = useRef<HTMLInputElement>(null);
   const replaceInputRef = useRef<HTMLInputElement>(null);
   const [replaceTarget, setReplaceTarget] = useState<Material | null>(null);
+  const [reindexing, setReindexing] = useState<Set<string>>(new Set());
 
   const loadMaterials = async () => {
     try {
@@ -218,6 +257,28 @@ export function MaterialsPage() {
       setLoading(false);
     }
   };
+
+  // Auto-repair: detect Active materials that lack embeddings and reset them
+  // to Failed so the re-index button shows up in the UI.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const broken = materials.filter(
+        (m) => m.status === 'Active' && m.has_embeddings === false,
+      );
+      if (broken.length === 0) return;
+      try {
+        const { repaired } = await apiService.repairMaterials();
+        if (repaired > 0 && !cancelled) {
+          showToast(`Fixed ${repaired} material(s) that needed re-indexing.`);
+          await loadMaterials();
+        }
+      } catch {
+        // silent — repair is best-effort
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [materials.length]);
 
   useEffect(() => {
     loadMaterials();
@@ -305,7 +366,7 @@ export function MaterialsPage() {
     for (const item of pending) {
       setQueue((prev) => prev.map((q) => (q.id === item.id ? { ...q, status: 'uploading', error: undefined } : q)));
       try {
-        await apiService.uploadMaterialAdvanced({
+        const resp = await apiService.uploadMaterialAdvanced({
           file: item.file,
           courseCode: item.courseCode,
           materialType: item.materialType,
@@ -314,7 +375,18 @@ export function MaterialsPage() {
           fileName: item.fileName || item.file.name,
           onDuplicate: 'error',
         });
-        setQueue((prev) => prev.map((q) => (q.id === item.id ? { ...q, status: 'success' } : q)));
+        const status = resp.material.status;
+        setQueue((prev) =>
+          prev.map((q) =>
+            q.id === item.id
+              ? {
+                  ...q,
+                  status: status === 'Active' ? 'success' : 'index_failed',
+                  error: status !== 'Active' ? (resp.material.error_message || 'Indexing pending') : undefined,
+                }
+              : q,
+          ),
+        );
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Upload failed';
 
@@ -322,7 +394,7 @@ export function MaterialsPage() {
           const shouldReplace = await confirm(`Duplicate detected for ${item.fileName}. Replace existing material?`, { title: 'Duplicate', confirmLabel: 'Replace', destructive: false });
           if (shouldReplace) {
             try {
-              await apiService.uploadMaterialAdvanced({
+              const resp = await apiService.uploadMaterialAdvanced({
                 file: item.file,
                 courseCode: item.courseCode,
                 materialType: item.materialType,
@@ -331,7 +403,18 @@ export function MaterialsPage() {
                 fileName: item.fileName || item.file.name,
                 onDuplicate: 'replace',
               });
-              setQueue((prev) => prev.map((q) => (q.id === item.id ? { ...q, status: 'success' } : q)));
+              const replaceStatus = resp.material.status;
+              setQueue((prev) =>
+                prev.map((q) =>
+                  q.id === item.id
+                    ? {
+                        ...q,
+                        status: replaceStatus === 'Active' ? 'success' : 'index_failed',
+                        error: replaceStatus !== 'Active' ? (resp.material.error_message || 'Indexing pending') : undefined,
+                      }
+                    : q,
+                ),
+              );
             } catch (replaceErr) {
               setQueue((prev) =>
                 prev.map((q) =>
@@ -373,7 +456,24 @@ export function MaterialsPage() {
       await apiService.deleteMaterial(id);
       await loadMaterials();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Delete failed');
+      showToast(err instanceof Error ? err.message : 'Delete failed');
+    }
+  };
+
+  const handleReindex = async (id: string) => {
+    setReindexing((prev) => new Set(prev).add(id));
+    try {
+      await apiService.reindexMaterial(id);
+      showToast('Material re-indexed successfully.');
+      await loadMaterials();
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Re-indexing failed');
+    } finally {
+      setReindexing((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
     }
   };
 
@@ -461,7 +561,7 @@ export function MaterialsPage() {
           <div onDragOver={(event) => event.preventDefault()} onDrop={handleDrop} className="ring-card p-8 text-center mb-4">
             <Upload className="w-8 h-8 mx-auto text-body-gray mb-2" />
             <p className="text-sm font-semibold text-near-black">Drop files here or click to select</p>
-            <p className="text-xs text-body-gray mt-1">PDF and PPTX files supported</p>
+            <p className="text-xs text-body-gray mt-1">PDF / PPTX only · Max 10 MB per file</p>
             <div className="flex flex-wrap gap-2 justify-center mt-4">
               <button type="button" onClick={() => fileInputRef.current?.click()} className="pill-secondary">Select Files</button>
               <button type="button" onClick={() => folderInputRef.current?.click()} className="pill-secondary">Select Folder</button>
@@ -578,6 +678,7 @@ export function MaterialsPage() {
                                                 <div className="flex items-center gap-2 flex-shrink-0">
                                                   {item.status === 'uploading' && <Loader className="w-4 h-4 text-body-gray animate-spin" />}
                                                   {item.status === 'success' && <CheckCircle className="w-4 h-4 text-positive" />}
+                                                  {item.status === 'index_failed' && <AlertCircle className="w-4 h-4 text-body-gray" />}
                                                   {item.status === 'error' && <AlertCircle className="w-4 h-4 text-danger" />}
                                                   {item.status === 'pending' && (
                                                     <button type="button" onClick={() => removeFromQueue(item.id)} className="p-1 text-body-gray">
@@ -695,8 +796,29 @@ export function MaterialsPage() {
                               <div className="tree-level">
                                 {ci.map((item) => (
                                   <div key={item.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg p-2 tree-node">
-                                    <p className="text-sm text-near-black">{item.file_name}</p>
+                                    <div className="min-w-0 flex-1">
+                                      <p className="text-sm text-near-black truncate">{item.file_name}</p>
+                                      {item.error_message && <p className="text-xs text-danger mt-0.5">{item.error_message}</p>}
+                                    </div>
                                     <div className="flex items-center gap-2">
+                                      {item.status === 'Active' && (
+                                        <span className={statusBadgeClass(item.status, item)}>{statusLabel(item.status, item)}</span>
+                                      )}
+                                      {item.status === 'Processing' && <span className={statusBadgeClass(item.status, item)}>{statusLabel(item.status, item)}</span>}
+                                      {item.status === 'Failed' && (
+                                        <span className={statusBadgeClass(item.status, item)}>{statusLabel(item.status, item)}</span>
+                                      )}
+                                      {(item.status === 'Failed' || (item.status === 'Active' && item.has_embeddings === false)) && (
+                                        <button
+                                          type="button"
+                                          className="pill-icon text-body-gray"
+                                          title="Retry indexing"
+                                          disabled={reindexing.has(item.id)}
+                                          onClick={() => handleReindex(item.id)}
+                                        >
+                                          {reindexing.has(item.id) ? <Loader className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                                        </button>
+                                      )}
                                       <button type="button" className="pill-icon" onClick={() => openReplace(item)}>
                                         <Edit2 className="w-3.5 h-3.5" />
                                       </button>
@@ -747,15 +869,32 @@ export function MaterialsPage() {
                                         )
                                         .map((item) => (
                                           <div key={item.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg pt-2 pb-2 pl-2 tree-node">
-                                            <div>
-                                              <p className="text-sm text-near-black">
+                                            <div className="min-w-0 flex-1">
+                                              <p className="text-sm text-near-black truncate">
                                                 <span className="text-muted-gray font-medium">{item._subgroup}</span> {item.file_name}
                                               </p>
-                                              {item.error_message && <p className="text-xs text-danger mt-1">{item.error_message}</p>}
+                                              {item.error_message && <p className="text-xs text-danger mt-0.5">{item.error_message}</p>}
                                             </div>
                                             <div className="flex items-center gap-2">
                                               <span className="text-xs text-body-gray">{formatBytes(item.file_size)}</span>
-                                              {item.status === 'Processing' && <span className={statusBadgeClass(item.status)}>{item.status}</span>}
+                                              {item.status === 'Active' && (
+                                                <span className={statusBadgeClass(item.status, item)}>{statusLabel(item.status, item)}</span>
+                                              )}
+                                              {item.status === 'Processing' && <span className={statusBadgeClass(item.status, item)}>{statusLabel(item.status, item)}</span>}
+                                              {item.status === 'Failed' && (
+                                                <span className={statusBadgeClass(item.status, item)}>{statusLabel(item.status, item)}</span>
+                                              )}
+                                              {(item.status === 'Failed' || (item.status === 'Active' && item.has_embeddings === false)) && (
+                                                <button
+                                                  type="button"
+                                                  className="pill-icon text-body-gray"
+                                                  title="Retry indexing"
+                                                  disabled={reindexing.has(item.id)}
+                                                  onClick={() => handleReindex(item.id)}
+                                                >
+                                                  {reindexing.has(item.id) ? <Loader className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                                                </button>
+                                              )}
                                               <button type="button" className="pill-icon" onClick={() => openReplace(item)}>
                                                 <Edit2 className="w-3.5 h-3.5" />
                                               </button>
