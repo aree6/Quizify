@@ -267,10 +267,10 @@ describe('Quiz Service - Scoring (Input/Output)', () => {
 
       const result = await getCourseAnalytics('c1');
       expect(result.studentAnalytics).toHaveLength(1);
-      const student = result.studentAnalytics[0];
+      const student = result.studentAnalytics[0]!;
       expect(student.studentName).toBe('Ali');
       expect(student.weakTopics).toHaveLength(1);
-      expect(student.weakTopics[0].topic).toBe('SDLC');
+      expect(student.weakTopics[0]!.topic).toBe('SDLC');
       expect(student.strongestTopic).toBe('Testing');
       expect(student.answers).toHaveLength(2);
     });

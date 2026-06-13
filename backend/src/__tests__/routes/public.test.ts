@@ -30,14 +30,14 @@ describe('Public Learning (TC007-TC008)', () => {
       vi.mocked(getPublicCourse).mockResolvedValue({
         id: 'c1',
         title: 'Test Mini-Course',
-        courseCode: 'SECJ2203',
-        lesson: '## Lesson content',
+        lessonContent: '## Lesson content',
         sources: [],
+        quizTitle: 'Test Mini-Course Quiz',
         passPercentage: 40,
         questions: [
-          { id: 'q1', prompt: 'Q1', optionA: 'A', optionB: 'B', optionC: 'C', optionD: 'D', correctOptionIndex: 0, orderIndex: 0, metadata: { topic: 'T', bloomLevel: 'understand', soloLevel: 'multistructural' } },
+          { id: 'q1', prompt: 'Q1', options: ['A', 'B', 'C', 'D'], explanations: ['', '', '', ''], metadata: { topic: 'T', subtopic: '', bloomLevel: 'understand', soloLevel: 'multistructural' } as const },
         ],
-      });
+      } as any);
 
       const res = await request.get('/api/public/course/test-token');
 
@@ -60,11 +60,13 @@ describe('Public Learning (TC007-TC008)', () => {
   describe('TC008: Take Quiz', () => {
     it('TC008_01: accepts valid quiz submission', async () => {
       vi.mocked(submitQuizAttempt).mockResolvedValue({
-        studentName: 'Ali',
+        attemptId: 'att-1',
+        submittedAt: '2026-01-01T00:00:00Z',
         score: 4,
-        totalQuestions: 5,
+        total: 5,
         percentage: 80,
         passed: true,
+        passPercentage: 40,
         answers: [],
       });
 
@@ -126,11 +128,13 @@ describe('Public Learning (TC007-TC008)', () => {
       });
 
       vi.mocked(submitQuizAttempt).mockResolvedValue({
-        studentName: 'Ali',
+        attemptId: 'att-2',
+        submittedAt: '2026-01-01T00:00:00Z',
         score: 5,
-        totalQuestions: 5,
+        total: 5,
         percentage: 100,
         passed: true,
+        passPercentage: 40,
         answers: [],
       });
 

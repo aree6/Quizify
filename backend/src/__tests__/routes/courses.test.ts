@@ -26,6 +26,7 @@ vi.mock('../../services/outlines.service.js', () => ({
 
 import { createApp } from '../../app.js';
 import { generateCoursePreview, confirmAndSaveCourse, listAvailableCourses, listMiniCourses, deleteMiniCourse } from '../../services/courses.service.js';
+import type { CoursePreviewResult } from '../../services/courses.service.js';
 import { getStoredOutline, extractAndSaveOutline } from '../../services/outlines.service.js';
 
 const app = createApp();
@@ -101,6 +102,11 @@ describe('Courses (TC003-TC006)', () => {
       const mockPreview = {
         title: 'Software Testing',
         courseCode: 'SECJ2203',
+        courseName: 'SECJ2203',
+        topics: ['Software Testing'],
+        questionCount: 10,
+        generationSource: 'RAG+LLM',
+        contextChunksUsed: 3,
         lesson: '## Lesson content\nThis is a test lesson [S1].',
         questions: [
           {
@@ -115,7 +121,7 @@ describe('Courses (TC003-TC006)', () => {
         topicCoverage: [{ topic: 'Testing', chunkCount: 5 }],
       };
 
-      vi.mocked(generateCoursePreview).mockResolvedValue(mockPreview);
+      vi.mocked(generateCoursePreview).mockResolvedValue(mockPreview as CoursePreviewResult);
 
       const res = await request
         .post('/api/courses/preview')
@@ -149,6 +155,11 @@ describe('Courses (TC003-TC006)', () => {
       const mockPreview = {
         title: 'Testing Quiz',
         courseCode: 'SECJ2203',
+        courseName: 'SECJ2203',
+        topics: ['Testing'],
+        questionCount: 5,
+        generationSource: 'RAG+LLM',
+        contextChunksUsed: 0,
         lesson: '## Lesson content',
         questions: [
           {
@@ -163,7 +174,7 @@ describe('Courses (TC003-TC006)', () => {
         topicCoverage: [],
       };
 
-      vi.mocked(generateCoursePreview).mockResolvedValue(mockPreview);
+      vi.mocked(generateCoursePreview).mockResolvedValue(mockPreview as CoursePreviewResult);
 
       const res = await request
         .post('/api/courses/preview')
@@ -191,10 +202,12 @@ describe('Courses (TC003-TC006)', () => {
       vi.mocked(confirmAndSaveCourse).mockResolvedValue({
         id: 'course-123',
         title: 'Test Course',
-        courseCode: 'SECJ2203',
         shareToken: 'test-token-abc12345',
         shareUrl: 'https://quizify.app/quiz?token=test-token-abc12345',
         status: 'Ready',
+        createdAt: '2026-01-01',
+        passPercentage: 40,
+        expiresAt: '',
       });
 
       const res = await request
@@ -222,8 +235,9 @@ describe('Courses (TC003-TC006)', () => {
 
     it('confirms course with optional pass percentage', async () => {
       vi.mocked(confirmAndSaveCourse).mockResolvedValue({
-        id: 'c1', title: 'T', courseCode: 'SECJ2203',
+        id: 'c1', title: 'T',
         shareToken: 'tok', shareUrl: '/?token=tok', status: 'Ready',
+        createdAt: '2026-01-01', passPercentage: 40, expiresAt: '',
       });
 
       const res = await request
