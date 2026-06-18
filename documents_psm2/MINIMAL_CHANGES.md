@@ -20,13 +20,14 @@ This folder (`documents_psm2/diagrams_source/`) contains the **Draw.io XML and M
 | `SRS/mermaid/uc007_update_course_info_slides_uml.mmd` | Same as the corresponding draw.io upload diagram, in Mermaid. |
 | `SRS/mermaid/whole_system_uml.mmd` | Firebase architecture (Auth API, RAG Service, File Storage, Database) → Supabase architecture. Added preview/confirm two-step, `match_material_chunks` SQL call, per-option explanations, [S#] source citations. |
 
-### SDD — 3 draw.io XML (state, component, package)
+### SDD — 4 draw.io XML (state, component, package, ST001)
 
 | File | Change |
 |---|---|
 | `SDD/drawio/state_diagram_mini_course.drawio` and `..._spacious.drawio` | Same 6 → 3 state change as the SRS state diagram. |
 | `SDD/drawio/component_architecture_ces_sail.drawio` and `..._spacious.drawio` | Removed `Auth API`, `RAG Service`, `Vector Store`, `File Storage`, `Database` as separate components. Replaced `Data Stores` subsystem with single `Supabase` subsystem (PostgreSQL+pgvector + Storage + Auth). Added the actual controllers (materials, courses, public, analytics, students, health) and services (materials, courses, rag, ai, quiz, outlines). |
 | `SDD/drawio/package_diagram_ces_sail.drawio` and `..._spacious.drawio` | Removed `P001..P005` packages and `Infrastructure` lane (Database/File Storage/RAG Service/Vector Store). Replaced with the actual `/src` directory layout: frontend pages/components/services/context/types/constants; backend routes/controllers/services/middleware/lib/config/types/data; supabase SQL + storage + auth + pgvector; LLM providers. |
+| `SDD/drawio/st001_state_machine_login.drawio` (new) | ST001 state machine for UC001 Login. Old PSM1 shape was `Unauthenticated → Login submitted → Authenticating → Authenticated` (email+password). New PSM2 shape: `Idle → OAuthPending → Authenticated` (terminal) OR `AuthFailed → Idle` on retry. Same 4-state layout and same level of detail as the original ST001. The other state machines ST002-ST009 are kept as-is (still generic and accurate for the current implementation). |
 
 ## What I did NOT change (already correct, copied as-is)
 
