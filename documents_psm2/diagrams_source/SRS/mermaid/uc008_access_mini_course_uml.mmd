@@ -1,0 +1,27 @@
+sequenceDiagram
+  autonumber
+  actor S as Student
+  participant UI as Public Web Page
+  participant Public as Public API
+  participant DB as Database
+
+  S->>UI: Open share link
+  activate UI
+  UI->>Public: GET /public/mini-courses/{shareToken}
+  activate Public
+  Public->>DB: Find mini-course by token
+  activate DB
+  DB-->>Public: Mini-course / not found
+  deactivate DB
+
+  alt [token valid]
+    Public-->>UI: Lesson + quiz payload
+    UI-->>S: Display lesson and quiz
+  else [token invalid/expired]
+    Public-->>UI: 404 Not Found
+    UI-->>S: Show invalid link message
+  end
+
+  deactivate Public
+
+  deactivate UI

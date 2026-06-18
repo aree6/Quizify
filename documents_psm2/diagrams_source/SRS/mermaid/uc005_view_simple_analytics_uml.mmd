@@ -1,0 +1,37 @@
+sequenceDiagram
+  autonumber
+  actor L as Lecturer
+  participant UI as Web UI
+  participant Analytics as Backend API
+  participant DB as Supabase (PostgreSQL)
+
+  L->>UI: Open analytics for a course
+  activate UI
+  UI->>Analytics: GET /api/analytics/:courseId
+  activate Analytics
+  Analytics->>DB: Aggregate attempts + question metadata
+  activate DB
+
+  par parallel aggregations
+    DB-->>Analytics: KPIs (totalSubmissions, uniqueStudents, avgScore, passRate)
+  and
+    DB-->>Analytics: Score distribution (buckets 0-20..81-100)
+  and
+    DB-->>Analytics: Topic performance (group by topic, subtopic)
+  and
+    DB-->>Analytics: Bloom's performance (group by bloomLevel)
+  and
+    DB-->>Analytics: SOLO performance (group by soloLevel)
+  and
+    DB-->>Analytics: Cross-matrix (topic x bloomLevel)
+  and
+    DB-->>Analytics: Per-question option distribution
+  and
+    DB-->>Analytics: Per-student weak topics
+  end
+
+  deactivate DB
+  Analytics-->>UI: CourseAnalytics JSON
+  deactivate Analytics
+  UI-->>L: Render dashboard (KPI cards + Recharts: bar, pie, heatmap + attempts table)
+  deactivate UI

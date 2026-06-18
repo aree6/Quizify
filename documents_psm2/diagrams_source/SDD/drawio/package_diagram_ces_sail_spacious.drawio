@@ -1,0 +1,155 @@
+<mxfile host="app.diagrams.net" modified="2026-06-18T00:00:00.000Z" agent="Mozilla/5.0" version="22.1.0">
+  <diagram id="package-quizify-psm2" name="Package Diagram - QUIZIFY (actual layout)">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="900" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="title" value="Package Diagram: QUIZIFY (actual /src layout)" style="text;html=1;align=center;verticalAlign=middle;fontSize=16;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="260" y="20" width="900" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- Frontend -->
+        <mxCell id="pkgFE" value="frontend/src" style="shape=folder;html=1;whiteSpace=wrap;align=left;verticalAlign=top;fontStyle=1;spacingTop=10;tabWidth=60;tabHeight=14;tabPosition=left;strokeColor=#000000;fillColor=#ffffff;" vertex="1" parent="1">
+          <mxGeometry x="40" y="80" width="320" height="640" as="geometry" />
+        </mxCell>
+
+        <mxCell id="fe_pages" value="pages/&#xa;Login, Dashboard, Materials,&#xa;CreateCourse, MyCourses, Analytics, Quiz" style="shape=folder;html=1;whiteSpace=wrap;align=left;verticalAlign=top;spacingTop=10;tabWidth=40;tabHeight=14;tabPosition=left;strokeColor=#000000;fillColor=#ffffff;" vertex="1" parent="pkgFE">
+          <mxGeometry x="20" y="60" width="280" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="fe_comp" value="components/&#xa;auth/ (RequireRole, AuthContext)&#xa;common/ (Layout, Toast, PageState)" style="shape=folder;html=1;whiteSpace=wrap;align=left;verticalAlign=top;spacingTop=10;tabWidth=40;tabHeight=14;tabPosition=left;strokeColor=#000000;fillColor=#ffffff;" vertex="1" parent="pkgFE">
+          <mxGeometry x="20" y="180" width="280" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="fe_svc" value="services/&#xa;api.ts, auth.ts, http.ts, supabase.ts" style="shape=folder;html=1;whiteSpace=wrap;align=left;verticalAlign=top;spacingTop=10;tabWidth=40;tabHeight=14;tabPosition=left;strokeColor=#000000;fillColor=#ffffff;" vertex="1" parent="pkgFE">
+          <mxGeometry x="20" y="300" width="280" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="fe_ctx" value="context/AuthContext.tsx" style="shape=folder;html=1;whiteSpace=wrap;align=left;verticalAlign=top;spacingTop=10;tabWidth=40;tabHeight=14;tabPosition=left;strokeColor=#000000;fillColor=#ffffff;" vertex="1" parent="pkgFE">
+          <mxGeometry x="20" y="400" width="280" height="40" as="geometry" />
+        </mxCell>
+
+        <mxCell id="fe_types" value="types/ (TypeScript types matching backend)" style="shape=folder;html=1;whiteSpace=wrap;align=left;verticalAlign=top;spacingTop=10;tabWidth=40;tabHeight=14;tabPosition=left;strokeColor=#000000;fillColor=#ffffff;" vertex="1" parent="pkgFE">
+          <mxGeometry x="20" y="460" width="280" height="40" as="geometry" />
+        </mxCell>
+
+        <mxCell id="fe_const" value="constants/" style="shape=folder;html=1;whiteSpace=wrap;align=left;verticalAlign=top;spacingTop=10;tabWidth=40;tabHeight=14;tabPosition=left;strokeColor=#000000;fillColor=#ffffff;" vertex="1" parent="pkgFE">
+          <mxGeometry x="20" y="520" width="280" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- Backend -->
+        <mxCell id="pkgBE" value="backend/src" style="shape=folder;html=1;whiteSpace=wrap;align=left;verticalAlign=top;fontStyle=1;spacingTop=10;tabWidth=60;tabHeight=14;tabPosition=left;strokeColor=#000000;fillColor=#ffffff;" vertex="1" parent="1">
+          <mxGeometry x="400" y="80" width="380" height="720" as="geometry" />
+        </mxCell>
+
+        <mxCell id="be_routes" value="routes/&#xa;index.ts (registers all /api routes)" style="shape=folder;html=1;whiteSpace=wrap;align=left;verticalAlign=top;spacingTop=10;tabWidth=40;tabHeight=14;tabPosition=left;strokeColor=#000000;fillColor=#ffffff;" vertex="1" parent="pkgBE">
+          <mxGeometry x="20" y="60" width="340" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="be_controllers" value="controllers/&#xa;materials, courses, public, analytics, students, health" style="shape=folder;html=1;whiteSpace=wrap;align=left;verticalAlign=top;spacingTop=10;tabWidth=40;tabHeight=14;tabPosition=left;strokeColor=#000000;fillColor=#ffffff;" vertex="1" parent="pkgBE">
+          <mxGeometry x="20" y="140" width="340" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="be_services" value="services/&#xa;materials, courses, rag, ai, quiz, outlines" style="shape=folder;html=1;whiteSpace=wrap;align=left;verticalAlign=top;spacingTop=10;tabWidth=40;tabHeight=14;tabPosition=left;strokeColor=#000000;fillColor=#ffffff;" vertex="1" parent="pkgBE">
+          <mxGeometry x="20" y="240" width="340" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="be_middleware" value="middleware/&#xa;auth (requireAuth, optionalAuth),&#xa;async-handler, error-handler" style="shape=folder;html=1;whiteSpace=wrap;align=left;verticalAlign=top;spacingTop=10;tabWidth=40;tabHeight=14;tabPosition=left;strokeColor=#000000;fillColor=#ffffff;" vertex="1" parent="pkgBE">
+          <mxGeometry x="20" y="340" width="340" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="be_lib" value="lib/&#xa;supabase.ts (Supabase client)" style="shape=folder;html=1;whiteSpace=wrap;align=left;verticalAlign=top;spacingTop=10;tabWidth=40;tabHeight=14;tabPosition=left;strokeColor=#000000;fillColor=#ffffff;" vertex="1" parent="pkgBE">
+          <mxGeometry x="20" y="440" width="340" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="be_config" value="config/ (env loading, constants)" style="shape=folder;html=1;whiteSpace=wrap;align=left;verticalAlign=top;spacingTop=10;tabWidth=40;tabHeight=14;tabPosition=left;strokeColor=#000000;fillColor=#ffffff;" vertex="1" parent="pkgBE">
+          <mxGeometry x="20" y="510" width="340" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="be_types" value="types/index.ts (CourseAnalytics, GeneratedQuestion, BloomLevel, SoloLevel, etc.)" style="shape=folder;html=1;whiteSpace=wrap;align=left;verticalAlign=top;spacingTop=10;tabWidth=40;tabHeight=14;tabPosition=left;strokeColor=#000000;fillColor=#ffffff;" vertex="1" parent="pkgBE">
+          <mxGeometry x="20" y="580" width="340" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="be_data" value="data/fallback-content.ts (offline fallback)" style="shape=folder;html=1;whiteSpace=wrap;align=left;verticalAlign=top;spacingTop=10;tabWidth=40;tabHeight=14;tabPosition=left;strokeColor=#000000;fillColor=#ffffff;" vertex="1" parent="pkgBE">
+          <mxGeometry x="20" y="660" width="340" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- Supabase -->
+        <mxCell id="pkgSupa" value="supabase/ (Supabase project)" style="shape=folder;html=1;whiteSpace=wrap;align=left;verticalAlign=top;fontStyle=1;spacingTop=10;tabWidth=60;tabHeight=14;tabPosition=left;strokeColor=#000000;fillColor=#fff2cc;" vertex="1" parent="1">
+          <mxGeometry x="820" y="80" width="320" height="450" as="geometry" />
+        </mxCell>
+
+        <mxCell id="supa_sql" value="mvp_schema.sql&#xa;CREATE TABLE materials, material_chunks,&#xa;mini_courses, quizzes, questions, quiz_attempts&#xa;+ match_material_chunks() SQL fn&#xa;+ RLS policies" style="shape=folder;html=1;whiteSpace=wrap;align=left;verticalAlign=top;spacingTop=10;tabWidth=40;tabHeight=14;tabPosition=left;strokeColor=#000000;fillColor=#ffffff;" vertex="1" parent="pkgSupa">
+          <mxGeometry x="20" y="60" width="280" height="120" as="geometry" />
+        </mxCell>
+
+        <mxCell id="supa_storage" value="Storage: bucket 'course-materials'" style="shape=folder;html=1;whiteSpace=wrap;align=left;verticalAlign=top;spacingTop=10;tabWidth=40;tabHeight=14;tabPosition=left;strokeColor=#000000;fillColor=#ffffff;" vertex="1" parent="pkgSupa">
+          <mxGeometry x="20" y="200" width="280" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="supa_auth" value="Auth: Google OAuth (auth.users)" style="shape=folder;html=1;whiteSpace=wrap;align=left;verticalAlign=top;spacingTop=10;tabWidth=40;tabHeight=14;tabPosition=left;strokeColor=#000000;fillColor=#ffffff;" vertex="1" parent="pkgSupa">
+          <mxGeometry x="20" y="270" width="280" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="supa_pgvec" value="pgvector extension (vector(1536) similarity)" style="shape=folder;html=1;whiteSpace=wrap;align=left;verticalAlign=top;spacingTop=10;tabWidth=40;tabHeight=14;tabPosition=left;strokeColor=#000000;fillColor=#ffffff;" vertex="1" parent="pkgSupa">
+          <mxGeometry x="20" y="340" width="280" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- LLM -->
+        <mxCell id="pkgLLM" value="LLM Providers" style="shape=folder;html=1;whiteSpace=wrap;align=left;verticalAlign=top;fontStyle=1;spacingTop=10;tabWidth=60;tabHeight=14;tabPosition=left;strokeColor=#000000;fillColor=#ffffff;" vertex="1" parent="1">
+          <mxGeometry x="820" y="560" width="320" height="200" as="geometry" />
+        </mxCell>
+
+        <mxCell id="llm_deepseek" value="DeepSeek (via OpenRouter) - chat + embeddings" style="shape=folder;html=1;whiteSpace=wrap;align=left;verticalAlign=top;spacingTop=10;tabWidth=40;tabHeight=14;tabPosition=left;strokeColor=#000000;fillColor=#ffffff;" vertex="1" parent="pkgLLM">
+          <mxGeometry x="20" y="60" width="280" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="llm_gemini" value="Gemini - fallback chat + embeddings" style="shape=folder;html=1;whiteSpace=wrap;align=left;verticalAlign=top;spacingTop=10;tabWidth=40;tabHeight=14;tabPosition=left;strokeColor=#000000;fillColor=#ffffff;" vertex="1" parent="pkgLLM">
+          <mxGeometry x="20" y="130" width="280" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- Dependencies -->
+        <mxCell id="dep1" value="&#171;use&#187;" style="endArrow=open;html=1;strokeColor=#000000;dashed=1;" edge="1" parent="1" source="fe_pages" target="be_routes">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="dep2" value="&#171;use&#187;" style="endArrow=open;html=1;strokeColor=#000000;dashed=1;" edge="1" parent="1" source="fe_svc" target="be_routes">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="dep3" value="&#171;use&#187; supabase-js" style="endArrow=open;html=1;strokeColor=#000000;dashed=1;" edge="1" parent="1" source="fe_svc" target="supa_auth">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="dep4" value="&#171;import&#187;" style="endArrow=open;html=1;strokeColor=#000000;dashed=1;" edge="1" parent="1" source="be_routes" target="be_controllers">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="dep5" value="&#171;import&#187;" style="endArrow=open;html=1;strokeColor=#000000;dashed=1;" edge="1" parent="1" source="be_controllers" target="be_services">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="dep6" value="&#171;import&#187; supabase-js" style="endArrow=open;html=1;strokeColor=#000000;dashed=1;" edge="1" parent="1" source="be_services" target="be_lib">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="dep7" value="&#171;import&#187;" style="endArrow=open;html=1;strokeColor=#000000;dashed=1;" edge="1" parent="1" source="be_lib" target="supa_sql">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="dep8" value="&#171;import&#187;" style="endArrow=open;html=1;strokeColor=#000000;dashed=1;" edge="1" parent="1" source="be_lib" target="supa_storage">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="dep9" value="&#171;import&#187; auth middleware" style="endArrow=open;html=1;strokeColor=#000000;dashed=1;" edge="1" parent="1" source="be_routes" target="be_middleware">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="dep10" value="&#171;verify JWT&#187;" style="endArrow=open;html=1;strokeColor=#000000;dashed=1;" edge="1" parent="1" source="be_middleware" target="supa_auth">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="dep11" value="&#171;HTTPS&#187; chat + embeddings" style="endArrow=open;html=1;strokeColor=#000000;dashed=1;" edge="1" parent="1" source="be_services" target="llm_deepseek">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="dep12" value="&#171;HTTPS&#187; fallback" style="endArrow=open;html=1;strokeColor=#000000;dashed=1;" edge="1" parent="1" source="be_services" target="llm_gemini">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="dep13" value="&#171;uses pgvector&#187;" style="endArrow=open;html=1;strokeColor=#000000;dashed=1;" edge="1" parent="1" source="supa_sql" target="supa_pgvec">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

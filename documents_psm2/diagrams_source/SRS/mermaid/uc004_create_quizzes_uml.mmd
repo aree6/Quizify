@@ -1,0 +1,32 @@
+sequenceDiagram
+  autonumber
+
+  actor L as Lecturer
+  participant UI as Web UI
+  participant Course as Course API
+  participant RAG as RAG Service
+  participant DB as Database
+
+  L->>UI: Continue generation
+  activate UI
+  UI->>Course: Generate quiz
+  activate Course
+
+  Course->>RAG: Generate MCQ quiz set (questions + options)
+  activate RAG
+  RAG-->>Course: Quiz questions
+  deactivate RAG
+
+  alt [quiz generated]
+    Course->>DB: Save QuizQuestion + QuizOption
+    activate DB
+    DB-->>Course: Quiz saved
+    deactivate DB
+
+    Course-->>UI: Quiz ready
+  else [generation failed]
+    Course-->>UI: 502 Generation error
+  end
+
+  deactivate Course
+  deactivate UI

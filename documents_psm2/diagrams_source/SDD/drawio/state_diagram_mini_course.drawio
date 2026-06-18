@@ -1,0 +1,47 @@
+<mxfile host="app.diagrams.net" modified="2026-06-18T00:00:00.000Z" agent="Mozilla/5.0" version="22.1.0">
+  <diagram id="state-mini-course-spacious" name="State - MINI_COURSE (PSM2, spacious)">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <mxCell id="title" value="State Machine: MINI_COURSE" style="text;html=1;align=center;verticalAlign=middle;fontSize=16;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="360" y="40" width="520" height="30" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="start" value="" style="ellipse;html=1;fillColor=#000000;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="180" y="160" width="20" height="20" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="generating" value="Generating&#xa;(RAG pipeline running)" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;strokeColor=#000000;fillColor=#ffffff;" vertex="1" parent="1">
+          <mxGeometry x="320" y="140" width="240" height="80" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="ready" value="Ready&#xa;(lesson + quiz stored)" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;strokeColor=#000000;fillColor=#ffffff;" vertex="1" parent="1">
+          <mxGeometry x="640" y="140" width="240" height="80" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="shared" value="Shared&#xa;(public link active)" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;strokeColor=#000000;fillColor=#ffffff;" vertex="1" parent="1">
+          <mxGeometry x="640" y="320" width="240" height="80" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="end" value="" style="ellipse;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="950" y="345" width="26" height="26" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="endInner" value="" style="ellipse;html=1;fillColor=#000000;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="956" y="351" width="14" height="14" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="e1" style="endArrow=block;html=1;strokeColor=#000000;" edge="1" parent="1" source="start" target="generating"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e2" value="Generation success" style="endArrow=block;html=1;strokeColor=#000000;" edge="1" parent="1" source="generating" target="ready"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e3" value="Share link created" style="endArrow=block;html=1;strokeColor=#000000;" edge="1" parent="1" source="ready" target="shared"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e4" value="Link expires / removed" style="endArrow=block;html=1;strokeColor=#000000;" edge="1" parent="1" source="shared" target="end"><mxGeometry relative="1" as="geometry"/></mxCell>
+
+        <mxCell id="note" value="Note: only 3 states per Supabase CHECK constraint&#xa;('Generating', 'Ready', 'Shared'). Failures are reported&#xa;at the API level and stored in materials.error_message." style="shape=note;whiteSpace=wrap;html=1;align=left;verticalAlign=top;strokeColor=#000000;fillColor=#fff2cc;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="160" y="320" width="400" height="60" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

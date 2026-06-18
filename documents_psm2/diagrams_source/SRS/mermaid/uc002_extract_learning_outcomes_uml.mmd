@@ -1,0 +1,32 @@
+sequenceDiagram
+  autonumber
+
+  actor L as Lecturer
+  participant UI as Web UI
+  participant Course as Course API
+  participant RAG as RAG Service
+  participant DB as Database
+
+  L->>UI: Request generation (topicTitle)
+  activate UI
+  UI->>Course: Start RAG pipeline
+  activate Course
+
+  Course->>DB: Load course materials metadata
+  activate DB
+  DB-->>Course: Materials list / empty
+  deactivate DB
+
+  alt [materials exist]
+    Course->>RAG: Extract learning outcomes + relevant content
+    activate RAG
+    RAG-->>Course: Extracted context
+    deactivate RAG
+
+    Course-->>UI: Context ready
+  else [materials missing]
+    Course-->>UI: 409 Conflict (materials not uploaded)
+  end
+
+  deactivate Course
+  deactivate UI

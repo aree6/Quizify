@@ -1,0 +1,128 @@
+<mxfile host="app.diagrams.net" modified="2026-06-18T00:00:00.000Z" agent="Mozilla/5.0" version="22.1.0">
+  <diagram name="Activity - UC001 Login (Google OAuth via Supabase)" id="act-uc001">
+    <mxGraphModel dx="1400" dy="2000" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="2000" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="user-lane" value="User" style="swimlane;startSize=40;fillColor=none;strokeColor=#000000;fontStyle=1;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="0" y="0" width="467" height="1600" as="geometry" />
+        </mxCell>
+        <mxCell id="ui-lane" value="Web UI (React 19 + Vite + Tailwind)" style="swimlane;startSize=40;fillColor=none;strokeColor=#000000;fontStyle=1;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="467" y="0" width="467" height="1600" as="geometry" />
+        </mxCell>
+        <mxCell id="supabase-lane" value="Supabase Auth" style="swimlane;startSize=40;fillColor=none;strokeColor=#000000;fontStyle=1;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="934" y="0" width="466" height="1600" as="geometry" />
+        </mxCell>
+
+        <!-- Start node -->
+        <mxCell id="start" value="" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;fillColor=#000000;strokeColor=#000000;" vertex="1" parent="user-lane">
+          <mxGeometry x="200" y="70" width="30" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- User clicks Sign in with Google -->
+        <mxCell id="act1" value="Click &quot;Sign in with Google&quot;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#000000;arcSize=20;" vertex="1" parent="user-lane">
+          <mxGeometry x="80" y="180" width="280" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="edge1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#000000;endArrow=classic;" edge="1" parent="user-lane" source="start" target="act1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Web UI calls Supabase Auth -->
+        <mxCell id="act2" value="supabase.auth.signInWithOAuth({provider:'google'})" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#000000;arcSize=20;" vertex="1" parent="ui-lane">
+          <mxGeometry x="50" y="320" width="380" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="edge2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#000000;endArrow=classic;" edge="1" parent="1" source="act1" target="act2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Supabase redirects to Google -->
+        <mxCell id="act3" value="Redirect user to Google OAuth consent screen" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#000000;arcSize=20;" vertex="1" parent="supabase-lane">
+          <mxGeometry x="40" y="450" width="380" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="edge3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#000000;endArrow=classic;" edge="1" parent="1" source="act2" target="act3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- User authorises -->
+        <mxCell id="act4" value="Authorize with Google" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#000000;arcSize=20;" vertex="1" parent="user-lane">
+          <mxGeometry x="100" y="580" width="240" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="edge4" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#000000;endArrow=classic;" edge="1" parent="1" source="act3" target="act4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Supabase issues JWT -->
+        <mxCell id="act5" value="Read role from auth.users.app_metadata.role; issue JWT session" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#000000;arcSize=20;" vertex="1" parent="supabase-lane">
+          <mxGeometry x="20" y="710" width="420" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="edge5" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#000000;endArrow=classic;" edge="1" parent="1" source="act4" target="act5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Web UI persists session -->
+        <mxCell id="act6" value="supabase.auth.getSession() persists JWT" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#000000;arcSize=20;" vertex="1" parent="ui-lane">
+          <mxGeometry x="50" y="840" width="380" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="edge6" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#000000;endArrow=classic;" edge="1" parent="1" source="act5" target="act6">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Decision: role -->
+        <mxCell id="dec1" value="role?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#000000;" vertex="1" parent="ui-lane">
+          <mxGeometry x="170" y="970" width="140" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="edge7" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#000000;endArrow=classic;" edge="1" parent="ui-lane" source="act6" target="dec1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Redirect by role -->
+        <mxCell id="act7" value="Redirect to /lecturer/dashboard" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#000000;arcSize=20;" vertex="1" parent="ui-lane">
+          <mxGeometry x="-20" y="1110" width="280" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="edge8" value="[lecturer]" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#000000;endArrow=classic;" edge="1" parent="ui-lane" source="dec1" target="act7">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="act8" value="Redirect to /admin/dashboard" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#000000;arcSize=20;" vertex="1" parent="ui-lane">
+          <mxGeometry x="200" y="1110" width="280" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="edge9" value="[admin]" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#000000;endArrow=classic;" edge="1" parent="ui-lane" source="dec1" target="act8">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="act9" value="Redirect to /student/dashboard" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#000000;arcSize=20;" vertex="1" parent="ui-lane">
+          <mxGeometry x="380" y="1110" width="280" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="edge10" value="[student]" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#000000;endArrow=classic;" edge="1" parent="ui-lane" source="dec1" target="act9">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- End node -->
+        <mxCell id="end" value="" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;fillColor=#FFFFFF;strokeColor=#000000;strokeWidth=3;" vertex="1" parent="ui-lane">
+          <mxGeometry x="210" y="1250" width="40" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="end-inner" value="" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;fillColor=#000000;strokeColor=#000000;" vertex="1" parent="ui-lane">
+          <mxGeometry x="218" y="1258" width="24" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="edgeEnd" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#000000;endArrow=classic;" edge="1" parent="ui-lane" source="act7" target="end">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edgeEnd2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#000000;endArrow=classic;" edge="1" parent="ui-lane" source="act8" target="end">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edgeEnd3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#000000;endArrow=classic;" edge="1" parent="ui-lane" source="act9" target="end">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Alternative flow: missing/invalid role -->
+        <mxCell id="actErr" value="Show error: unauthorized account" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#000000;arcSize=20;" vertex="1" parent="ui-lane">
+          <mxGeometry x="100" y="1320" width="280" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="edgeErr" value="[no role]" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#000000;endArrow=classic;dashed=1;" edge="1" parent="ui-lane" source="dec1" target="actErr">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

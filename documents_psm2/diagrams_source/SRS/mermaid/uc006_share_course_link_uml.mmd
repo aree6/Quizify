@@ -1,0 +1,29 @@
+sequenceDiagram
+  autonumber
+  actor L as Lecturer
+  participant UI as Web UI
+  participant Course as Course API
+  participant DB as Database
+
+  L->>UI: Open generated mini-course
+  L->>UI: Click Share
+  activate UI
+
+  UI->>Course: POST /mini-courses/{courseId}/share
+  activate Course
+  Course->>DB: Generate/update shareToken
+  activate DB
+  DB-->>Course: shareToken saved
+  deactivate DB
+
+  alt [token generated]
+    Course-->>UI: Shareable link
+    UI-->>L: Display link (copy)
+  else [generation failed]
+    Course-->>UI: 500 Error
+    UI-->>L: Display error + allow retry
+  end
+
+  deactivate Course
+
+  deactivate UI
