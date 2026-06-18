@@ -9,150 +9,83 @@
           <mxGeometry x="260" y="20" width="650" height="30" as="geometry" />
         </mxCell>
 
-        <!-- Subsystems -->
-        <mxCell id="subClient" value="&#171;subsystem&#187;&lt;br&gt;&lt;b&gt;Client (React 19 + Vite + Tailwind 4)&lt;/b&gt;" style="html=1;dropTarget=0;whiteSpace=wrap;fontSize=14;strokeColor=#000000;fillColor=#ffffff;rounded=0;" vertex="1" parent="1">
-          <mxGeometry x="40" y="90" width="280" height="650" as="geometry" />
+        <mxCell id="subClient" value="&#171;subsystem&#187;&lt;br&gt;&lt;b&gt;Client&lt;/b&gt;" style="html=1;dropTarget=0;whiteSpace=wrap;fontSize=14;strokeColor=#000000;fillColor=#ffffff;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="40" y="90" width="260" height="550" as="geometry" />
         </mxCell>
 
-        <mxCell id="subBackend" value="&#171;subsystem&#187;&lt;br&gt;&lt;b&gt;Backend API (Node.js + Express 4)&lt;/b&gt;" style="html=1;dropTarget=0;whiteSpace=wrap;fontSize=14;strokeColor=#000000;fillColor=#ffffff;rounded=0;" vertex="1" parent="1">
-          <mxGeometry x="350" y="90" width="420" height="650" as="geometry" />
+        <mxCell id="subBackend" value="&#171;subsystem&#187;&lt;br&gt;&lt;b&gt;Backend API&lt;/b&gt;" style="html=1;dropTarget=0;whiteSpace=wrap;fontSize=14;strokeColor=#000000;fillColor=#ffffff;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="350" y="90" width="320" height="550" as="geometry" />
         </mxCell>
 
-        <mxCell id="subLLM" value="&#171;subsystem&#187;&lt;b&gt;&lt;br&gt;LLM Providers&lt;/b&gt;&lt;br&gt;(DeepSeek via OpenRouter + Gemini)" style="html=1;dropTarget=0;whiteSpace=wrap;fontSize=13;strokeColor=#000000;fillColor=#ffffff;rounded=0;" vertex="1" parent="1">
-          <mxGeometry x="800" y="90" width="220" height="650" as="geometry" />
+        <mxCell id="subAI" value="&#171;subsystem&#187;&lt;br&gt;&lt;b&gt;AI / Services&lt;/b&gt;" style="html=1;dropTarget=0;whiteSpace=wrap;fontSize=14;strokeColor=#000000;fillColor=#ffffff;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="720" y="90" width="200" height="550" as="geometry" />
         </mxCell>
 
         <mxCell id="subSupabase" value="&#171;subsystem&#187;&lt;br&gt;&lt;b&gt;Supabase&lt;/b&gt;" style="html=1;dropTarget=0;whiteSpace=wrap;fontSize=14;strokeColor=#000000;fillColor=#fff2cc;rounded=0;" vertex="1" parent="1">
-          <mxGeometry x="1050" y="90" width="100" height="650" as="geometry" />
+          <mxGeometry x="970" y="90" width="160" height="550" as="geometry" />
         </mxCell>
 
-        <!-- Client components -->
-        <mxCell id="cLectUI" value="&#171;component&#187;&lt;br&gt;&lt;b&gt;:Lecturer/Admin Pages&lt;/b&gt;&lt;br&gt;Dashboard, Materials, CreateCourse,&#xa;MyCourses, Analytics" style="html=1;dropTarget=0;whiteSpace=wrap;fontSize=11;" vertex="1" parent="subClient">
-          <mxGeometry x="20" y="80" width="240" height="80" as="geometry" />
+        <mxCell id="cLectUI" value="&#171;component&#187;&lt;br&gt;&lt;b&gt;:Lecturer/Admin Web UI&lt;/b&gt;" style="html=1;dropTarget=0;whiteSpace=wrap;fontSize=12;" vertex="1" parent="subClient">
+          <mxGeometry x="30" y="80" width="200" height="60" as="geometry" />
         </mxCell>
 
-        <mxCell id="cStudUI" value="&#171;component&#187;&lt;br&gt;&lt;b&gt;:Student Pages&lt;/b&gt;&lt;br&gt;Quiz" style="html=1;dropTarget=0;whiteSpace=wrap;fontSize=11;" vertex="1" parent="subClient">
-          <mxGeometry x="20" y="180" width="240" height="60" as="geometry" />
+        <mxCell id="cStudUI" value="&#171;component&#187;&lt;br&gt;&lt;b&gt;:Student Public UI&lt;/b&gt;" style="html=1;dropTarget=0;whiteSpace=wrap;fontSize=12;" vertex="1" parent="subClient">
+          <mxGeometry x="30" y="170" width="200" height="60" as="geometry" />
         </mxCell>
 
-        <mxCell id="cCommon" value="&#171;component&#187;&lt;br&gt;&lt;b&gt;:Common&lt;/b&gt;&lt;br&gt;Layout, AuthContext, Toast, RequireRole" style="html=1;dropTarget=0;whiteSpace=wrap;fontSize=11;" vertex="1" parent="subClient">
-          <mxGeometry x="20" y="260" width="240" height="80" as="geometry" />
+        <mxCell id="cMaterials" value="&#171;component&#187;&lt;br&gt;&lt;b&gt;:Materials API&lt;/b&gt;" style="html=1;dropTarget=0;whiteSpace=wrap;fontSize=12;" vertex="1" parent="subBackend">
+          <mxGeometry x="30" y="80" width="260" height="60" as="geometry" />
         </mxCell>
 
-        <mxCell id="cFEapi" value="&#171;component&#187;&lt;br&gt;&lt;b&gt;:Frontend API client&lt;/b&gt;&lt;br&gt;api.ts, http.ts" style="html=1;dropTarget=0;whiteSpace=wrap;fontSize=11;" vertex="1" parent="subClient">
-          <mxGeometry x="20" y="360" width="240" height="60" as="geometry" />
+        <mxCell id="cCourse" value="&#171;component&#187;&lt;br&gt;&lt;b&gt;:Courses API&lt;/b&gt;" style="html=1;dropTarget=0;whiteSpace=wrap;fontSize=12;" vertex="1" parent="subBackend">
+          <mxGeometry x="30" y="170" width="260" height="60" as="geometry" />
         </mxCell>
 
-        <!-- Backend controllers -->
-        <mxCell id="cMaterials" value="&#171;component&#187;&lt;br&gt;&lt;b&gt;:Materials Controller&lt;/b&gt;&lt;br&gt;/api/materials/*" style="html=1;dropTarget=0;whiteSpace=wrap;fontSize=11;" vertex="1" parent="subBackend">
-          <mxGeometry x="20" y="80" width="180" height="60" as="geometry" />
+        <mxCell id="cPublic" value="&#171;component&#187;&lt;br&gt;&lt;b&gt;:Public API&lt;/b&gt;" style="html=1;dropTarget=0;whiteSpace=wrap;fontSize=12;" vertex="1" parent="subBackend">
+          <mxGeometry x="30" y="260" width="260" height="60" as="geometry" />
         </mxCell>
 
-        <mxCell id="cCourses" value="&#171;component&#187;&lt;br&gt;&lt;b&gt;:Courses Controller&lt;/b&gt;&lt;br&gt;/api/courses/* (preview, confirm, reindex)" style="html=1;dropTarget=0;whiteSpace=wrap;fontSize=11;" vertex="1" parent="subBackend">
-          <mxGeometry x="210" y="80" width="200" height="60" as="geometry" />
+        <mxCell id="cAnalytics" value="&#171;component&#187;&lt;br&gt;&lt;b&gt;:Analytics API&lt;/b&gt;" style="html=1;dropTarget=0;whiteSpace=wrap;fontSize=12;" vertex="1" parent="subBackend">
+          <mxGeometry x="30" y="350" width="260" height="60" as="geometry" />
         </mxCell>
 
-        <mxCell id="cPublic" value="&#171;component&#187;&lt;br&gt;&lt;b&gt;:Public Controller&lt;/b&gt;&lt;br&gt;/api/public/course/:token" style="html=1;dropTarget=0;whiteSpace=wrap;fontSize=11;" vertex="1" parent="subBackend">
-          <mxGeometry x="20" y="160" width="180" height="60" as="geometry" />
+        <mxCell id="cRAG" value="&#171;component&#187;&lt;br&gt;&lt;b&gt;:RAG Service&lt;/b&gt;" style="html=1;dropTarget=0;whiteSpace=wrap;fontSize=12;" vertex="1" parent="subAI">
+          <mxGeometry x="20" y="80" width="160" height="60" as="geometry" />
         </mxCell>
 
-        <mxCell id="cAnalytics" value="&#171;component&#187;&lt;br&gt;&lt;b&gt;:Analytics Controller&lt;/b&gt;&lt;br&gt;/api/analytics/:courseId" style="html=1;dropTarget=0;whiteSpace=wrap;fontSize=11;" vertex="1" parent="subBackend">
-          <mxGeometry x="210" y="160" width="200" height="60" as="geometry" />
+        <mxCell id="cLLM" value="&#171;component&#187;&lt;br&gt;&lt;b&gt;:LLM Provider&lt;/b&gt;" style="html=1;dropTarget=0;whiteSpace=wrap;fontSize=12;" vertex="1" parent="subAI">
+          <mxGeometry x="20" y="170" width="160" height="60" as="geometry" />
         </mxCell>
 
-        <mxCell id="cStudents" value="&#171;component&#187;&lt;br&gt;&lt;b&gt;:Students Controller&lt;/b&gt;&lt;br&gt;/api/students/attempts" style="html=1;dropTarget=0;whiteSpace=wrap;fontSize=11;" vertex="1" parent="subBackend">
-          <mxGeometry x="20" y="240" width="180" height="60" as="geometry" />
+        <mxCell id="cSupaPg" value="PostgreSQL&#xa;+ pgvector" style="html=1;whiteSpace=wrap;fontSize=11;strokeColor=#000000;fillColor=#ffffff;" vertex="1" parent="subSupabase">
+          <mxGeometry x="20" y="80" width="120" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="cSupaStore" value="Storage" style="html=1;whiteSpace=wrap;fontSize=11;strokeColor=#000000;fillColor=#ffffff;" vertex="1" parent="subSupabase">
+          <mxGeometry x="20" y="150" width="120" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="cSupaAuth" value="Auth (Google)" style="html=1;whiteSpace=wrap;fontSize=11;strokeColor=#000000;fillColor=#ffffff;" vertex="1" parent="subSupabase">
+          <mxGeometry x="20" y="210" width="120" height="40" as="geometry" />
         </mxCell>
 
-        <mxCell id="cHealth" value="&#171;component&#187;&lt;br&gt;&lt;b&gt;:Health&lt;/b&gt;&lt;br&gt;/health" style="html=1;dropTarget=0;whiteSpace=wrap;fontSize=11;" vertex="1" parent="subBackend">
-          <mxGeometry x="210" y="240" width="200" height="40" as="geometry" />
-        </mxCell>
-
-        <!-- Backend services -->
-        <mxCell id="sMaterials" value="&#171;service&#187; materials.service&#xa;(upload, chunk, embed, reindex)" style="html=1;whiteSpace=wrap;fontSize=10;" vertex="1" parent="subBackend">
-          <mxGeometry x="20" y="340" width="180" height="60" as="geometry" />
-        </mxCell>
-        <mxCell id="sCourses" value="&#171;service&#187; courses.service&#xa;(generateCoursePreview, confirmAndSaveCourse)" style="html=1;whiteSpace=wrap;fontSize=10;" vertex="1" parent="subBackend">
-          <mxGeometry x="210" y="340" width="200" height="60" as="geometry" />
-        </mxCell>
-        <mxCell id="sRag" value="&#171;service&#187; rag.service&#xa;(extract, chunk, match_material_chunks, outline)" style="html=1;whiteSpace=wrap;fontSize=10;" vertex="1" parent="subBackend">
-          <mxGeometry x="20" y="420" width="180" height="60" as="geometry" />
-        </mxCell>
-        <mxCell id="sAi" value="&#171;service&#187; ai.service&#xa;(generateLesson, generateQuiz, embed)" style="html=1;whiteSpace=wrap;fontSize=10;" vertex="1" parent="subBackend">
-          <mxGeometry x="210" y="420" width="200" height="60" as="geometry" />
-        </mxCell>
-        <mxCell id="sQuiz" value="&#171;service&#187; quiz.service&#xa;(publicCourse, submitQuiz, analytics, attempts)" style="html=1;whiteSpace=wrap;fontSize=10;" vertex="1" parent="subBackend">
-          <mxGeometry x="20" y="500" width="180" height="60" as="geometry" />
-        </mxCell>
-        <mxCell id="sOutlines" value="&#171;service&#187; outlines.service&#xa;(extractAndSaveOutline, getStoredOutline)" style="html=1;whiteSpace=wrap;fontSize=10;" vertex="1" parent="subBackend">
-          <mxGeometry x="210" y="500" width="200" height="60" as="geometry" />
-        </mxCell>
-
-        <!-- Middleware -->
-        <mxCell id="mwAuth" value="&#171;middleware&#187; auth&#xa;(requireAuth, optionalAuth)" style="html=1;whiteSpace=wrap;fontSize=10;" vertex="1" parent="subBackend">
-          <mxGeometry x="20" y="600" width="180" height="50" as="geometry" />
-        </mxCell>
-        <mxCell id="mwErr" value="&#171;middleware&#187; error-handler, async-handler" style="html=1;whiteSpace=wrap;fontSize=10;" vertex="1" parent="subBackend">
-          <mxGeometry x="210" y="600" width="200" height="50" as="geometry" />
-        </mxCell>
-
-        <!-- LLM components -->
-        <mxCell id="cDeepSeek" value="&#171;component&#187;&lt;br&gt;&lt;b&gt;:DeepSeek&lt;/b&gt;&lt;br&gt;via OpenRouter" style="html=1;dropTarget=0;whiteSpace=wrap;fontSize=11;" vertex="1" parent="subLLM">
-          <mxGeometry x="20" y="100" width="180" height="60" as="geometry" />
-        </mxCell>
-        <mxCell id="cGemini" value="&#171;component&#187;&lt;br&gt;&lt;b&gt;:Gemini&lt;/b&gt;" style="html=1;dropTarget=0;whiteSpace=wrap;fontSize=11;" vertex="1" parent="subLLM">
-          <mxGeometry x="20" y="180" width="180" height="60" as="geometry" />
-        </mxCell>
-        <mxCell id="lcEmbed" value="embeddings" style="ellipse;whiteSpace=wrap;html=1;align=center;fontSize=10;" vertex="1" parent="subLLM">
-          <mxGeometry x="50" y="280" width="120" height="40" as="geometry" />
-        </mxCell>
-        <mxCell id="lcChat" value="chat.completions" style="ellipse;whiteSpace=wrap;html=1;align=center;fontSize=10;" vertex="1" parent="subLLM">
-          <mxGeometry x="50" y="340" width="120" height="40" as="geometry" />
-        </mxCell>
-
-        <!-- Supabase components -->
-        <mxCell id="sbPg" value="PostgreSQL&#xa;+ pgvector" style="html=1;whiteSpace=wrap;fontSize=10;strokeColor=#000000;fillColor=#ffffff;" vertex="1" parent="subSupabase">
-          <mxGeometry x="10" y="100" width="80" height="50" as="geometry" />
-        </mxCell>
-        <mxCell id="sbStorage" value="Storage" style="html=1;whiteSpace=wrap;fontSize=10;strokeColor=#000000;fillColor=#ffffff;" vertex="1" parent="subSupabase">
-          <mxGeometry x="10" y="170" width="80" height="50" as="geometry" />
-        </mxCell>
-        <mxCell id="sbAuth" value="Auth&#xa;(Google)" style="html=1;whiteSpace=wrap;fontSize=10;strokeColor=#000000;fillColor=#ffffff;" vertex="1" parent="subSupabase">
-          <mxGeometry x="10" y="240" width="80" height="50" as="geometry" />
-        </mxCell>
-        <mxCell id="sbSql" value="match_material_chunks() SQL fn" style="html=1;whiteSpace=wrap;fontSize=9;strokeColor=#000000;fillColor=#ffffff;" vertex="1" parent="subSupabase">
-          <mxGeometry x="5" y="310" width="90" height="60" as="geometry" />
-        </mxCell>
-        <mxCell id="sbRLS" value="RLS policies" style="html=1;whiteSpace=wrap;fontSize=9;strokeColor=#000000;fillColor=#ffffff;" vertex="1" parent="subSupabase">
-          <mxGeometry x="10" y="390" width="80" height="40" as="geometry" />
-        </mxCell>
-
-        <!-- Edges -->
-        <mxCell id="e1" value="HTTPS REST" style="endArrow=block;html=1;strokeColor=#000000;" edge="1" parent="1" source="cFEapi" target="cMaterials">
+        <mxCell id="e1" value="" style="endArrow=block;html=1;strokeColor=#000000;" edge="1" parent="1" source="cLectUI" target="cMaterials">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e2" value="supabase-js" style="endArrow=block;html=1;strokeColor=#000000;" edge="1" parent="1" source="cCommon" target="sbAuth">
+        <mxCell id="e2" value="" style="endArrow=block;html=1;strokeColor=#000000;" edge="1" parent="1" source="cStudUI" target="cPublic">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e3" value="verifies JWT" style="endArrow=block;html=1;strokeColor=#000000;dashed=1;" edge="1" parent="1" source="mwAuth" target="sbAuth">
+        <mxCell id="e3" value="" style="endArrow=block;html=1;strokeColor=#000000;" edge="1" parent="1" source="cCourse" target="cRAG">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e4" value="queries" style="endArrow=block;html=1;strokeColor=#000000;" edge="1" parent="1" source="sMaterials" target="sbPg">
+        <mxCell id="e4" value="" style="endArrow=block;html=1;strokeColor=#000000;" edge="1" parent="1" source="cRAG" target="cLLM">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e5" value="upload/download" style="endArrow=block;html=1;strokeColor=#000000;" edge="1" parent="1" source="sMaterials" target="sbStorage">
+        <mxCell id="e5" value="" style="endArrow=block;html=1;strokeColor=#000000;" edge="1" parent="1" source="cMaterials" target="cSupaPg">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e6" value="match_material_chunks" style="endArrow=block;html=1;strokeColor=#000000;" edge="1" parent="1" source="sRag" target="sbSql">
+        <mxCell id="e6" value="" style="endArrow=block;html=1;strokeColor=#000000;" edge="1" parent="1" source="cMaterials" target="cSupaStore">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e7" value="chat.completions" style="endArrow=block;html=1;strokeColor=#000000;" edge="1" parent="1" source="sAi" target="lcChat">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e8" value="embeddings" style="endArrow=block;html=1;strokeColor=#000000;" edge="1" parent="1" source="sAi" target="lcEmbed">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e9" value="queries attempts + metadata" style="endArrow=block;html=1;strokeColor=#000000;" edge="1" parent="1" source="sQuiz" target="sbPg">
+        <mxCell id="e7" value="" style="endArrow=block;html=1;strokeColor=#000000;dashed=1;" edge="1" parent="1" source="cLectUI" target="cSupaAuth">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
       </root>

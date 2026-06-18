@@ -5,109 +5,53 @@ sequenceDiagram
   actor S as Student
   participant UI as Web UI / Public UI
   participant Auth as Supabase Auth
-  participant API as Backend API (Express)
-  participant Supabase as Supabase (PostgreSQL + pgvector + Storage + Auth)
-  participant LLM as LLM (DeepSeek / Gemini)
+  participant API as Backend API
+  participant DB as Supabase
+  participant LLM as LLM
 
-  %% Admin prepares materials
+  %% Admin uploads materials
   A->>UI: Upload course info + slides (PDF or PPTX)
-  activate UI
-  UI->>API: POST /api/materials/upload (multipart)
-  activate API
-  API->>Supabase: Storage upload to course-materials bucket
-  Supabase-->>API: storage_path
-  API->>Supabase: INSERT materials (status='Processing')
-  API->>API: Extract text (pdf-parse / jszip)
-  API->>API: Chunk text (langchain/textsplitters)
-  API->>LLM: Embed chunks (1536-dim)
-  LLM-->>API: vectors
-  API->>Supabase: INSERT material_chunks (embedding vector(1536))
-  API->>Supabase: UPDATE materials SET status='Active'
+  UI->>API: POST /api/materials/upload
+  API->>DB: Store file metadata + embeddings
   API-->>UI: 201 Created
-  deactivate API
-  UI-->>A: Show success
-  deactivate UI
 
-  %% Lecturer logs in via Google OAuth
+  %% Lecturer logs in
   L->>UI: Click "Sign in with Google"
-  activate UI
-  UI->>Auth: supabase.auth.signInWithOAuth({ provider: 'google' })
-  Auth->>L: Redirect to Google consent
-  L->>Auth: Authorize
-  Auth->>Auth: Read role from auth.users.app_metadata.role
+  UI->>Auth: Initiate Google OAuth
   Auth-->>UI: JWT session
   UI-->>L: Redirect to /lecturer/dashboard
-  deactivate UI
 
-  %% Lecturer generates mini-course (preview)
-  L->>UI: Create course (topic, Bloom/SOLO toggles, LOs, pass%)
-  activate UI
+  %% Lecturer generates mini-course (preview then confirm)
+  L->>UI: Create course
   UI->>API: POST /api/courses/preview
-  activate API
-  API->>Supabase: match_material_chunks(course_code, query_embed) via pgvector
-  Supabase-->>API: top-k chunks per topic
-  API->>LLM: generate lesson with [S#] markers + MCQs with Bloom/SOLO + explanations
-  LLM-->>API: lesson + questions + sources
-  API-->>UI: preview object (NOT yet persisted)
-  deactivate API
-  UI-->>L: Show preview (editable)
-  deactivate UI
-
-  %% Lecturer confirms
+  API->>DB: Retrieve relevant chunks (pgvector)
+  API->>LLM: Generate lesson with [S#] + MCQ quiz
+  LLM-->>API: Lesson + quiz
+  API-->>UI: Preview
   L->>UI: Click Confirm
-  activate UI
   UI->>API: POST /api/courses/confirm
-  activate API
-  API->>Supabase: INSERT mini_courses (status='Ready', sources, pass_percentage)
-  API->>Supabase: INSERT quizzes + questions (option_a..d, explanations, metadata)
-  Supabase-->>API: courseId
+  API->>DB: Persist mini_courses + quizzes + questions
   API-->>UI: 201 Created
-  deactivate API
-  UI-->>L: Show "Ready"
-  deactivate UI
 
   %% Lecturer shares
   L->>UI: Click Share
-  activate UI
-  UI->>API: share action (set status='Shared', generate share_token)
-  activate API
-  API->>Supabase: UPDATE mini_courses SET status='Shared', share_token=...
+  UI->>API: Set status='Shared', generate share_token
   API-->>UI: share URL /s/{token}
-  deactivate API
-  UI-->>L: Display share link
-  deactivate UI
 
-  %% Student accesses and submits
-  S->>UI: Open share link /s/{token}
-  activate UI
+  %% Student takes quiz
+  S->>UI: Open /s/{token}
   UI->>API: GET /api/public/course/:token
-  activate API
-  API->>Supabase: SELECT mini_courses + quizzes + questions WHERE share_token=... AND status='Shared'
-  Supabase-->>API: lesson + questions
-  API-->>UI: lesson + quiz payload
-  deactivate API
-  UI-->>S: Display lesson and quiz
-
+  API-->>UI: Lesson + quiz
   S->>UI: Submit name + answers
   UI->>API: POST /api/public/course/:token/submit
-  activate API
-  API->>API: Validate name (>=2 chars) and answers
-  API->>API: Score against correct_option_index
-  API->>Supabase: INSERT quiz_attempts (score, total, percentage, passed, submitted_answers)
-  Supabase-->>API: attemptId
-  API-->>UI: { score, total, percentage, passed, explanations }
-  deactivate API
-  UI-->>S: Display score + per-option explanations + pass/fail
-  deactivate UI
+  API->>API: Score, compute pass/fail
+  API->>DB: INSERT quiz_attempts
+  API-->>UI: Score + explanations + pass/fail
+  UI-->>S: Display result
 
   %% Lecturer views analytics
   L->>UI: Open Analytics
-  activate UI
   UI->>API: GET /api/analytics/:courseId
-  activate API
-  API->>Supabase: Aggregate attempts + question metadata
-  Supabase-->>API: rows
-  API-->>UI: CourseAnalytics JSON
-  deactivate API
-  UI-->>L: Render dashboard (KPIs + Recharts: bar, pie, heatmap + attempts table)
-  deactivate UI
+  API->>DB: Aggregate attempts + question metadata
+  API-->>UI: CourseAnalytics
+  UI-->>L: Render dashboard

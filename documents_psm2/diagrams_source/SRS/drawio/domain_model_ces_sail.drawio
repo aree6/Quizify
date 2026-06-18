@@ -5,47 +5,39 @@
         <mxCell id="0"/>
         <mxCell id="1" parent="0"/>
 
-        <!-- materials -->
-        <mxCell id="materials" value="materials&#xa;&#xa;id              uuid PK&#xa;course_code     text&#xa;material_type   text  ('slide' | 'course_info')&#xa;chapter         text&#xa;chapter_item_label text&#xa;file_name       text&#xa;storage_path    text UNIQUE&#xa;mime_type       text&#xa;file_size       bigint&#xa;chunk_count     integer&#xa;status          text  ('Processing' | 'Active' | 'Failed' | 'Deleted')&#xa;error_message   text&#xa;uploaded_at     timestamptz&#xa;updated_at      timestamptz" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=10;spacingTop=10;strokeColor=#000000;fillColor=#ffffff;" vertex="1" parent="1">
-          <mxGeometry x="40" y="60" width="280" height="280" as="geometry"/>
+        <mxCell id="materials" value="materials&#xa;&#xa;id, course_code,&#xa;material_type (slide | course_info),&#xa;chapter, file_name,&#xa;storage_path, status&#xa;(Processing | Active | Failed | Deleted)" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=10;spacingTop=10;strokeColor=#000000;fillColor=#ffffff;" vertex="1" parent="1">
+          <mxGeometry x="40" y="80" width="240" height="180" as="geometry"/>
         </mxCell>
 
-        <!-- material_chunks -->
-        <mxCell id="material_chunks" value="material_chunks&#xa;&#xa;id            uuid PK&#xa;material_id   uuid FK -&gt; materials.id&#xa;course_code   text&#xa;source_file   text&#xa;chapter       text&#xa;chunk_index   integer&#xa;chunk_text    text&#xa;embedding     vector(1536)&#xa;created_at    timestamptz" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=10;spacingTop=10;strokeColor=#000000;fillColor=#ffffff;" vertex="1" parent="1">
-          <mxGeometry x="360" y="60" width="280" height="240" as="geometry"/>
+        <mxCell id="material_chunks" value="material_chunks&#xa;&#xa;id, material_id, course_code,&#xa;source_file, chapter,&#xa;chunk_index, chunk_text,&#xa;embedding vector(1536)" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=10;spacingTop=10;strokeColor=#000000;fillColor=#ffffff;" vertex="1" parent="1">
+          <mxGeometry x="320" y="80" width="240" height="160" as="geometry"/>
         </mxCell>
 
-        <!-- mini_courses -->
-        <mxCell id="mini_courses" value="mini_courses&#xa;&#xa;id              uuid PK&#xa;title           text&#xa;course_code     text&#xa;topics          text[]&#xa;lesson_content  text&#xa;sources         jsonb&#xa;status          text  ('Generating' | 'Ready' | 'Shared')&#xa;share_token     text UNIQUE&#xa;pass_percentage integer&#xa;expires_at      timestamptz&#xa;created_by_name text&#xa;creator_email   text&#xa;created_at      timestamptz&#xa;updated_at      timestamptz" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=10;spacingTop=10;strokeColor=#000000;fillColor=#ffffff;" vertex="1" parent="1">
-          <mxGeometry x="40" y="380" width="280" height="280" as="geometry"/>
+        <mxCell id="mini_courses" value="mini_courses&#xa;&#xa;id, title, course_code,&#xa;topics, lesson_content,&#xa;sources (jsonb),&#xa;status (Generating | Ready | Shared),&#xa;share_token, pass_percentage,&#xa;expires_at, created_by_name" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=10;spacingTop=10;strokeColor=#000000;fillColor=#ffffff;" vertex="1" parent="1">
+          <mxGeometry x="40" y="320" width="240" height="180" as="geometry"/>
         </mxCell>
 
-        <!-- quizzes -->
-        <mxCell id="quizzes" value="quizzes&#xa;&#xa;id              uuid PK&#xa;mini_course_id  uuid FK -&gt; mini_courses.id&#xa;title           text&#xa;question_count  integer&#xa;created_at      timestamptz" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=10;spacingTop=10;strokeColor=#000000;fillColor=#ffffff;" vertex="1" parent="1">
-          <mxGeometry x="680" y="60" width="260" height="180" as="geometry"/>
+        <mxCell id="quizzes" value="quizzes&#xa;&#xa;id, mini_course_id,&#xa;title, question_count" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=10;spacingTop=10;strokeColor=#000000;fillColor=#ffffff;" vertex="1" parent="1">
+          <mxGeometry x="600" y="80" width="240" height="120" as="geometry"/>
         </mxCell>
 
-        <!-- questions -->
-        <mxCell id="questions" value="questions&#xa;&#xa;id                    uuid PK&#xa;quiz_id               uuid FK -&gt; quizzes.id&#xa;prompt                text&#xa;option_a              text&#xa;option_b              text&#xa;option_c              text&#xa;option_d              text&#xa;correct_option_index  integer  (0..3)&#xa;order_index           integer&#xa;explanations          jsonb    {correct, incorrect_a..d}&#xa;metadata              jsonb    {topic, subtopic, bloomLevel, soloLevel}&#xa;created_at            timestamptz" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=10;spacingTop=10;strokeColor=#000000;fillColor=#ffffff;" vertex="1" parent="1">
-          <mxGeometry x="680" y="280" width="280" height="280" as="geometry"/>
+        <mxCell id="questions" value="questions&#xa;&#xa;id, quiz_id, prompt,&#xa;option_a, option_b,&#xa;option_c, option_d,&#xa;correct_option_index,&#xa;explanations (jsonb),&#xa;metadata (jsonb: topic, bloom, solo)" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=10;spacingTop=10;strokeColor=#000000;fillColor=#ffffff;" vertex="1" parent="1">
+          <mxGeometry x="600" y="240" width="240" height="180" as="geometry"/>
         </mxCell>
 
-        <!-- quiz_attempts -->
-        <mxCell id="quiz_attempts" value="quiz_attempts&#xa;&#xa;id                 uuid PK&#xa;mini_course_id     uuid FK -&gt; mini_courses.id&#xa;quiz_id            uuid FK -&gt; quizzes.id&#xa;student_name       text&#xa;student_email      text&#xa;score              integer&#xa;total_questions    integer&#xa;percentage         integer&#xa;submitted_answers  jsonb&#xa;submitted_at       timestamptz" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=10;spacingTop=10;strokeColor=#000000;fillColor=#ffffff;" vertex="1" parent="1">
-          <mxGeometry x="360" y="380" width="280" height="240" as="geometry"/>
+        <mxCell id="quiz_attempts" value="quiz_attempts&#xa;&#xa;id, mini_course_id, quiz_id,&#xa;student_name, student_email,&#xa;score, total_questions,&#xa;percentage, submitted_answers (jsonb)" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=10;spacingTop=10;strokeColor=#000000;fillColor=#ffffff;" vertex="1" parent="1">
+          <mxGeometry x="320" y="320" width="240" height="180" as="geometry"/>
         </mxCell>
 
-        <!-- auth note -->
-        <mxCell id="auth_note" value="auth.users (Supabase Auth)&#xa;&#xa;id            uuid PK&#xa;email         text&#xa;app_metadata  jsonb   {role: 'lecturer' | 'admin' | 'student'}&#xa;&#xa;No app-side User table." style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=10;spacingTop=10;strokeColor=#000000;fillColor=#fff2cc;" vertex="1" parent="1">
-          <mxGeometry x="680" y="600" width="280" height="160" as="geometry"/>
+        <mxCell id="auth_note" value="auth.users (Supabase Auth)&#xa;&#xa;email, app_metadata.role&#xa;(lecturer | admin | student)&#xa;&#xa;No app-side User table." style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=10;spacingTop=10;strokeColor=#000000;fillColor=#fff2cc;" vertex="1" parent="1">
+          <mxGeometry x="600" y="460" width="240" height="120" as="geometry"/>
         </mxCell>
 
-        <!-- Relationships -->
-        <mxCell id="r1" value="has&#xa;1 to 0..*" style="endArrow=ERmany;html=1;strokeColor=#000000;" edge="1" parent="1" source="materials" target="material_chunks"><mxGeometry relative="1" as="geometry"/></mxCell>
-        <mxCell id="r2" value="has&#xa;1 to 0..*" style="endArrow=ERmany;html=1;strokeColor=#000000;" edge="1" parent="1" source="mini_courses" target="quizzes"><mxGeometry relative="1" as="geometry"/></mxCell>
-        <mxCell id="r3" value="has&#xa;1 to 0..*" style="endArrow=ERmany;html=1;strokeColor=#000000;" edge="1" parent="1" source="quizzes" target="questions"><mxGeometry relative="1" as="geometry"/></mxCell>
-        <mxCell id="r4" value="receives&#xa;1 to 0..*" style="endArrow=ERmany;html=1;strokeColor=#000000;" edge="1" parent="1" source="mini_courses" target="quiz_attempts"><mxGeometry relative="1" as="geometry"/></mxCell>
-        <mxCell id="r5" value="for&#xa;1 to 0..*" style="endArrow=ERmany;html=1;strokeColor=#000000;" edge="1" parent="1" source="quizzes" target="quiz_attempts"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="r1" value="has 1..*" style="endArrow=ERmany;html=1;strokeColor=#000000;" edge="1" parent="1" source="materials" target="material_chunks"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="r2" value="has 1..*" style="endArrow=ERmany;html=1;strokeColor=#000000;" edge="1" parent="1" source="mini_courses" target="quizzes"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="r3" value="has 1..*" style="endArrow=ERmany;html=1;strokeColor=#000000;" edge="1" parent="1" source="quizzes" target="questions"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="r4" value="receives 1..*" style="endArrow=ERmany;html=1;strokeColor=#000000;" edge="1" parent="1" source="mini_courses" target="quiz_attempts"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="r5" value="for 1..*" style="endArrow=ERmany;html=1;strokeColor=#000000;" edge="1" parent="1" source="quizzes" target="quiz_attempts"><mxGeometry relative="1" as="geometry"/></mxCell>
         <mxCell id="r6" value="references (via course_code)" style="endArrow=open;html=1;dashed=1;strokeColor=#000000;" edge="1" parent="1" source="mini_courses" target="materials"><mxGeometry relative="1" as="geometry"/></mxCell>
       </root>
     </mxGraphModel>

@@ -3,36 +3,17 @@ sequenceDiagram
   actor U as User
   participant UI as Web UI
   participant Auth as Supabase Auth
-  participant Google as Google OAuth
 
   U->>UI: Click "Sign in with Google"
-  activate UI
-  UI->>Auth: supabase.auth.signInWithOAuth({ provider: 'google' })
-  activate Auth
-  Auth->>Google: Redirect to consent screen
-  deactivate Auth
-
-  Google-->>U: Prompt for consent
-  U->>Google: Authorize
-  Google->>Auth: Authorization code
-  activate Auth
-  Auth->>Auth: Read role from auth.users.app_metadata.role
-  Auth-->>UI: Returns JWT in URL fragment
-  deactivate Auth
-
-  UI->>Auth: supabase.auth.getSession() persists JWT
-  activate Auth
+  UI->>Auth: Initiate Google OAuth
+  Auth-->>U: Redirect to Google consent
+  U->>Auth: Authorize
+  Auth-->>UI: Return JWT session
+  UI->>Auth: Persist session
   Auth-->>UI: Session
-  deactivate Auth
 
-  alt role == lecturer
-    UI-->>U: Redirect to /lecturer/dashboard
-  else role == admin
-    UI-->>U: Redirect to /admin/dashboard
-  else role == student
-    UI-->>U: Redirect to /student/dashboard
+  alt role == lecturer / admin / student
+    UI-->>U: Redirect to role-based dashboard
   else no role
     UI-->>U: Show error: unauthorized account
   end
-
-  deactivate UI

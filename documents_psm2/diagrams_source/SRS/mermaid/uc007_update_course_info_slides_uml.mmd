@@ -4,48 +4,22 @@ sequenceDiagram
   participant UI as Web UI
   participant API as Backend API
   participant Store as Supabase Storage
-  participant DB as Supabase (PostgreSQL)
-  participant LLM as Embedding API (DeepSeek / Gemini)
+  participant DB as Supabase
 
   A->>UI: Enter course info + select file (PDF or PPTX)
   A->>UI: Click Save/Upload
-  activate UI
   UI->>API: POST /api/materials/upload (multipart)
-  activate API
-  API->>API: Validate file type (PDF or PPTX)
-
+  API->>API: Validate file type
   alt invalid file type
     API-->>UI: 400 Bad Request
     UI-->>A: Show validation error
   else valid
-    API->>Store: Upload file to bucket course-materials
-    activate Store
+    API->>Store: Upload to bucket course-materials
     Store-->>API: storage_path
-    deactivate Store
-
-    API->>DB: INSERT materials (status='Processing', course_code, material_type, chapter, storage_path, mime_type, file_size)
-    activate DB
-    DB-->>API: material id
-    deactivate DB
-
-    API->>API: Extract text (pdf-parse for PDF, jszip+xml for PPTX)
-    API->>API: Chunk text (langchain/textsplitters)
-    API->>LLM: Generate embeddings (1536-dim)
-    activate LLM
-    LLM-->>API: vectors
-    deactivate LLM
-    API->>DB: INSERT material_chunks (chunk_text, embedding vector(1536), course_code, source_file, chapter)
-    activate DB
-    DB-->>API: chunk ids
-    deactivate DB
-    API->>DB: UPDATE materials SET status='Active', chunk_count=N
-    activate DB
-    DB-->>API: ok
-    deactivate DB
-
-    API-->>UI: 201 Created (material id)
-    UI-->>A: Display success confirmation
+    API->>DB: INSERT materials (status='Processing')
+    API->>API: Extract text + chunk + embed
+    API->>DB: INSERT material_chunks (with embeddings)
+    API->>DB: UPDATE materials SET status='Active'
+    API-->>UI: 201 Created
+    UI-->>A: Display success
   end
-
-  deactivate API
-  deactivate UI
