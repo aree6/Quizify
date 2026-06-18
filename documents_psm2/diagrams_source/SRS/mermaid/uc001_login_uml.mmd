@@ -1,19 +1,27 @@
 sequenceDiagram
-  autonumber
   actor U as User
   participant UI as Web UI
   participant Auth as Supabase Auth
 
   U->>UI: Click "Sign in with Google"
+  activate UI
   UI->>Auth: Initiate Google OAuth
+  activate Auth
   Auth-->>U: Redirect to Google consent
+  deactivate Auth
   U->>Auth: Authorize
+  activate Auth
+  Auth->>Auth: Read role from auth.users.app_metadata.role
   Auth-->>UI: Return JWT session
+  deactivate Auth
   UI->>Auth: Persist session
+  activate Auth
   Auth-->>UI: Session
+  deactivate Auth
 
   alt role == lecturer / admin / student
     UI-->>U: Redirect to role-based dashboard
   else no role
     UI-->>U: Show error: unauthorized account
   end
+  deactivate UI
