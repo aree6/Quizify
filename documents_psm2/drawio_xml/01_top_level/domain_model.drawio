@@ -5,18 +5,42 @@
       <root>
         <mxCell id="0"/>
         <mxCell id="1" parent="0"/>
-        <mxCell id="title" value="Domain Model: QUIZIFY" style="text;html=1;align=center;verticalAlign=middle;fontSize=18;fontStyle=1;fontFamily=Tahoma;" vertex="1" parent="1"><mxGeometry x="200" y="30" width="700" height="30" as="geometry"/></mxCell>
-        <mxCell id="materials" value="materials&#xa;&#xa;id, course_code,&#xa;material_type,&#xa;chapter, file_name,&#xa;storage_path, status,&#xa;chunk_count" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=10;spacingTop=10;fillColor=#FFFFFF;strokeColor=#000000;fontSize=14;fontFamily=Tahoma;" vertex="1" parent="1"><mxGeometry x="40" y="100" width="220" height="140" as="geometry"/></mxCell>
-        <mxCell id="material_chunks" value="material_chunks&#xa;&#xa;id, material_id, course_code,&#xa;source_file, chapter,&#xa;chunk_index, chunk_text,&#xa;embedding vector(1536)" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=10;spacingTop=10;fillColor=#FFFFFF;strokeColor=#000000;fontSize=14;fontFamily=Tahoma;" vertex="1" parent="1"><mxGeometry x="320" y="100" width="220" height="140" as="geometry"/></mxCell>
-        <mxCell id="mini_courses" value="mini_courses&#xa;&#xa;id, title, course_code,&#xa;topics, lesson_content,&#xa;sources, status,&#xa;share_token, pass_percentage" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=10;spacingTop=10;fillColor=#FFFFFF;strokeColor=#000000;fontSize=14;fontFamily=Tahoma;" vertex="1" parent="1"><mxGeometry x="40" y="280" width="220" height="140" as="geometry"/></mxCell>
-        <mxCell id="quizzes" value="quizzes&#xa;&#xa;id, mini_course_id,&#xa;title, question_count" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=10;spacingTop=10;fillColor=#FFFFFF;strokeColor=#000000;fontSize=14;fontFamily=Tahoma;" vertex="1" parent="1"><mxGeometry x="600" y="100" width="220" height="100" as="geometry"/></mxCell>
-        <mxCell id="questions" value="questions&#xa;&#xa;id, quiz_id, prompt,&#xa;option_a, option_b,&#xa;option_c, option_d,&#xa;correct_option_index,&#xa;explanations, metadata" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=10;spacingTop=10;fillColor=#FFFFFF;strokeColor=#000000;fontSize=14;fontFamily=Tahoma;" vertex="1" parent="1"><mxGeometry x="600" y="240" width="220" height="140" as="geometry"/></mxCell>
-        <mxCell id="quiz_attempts" value="quiz_attempts&#xa;&#xa;id, mini_course_id, quiz_id,&#xa;student_name, student_email,&#xa;score, total_questions,&#xa;percentage, submitted_answers" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=10;spacingTop=10;fillColor=#FFFFFF;strokeColor=#000000;fontSize=14;fontFamily=Tahoma;" vertex="1" parent="1"><mxGeometry x="320" y="280" width="220" height="140" as="geometry"/></mxCell>
-        <mxCell id="r1" value="has 1..*" style="endArrow=ERmany;html=1;strokeColor=#000000;fontSize=14;fontFamily=Tahoma;" edge="1" parent="1" source="materials" target="material_chunks"><mxGeometry relative="1" as="geometry"/></mxCell>
-        <mxCell id="r2" value="has 1..*" style="endArrow=ERmany;html=1;strokeColor=#000000;fontSize=14;fontFamily=Tahoma;" edge="1" parent="1" source="mini_courses" target="quizzes"><mxGeometry relative="1" as="geometry"/></mxCell>
-        <mxCell id="r3" value="has 1..*" style="endArrow=ERmany;html=1;strokeColor=#000000;fontSize=14;fontFamily=Tahoma;" edge="1" parent="1" source="quizzes" target="questions"><mxGeometry relative="1" as="geometry"/></mxCell>
-        <mxCell id="r4" value="receives 1..*" style="endArrow=ERmany;html=1;strokeColor=#000000;fontSize=14;fontFamily=Tahoma;" edge="1" parent="1" source="mini_courses" target="quiz_attempts"><mxGeometry relative="1" as="geometry"/></mxCell>
-        <mxCell id="r5" value="for 1..*" style="endArrow=ERmany;html=1;strokeColor=#000000;fontSize=14;fontFamily=Tahoma;" edge="1" parent="1" source="quizzes" target="quiz_attempts"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="title" value="Domain Model: QUIZIFY" style="text;html=1;align=center;verticalAlign=middle;fontSize=18;fontStyle=1;fontFamily=Tahoma;" vertex="1" parent="1">
+          <mxGeometry x="200" y="30" width="700" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="materials" value="materials&#xa;&#xa;id, course_code,&#xa;material_type,&#xa;chapter, file_name,&#xa;storage_path, status,&#xa;chunk_count" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=10;spacingTop=10;fillColor=#FFFFFF;strokeColor=#000000;fontSize=14;fontFamily=Tahoma;" vertex="1" parent="1">
+          <mxGeometry x="40" y="100" width="220" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="material_chunks" value="material_chunks&#xa;&#xa;id, material_id, course_code,&#xa;source_file, chapter,&#xa;chunk_index, chunk_text,&#xa;embedding vector(1536)" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=10;spacingTop=10;fillColor=#FFFFFF;strokeColor=#000000;fontSize=14;fontFamily=Tahoma;" vertex="1" parent="1">
+          <mxGeometry x="320" y="100" width="220" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="mini_courses" value="mini_courses&#xa;&#xa;id, title, course_code,&#xa;topics, lesson_content,&#xa;sources, status,&#xa;share_token, pass_percentage" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=10;spacingTop=10;fillColor=#FFFFFF;strokeColor=#000000;fontSize=14;fontFamily=Tahoma;" vertex="1" parent="1">
+          <mxGeometry x="40" y="280" width="220" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="quizzes" value="quizzes&#xa;&#xa;id, mini_course_id,&#xa;title, question_count" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=10;spacingTop=10;fillColor=#FFFFFF;strokeColor=#000000;fontSize=14;fontFamily=Tahoma;" vertex="1" parent="1">
+          <mxGeometry x="600" y="100" width="220" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="questions" value="questions&#xa;&#xa;id, quiz_id, prompt,&#xa;option_a, option_b,&#xa;option_c, option_d,&#xa;correct_option_index,&#xa;explanations, metadata" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=10;spacingTop=10;fillColor=#FFFFFF;strokeColor=#000000;fontSize=14;fontFamily=Tahoma;" vertex="1" parent="1">
+          <mxGeometry x="600" y="240" width="220" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="quiz_attempts" value="quiz_attempts&#xa;&#xa;id, mini_course_id, quiz_id,&#xa;student_name, student_email,&#xa;score, total_questions,&#xa;percentage, submitted_answers" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=10;spacingTop=10;fillColor=#FFFFFF;strokeColor=#000000;fontSize=14;fontFamily=Tahoma;" vertex="1" parent="1">
+          <mxGeometry x="320" y="280" width="220" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="r1" edge="1" value="has 1..*" style="endArrow=ERmany;html=1;strokeColor=#000000;fontSize=14;fontFamily=Tahoma;" parent="1" source="materials" target="material_chunks">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="r2" edge="1" value="has 1..*" style="endArrow=ERmany;html=1;strokeColor=#000000;fontSize=14;fontFamily=Tahoma;" parent="1" source="mini_courses" target="quizzes">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="r3" edge="1" value="has 1..*" style="endArrow=ERmany;html=1;strokeColor=#000000;fontSize=14;fontFamily=Tahoma;" parent="1" source="quizzes" target="questions">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="r4" edge="1" value="receives 1..*" style="endArrow=ERmany;html=1;strokeColor=#000000;fontSize=14;fontFamily=Tahoma;" parent="1" source="mini_courses" target="quiz_attempts">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="r5" edge="1" value="for 1..*" style="endArrow=ERmany;html=1;strokeColor=#000000;fontSize=14;fontFamily=Tahoma;" parent="1" source="quizzes" target="quiz_attempts">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
       </root>
     </mxGraphModel>
   </diagram>

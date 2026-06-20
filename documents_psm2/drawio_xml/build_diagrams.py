@@ -89,11 +89,16 @@ def parse_source():
 
 def xe(s):
     """Escape a string for safe use as an XML attribute value."""
-    return (s.replace('&', '&amp;')
+    if s is None:
+        return ''
+    return (str(s)
+             .replace('&', '&amp;')
              .replace('<', '&lt;')
              .replace('>', '&gt;')
              .replace('"', '&quot;')
-             .replace("'", '&apos;'))
+             .replace("'", '&apos;')
+             .replace('\n', '&#xa;')
+             .replace('\r', ''))
 
 
 def extract_page_body(content, page_name):
@@ -108,7 +113,12 @@ def extract_page_body(content, page_name):
 def extract_all_cells(page_body):
     """Extract complete <mxCell> elements (both self-closing and multi-line).
     Uses a balanced-tag approach so it correctly handles cells that contain
-    self-closing inner elements like <mxPoint .../>."""
+    self-closing inner elements like <mxPoint .../>.
+
+    Skips the standard root cells (id="0" and id="1") because wrap_in_drawio
+    will add fresh ones - otherwise Draw.io sees duplicate ids and renders
+    nothing for the page.
+    """
     cells = []
     i = 0
     n = len(page_body)
@@ -120,8 +130,9 @@ def extract_all_cells(page_body):
         if end_open == -1:
             break
         if page_body[end_open - 1] == '/':
-            # self-closing
-            cells.append(page_body[idx:end_open + 1])
+            cell_xml = page_body[idx:end_open + 1]
+            if not _is_root_cell(cell_xml):
+                cells.append(cell_xml)
             i = end_open + 1
             continue
         # multi-line: balance tags
@@ -133,7 +144,6 @@ def extract_all_cells(page_body):
             if nclose == -1:
                 break
             if nopen != -1 and nopen < nclose:
-                # is this one self-closing?
                 no_end = page_body.find('>', nopen)
                 if no_end != -1 and page_body[no_end - 1] == '/':
                     j = no_end + 1
@@ -143,12 +153,44 @@ def extract_all_cells(page_body):
             else:
                 depth -= 1
                 if depth == 0:
-                    cells.append(page_body[idx:nclose + len('</mxCell>')])
+                    cell_xml = page_body[idx:nclose + len('</mxCell>')]
+                    if not _is_root_cell(cell_xml):
+                        cells.append(cell_xml)
                     j = nclose + len('</mxCell>')
                     break
                 j = nclose + len('</mxCell>')
         i = j
     return cells
+
+
+def _is_root_cell(cell_xml):
+    """Return True if this is a standard root cell (id="0" or id="1")."""
+    m = re.search(r'<mxCell[^>]*\sid="([01])"', cell_xml)
+    return m is not None
+
+
+def c(id_, value, style, x, y, w, h, parent='1', vertex='1'):
+    """Build a multi-line <mxCell> in the same style as the source file.
+    Matches the format used in the user's per-UC working files."""
+    value_attr = f' value="{xe(value)}"' if value else ' value=""'
+    return (
+        f'<mxCell id="{xe(id_)}"{value_attr} style="{style}" '
+        f'vertex="{vertex}" parent="{xe(parent)}">\n'
+        f'          <mxGeometry x="{x}" y="{y}" width="{w}" height="{h}" '
+        f'as="geometry" />\n'
+        f'        </mxCell>'
+    )
+
+
+def c_edge(id_, value, style, source, target, parent='1'):
+    """Build a multi-line <mxCell> edge in the same style as the source."""
+    value_attr = f' value="{xe(value)}"' if value else ' value=""'
+    return (
+        f'<mxCell id="{xe(id_)}" edge="1"{value_attr} style="{style}" '
+        f'parent="{xe(parent)}" source="{xe(source)}" target="{xe(target)}">\n'
+        f'          <mxGeometry relative="1" as="geometry" />\n'
+        f'        </mxCell>'
+    )
 
 
 def extract_cells_by_prefix(page_body, prefix):
@@ -601,57 +643,48 @@ def build_package(content):
 
 def build_erd(content):
     """Build ERD from scratch with the 6 Supabase tables."""
+    er_style = (
+        'rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;'
+        'spacingLeft=10;spacingTop=10;fillColor=#FFFFFF;'
+        'strokeColor=#000000;fontSize=14;fontFamily=Tahoma;'
+    )
+    edge_style = (
+        'endArrow=ERmany;html=1;strokeColor=#000000;'
+        'fontSize=14;fontFamily=Tahoma;'
+    )
     write_file(
         '01_top_level/erd.drawio',
         wrap_in_drawio(
             'ERD - QUIZIFY (Supabase)',
             [
-                # Title
-                f'<mxCell id="title" value="ERD: QUIZIFY" style="{STYLE_TITLE}" vertex="1" parent="1">'
-                f'<mxGeometry x="200" y="30" width="700" height="30" as="geometry"/></mxCell>',
-                # materials
-                f'<mxCell id="materials" value="materials&#xa;&#xa;id, course_code,&#xa;material_type,&#xa;chapter, file_name,&#xa;storage_path, status,&#xa;chunk_count" '
-                f'style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=10;spacingTop=10;'
-                f'fillColor=#FFFFFF;strokeColor=#000000;fontSize=14;fontFamily=Tahoma;" vertex="1" parent="1">'
-                f'<mxGeometry x="40" y="100" width="220" height="140" as="geometry"/></mxCell>',
-                # material_chunks
-                f'<mxCell id="material_chunks" value="material_chunks&#xa;&#xa;id, material_id, course_code,&#xa;source_file, chapter,&#xa;chunk_index, chunk_text,&#xa;embedding vector(1536)" '
-                f'style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=10;spacingTop=10;'
-                f'fillColor=#FFFFFF;strokeColor=#000000;fontSize=14;fontFamily=Tahoma;" vertex="1" parent="1">'
-                f'<mxGeometry x="320" y="100" width="220" height="140" as="geometry"/></mxCell>',
-                # mini_courses
-                f'<mxCell id="mini_courses" value="mini_courses&#xa;&#xa;id, title, course_code,&#xa;topics, lesson_content,&#xa;sources, status,&#xa;share_token, pass_percentage,&#xa;expires_at" '
-                f'style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=10;spacingTop=10;'
-                f'fillColor=#FFFFFF;strokeColor=#000000;fontSize=14;fontFamily=Tahoma;" vertex="1" parent="1">'
-                f'<mxGeometry x="40" y="280" width="220" height="140" as="geometry"/></mxCell>',
-                # quizzes
-                f'<mxCell id="quizzes" value="quizzes&#xa;&#xa;id, mini_course_id,&#xa;title, question_count" '
-                f'style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=10;spacingTop=10;'
-                f'fillColor=#FFFFFF;strokeColor=#000000;fontSize=14;fontFamily=Tahoma;" vertex="1" parent="1">'
-                f'<mxGeometry x="600" y="100" width="220" height="100" as="geometry"/></mxCell>',
-                # questions
-                f'<mxCell id="questions" value="questions&#xa;&#xa;id, quiz_id, prompt,&#xa;option_a, option_b,&#xa;option_c, option_d,&#xa;correct_option_index,&#xa;explanations, metadata" '
-                f'style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=10;spacingTop=10;'
-                f'fillColor=#FFFFFF;strokeColor=#000000;fontSize=14;fontFamily=Tahoma;" vertex="1" parent="1">'
-                f'<mxGeometry x="600" y="240" width="220" height="140" as="geometry"/></mxCell>',
-                # quiz_attempts
-                f'<mxCell id="quiz_attempts" value="quiz_attempts&#xa;&#xa;id, mini_course_id, quiz_id,&#xa;student_name, student_email,&#xa;score, total_questions,&#xa;percentage, submitted_answers" '
-                f'style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=10;spacingTop=10;'
-                f'fillColor=#FFFFFF;strokeColor=#000000;fontSize=14;fontFamily=Tahoma;" vertex="1" parent="1">'
-                f'<mxGeometry x="320" y="280" width="220" height="140" as="geometry"/></mxCell>',
-                # Relationships
-                f'<mxCell id="r1" value="has 1..*" style="endArrow=ERmany;html=1;strokeColor=#000000;fontSize=14;fontFamily=Tahoma;" edge="1" parent="1" '
-                f'source="materials" target="material_chunks"><mxGeometry relative="1" as="geometry"/></mxCell>',
-                f'<mxCell id="r2" value="has 1..*" style="endArrow=ERmany;html=1;strokeColor=#000000;fontSize=14;fontFamily=Tahoma;" edge="1" parent="1" '
-                f'source="mini_courses" target="quizzes"><mxGeometry relative="1" as="geometry"/></mxCell>',
-                f'<mxCell id="r3" value="has 1..*" style="endArrow=ERmany;html=1;strokeColor=#000000;fontSize=14;fontFamily=Tahoma;" edge="1" parent="1" '
-                f'source="quizzes" target="questions"><mxGeometry relative="1" as="geometry"/></mxCell>',
-                f'<mxCell id="r4" value="receives 1..*" style="endArrow=ERmany;html=1;strokeColor=#000000;fontSize=14;fontFamily=Tahoma;" edge="1" parent="1" '
-                f'source="mini_courses" target="quiz_attempts"><mxGeometry relative="1" as="geometry"/></mxCell>',
-                f'<mxCell id="r5" value="for 1..*" style="endArrow=ERmany;html=1;strokeColor=#000000;fontSize=14;fontFamily=Tahoma;" edge="1" parent="1" '
-                f'source="quizzes" target="quiz_attempts"><mxGeometry relative="1" as="geometry"/></mxCell>',
-                f'<mxCell id="r6" value="references (via course_code)" style="endArrow=open;html=1;dashed=1;strokeColor=#000000;fontSize=14;fontFamily=Tahoma;" edge="1" parent="1" '
-                f'source="mini_courses" target="materials"><mxGeometry relative="1" as="geometry"/></mxCell>',
+                c('title', 'ERD: QUIZIFY', STYLE_TITLE, 200, 30, 700, 30),
+                c('materials',
+                  'materials\n\nid, course_code,\nmaterial_type,\nchapter, file_name,\nstorage_path, status,\nchunk_count',
+                  er_style, 40, 100, 220, 140),
+                c('material_chunks',
+                  'material_chunks\n\nid, material_id, course_code,\nsource_file, chapter,\nchunk_index, chunk_text,\nembedding vector(1536)',
+                  er_style, 320, 100, 220, 140),
+                c('mini_courses',
+                  'mini_courses\n\nid, title, course_code,\ntopics, lesson_content,\nsources, status,\nshare_token, pass_percentage,\nexpires_at',
+                  er_style, 40, 280, 220, 140),
+                c('quizzes',
+                  'quizzes\n\nid, mini_course_id,\ntitle, question_count',
+                  er_style, 600, 100, 220, 100),
+                c('questions',
+                  'questions\n\nid, quiz_id, prompt,\noption_a, option_b,\noption_c, option_d,\ncorrect_option_index,\nexplanations, metadata',
+                  er_style, 600, 240, 220, 140),
+                c('quiz_attempts',
+                  'quiz_attempts\n\nid, mini_course_id, quiz_id,\nstudent_name, student_email,\nscore, total_questions,\npercentage, submitted_answers',
+                  er_style, 320, 280, 220, 140),
+                c_edge('r1', 'has 1..*', edge_style, 'materials', 'material_chunks'),
+                c_edge('r2', 'has 1..*', edge_style, 'mini_courses', 'quizzes'),
+                c_edge('r3', 'has 1..*', edge_style, 'quizzes', 'questions'),
+                c_edge('r4', 'receives 1..*', edge_style, 'mini_courses', 'quiz_attempts'),
+                c_edge('r5', 'for 1..*', edge_style, 'quizzes', 'quiz_attempts'),
+                c_edge('r6', 'references (via course_code)',
+                       'endArrow=open;html=1;dashed=1;strokeColor=#000000;'
+                       'fontSize=14;fontFamily=Tahoma;',
+                       'mini_courses', 'materials'),
             ],
             page_width=900, page_height=500
         )
@@ -664,55 +697,44 @@ def build_erd(content):
 
 def build_domain_model(content):
     """Build domain model with just the 6 Supabase tables."""
+    er_style = (
+        'rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;'
+        'spacingLeft=10;spacingTop=10;fillColor=#FFFFFF;'
+        'strokeColor=#000000;fontSize=14;fontFamily=Tahoma;'
+    )
+    edge_style = (
+        'endArrow=ERmany;html=1;strokeColor=#000000;'
+        'fontSize=14;fontFamily=Tahoma;'
+    )
     write_file(
         '01_top_level/domain_model.drawio',
         wrap_in_drawio(
             'Domain Model - QUIZIFY (Supabase)',
             [
-                # Title
-                f'<mxCell id="title" value="Domain Model: QUIZIFY" style="{STYLE_TITLE}" vertex="1" parent="1">'
-                f'<mxGeometry x="200" y="30" width="700" height="30" as="geometry"/></mxCell>',
-                # materials
-                f'<mxCell id="materials" value="materials&#xa;&#xa;id, course_code,&#xa;material_type,&#xa;chapter, file_name,&#xa;storage_path, status,&#xa;chunk_count" '
-                f'style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=10;spacingTop=10;'
-                f'fillColor=#FFFFFF;strokeColor=#000000;fontSize=14;fontFamily=Tahoma;" vertex="1" parent="1">'
-                f'<mxGeometry x="40" y="100" width="220" height="140" as="geometry"/></mxCell>',
-                # material_chunks
-                f'<mxCell id="material_chunks" value="material_chunks&#xa;&#xa;id, material_id, course_code,&#xa;source_file, chapter,&#xa;chunk_index, chunk_text,&#xa;embedding vector(1536)" '
-                f'style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=10;spacingTop=10;'
-                f'fillColor=#FFFFFF;strokeColor=#000000;fontSize=14;fontFamily=Tahoma;" vertex="1" parent="1">'
-                f'<mxGeometry x="320" y="100" width="220" height="140" as="geometry"/></mxCell>',
-                # mini_courses
-                f'<mxCell id="mini_courses" value="mini_courses&#xa;&#xa;id, title, course_code,&#xa;topics, lesson_content,&#xa;sources, status,&#xa;share_token, pass_percentage" '
-                f'style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=10;spacingTop=10;'
-                f'fillColor=#FFFFFF;strokeColor=#000000;fontSize=14;fontFamily=Tahoma;" vertex="1" parent="1">'
-                f'<mxGeometry x="40" y="280" width="220" height="140" as="geometry"/></mxCell>',
-                # quizzes
-                f'<mxCell id="quizzes" value="quizzes&#xa;&#xa;id, mini_course_id,&#xa;title, question_count" '
-                f'style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=10;spacingTop=10;'
-                f'fillColor=#FFFFFF;strokeColor=#000000;fontSize=14;fontFamily=Tahoma;" vertex="1" parent="1">'
-                f'<mxGeometry x="600" y="100" width="220" height="100" as="geometry"/></mxCell>',
-                # questions
-                f'<mxCell id="questions" value="questions&#xa;&#xa;id, quiz_id, prompt,&#xa;option_a, option_b,&#xa;option_c, option_d,&#xa;correct_option_index,&#xa;explanations, metadata" '
-                f'style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=10;spacingTop=10;'
-                f'fillColor=#FFFFFF;strokeColor=#000000;fontSize=14;fontFamily=Tahoma;" vertex="1" parent="1">'
-                f'<mxGeometry x="600" y="240" width="220" height="140" as="geometry"/></mxCell>',
-                # quiz_attempts
-                f'<mxCell id="quiz_attempts" value="quiz_attempts&#xa;&#xa;id, mini_course_id, quiz_id,&#xa;student_name, student_email,&#xa;score, total_questions,&#xa;percentage, submitted_answers" '
-                f'style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=10;spacingTop=10;'
-                f'fillColor=#FFFFFF;strokeColor=#000000;fontSize=14;fontFamily=Tahoma;" vertex="1" parent="1">'
-                f'<mxGeometry x="320" y="280" width="220" height="140" as="geometry"/></mxCell>',
-                # Relationships
-                f'<mxCell id="r1" value="has 1..*" style="endArrow=ERmany;html=1;strokeColor=#000000;fontSize=14;fontFamily=Tahoma;" edge="1" parent="1" '
-                f'source="materials" target="material_chunks"><mxGeometry relative="1" as="geometry"/></mxCell>',
-                f'<mxCell id="r2" value="has 1..*" style="endArrow=ERmany;html=1;strokeColor=#000000;fontSize=14;fontFamily=Tahoma;" edge="1" parent="1" '
-                f'source="mini_courses" target="quizzes"><mxGeometry relative="1" as="geometry"/></mxCell>',
-                f'<mxCell id="r3" value="has 1..*" style="endArrow=ERmany;html=1;strokeColor=#000000;fontSize=14;fontFamily=Tahoma;" edge="1" parent="1" '
-                f'source="quizzes" target="questions"><mxGeometry relative="1" as="geometry"/></mxCell>',
-                f'<mxCell id="r4" value="receives 1..*" style="endArrow=ERmany;html=1;strokeColor=#000000;fontSize=14;fontFamily=Tahoma;" edge="1" parent="1" '
-                f'source="mini_courses" target="quiz_attempts"><mxGeometry relative="1" as="geometry"/></mxCell>',
-                f'<mxCell id="r5" value="for 1..*" style="endArrow=ERmany;html=1;strokeColor=#000000;fontSize=14;fontFamily=Tahoma;" edge="1" parent="1" '
-                f'source="quizzes" target="quiz_attempts"><mxGeometry relative="1" as="geometry"/></mxCell>',
+                c('title', 'Domain Model: QUIZIFY', STYLE_TITLE, 200, 30, 700, 30),
+                c('materials',
+                  'materials\n\nid, course_code,\nmaterial_type,\nchapter, file_name,\nstorage_path, status,\nchunk_count',
+                  er_style, 40, 100, 220, 140),
+                c('material_chunks',
+                  'material_chunks\n\nid, material_id, course_code,\nsource_file, chapter,\nchunk_index, chunk_text,\nembedding vector(1536)',
+                  er_style, 320, 100, 220, 140),
+                c('mini_courses',
+                  'mini_courses\n\nid, title, course_code,\ntopics, lesson_content,\nsources, status,\nshare_token, pass_percentage',
+                  er_style, 40, 280, 220, 140),
+                c('quizzes',
+                  'quizzes\n\nid, mini_course_id,\ntitle, question_count',
+                  er_style, 600, 100, 220, 100),
+                c('questions',
+                  'questions\n\nid, quiz_id, prompt,\noption_a, option_b,\noption_c, option_d,\ncorrect_option_index,\nexplanations, metadata',
+                  er_style, 600, 240, 220, 140),
+                c('quiz_attempts',
+                  'quiz_attempts\n\nid, mini_course_id, quiz_id,\nstudent_name, student_email,\nscore, total_questions,\npercentage, submitted_answers',
+                  er_style, 320, 280, 220, 140),
+                c_edge('r1', 'has 1..*', edge_style, 'materials', 'material_chunks'),
+                c_edge('r2', 'has 1..*', edge_style, 'mini_courses', 'quizzes'),
+                c_edge('r3', 'has 1..*', edge_style, 'quizzes', 'questions'),
+                c_edge('r4', 'receives 1..*', edge_style, 'mini_courses', 'quiz_attempts'),
+                c_edge('r5', 'for 1..*', edge_style, 'quizzes', 'quiz_attempts'),
             ],
             page_width=900, page_height=500
         )
@@ -725,87 +747,78 @@ def build_domain_model(content):
 
 def build_class(content):
     """Build class diagram with the 6 Supabase tables (same as ERD but as classes)."""
+    service_style = (
+        'rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;'
+        'spacingLeft=10;spacingTop=10;fillColor=#dae8fc;'
+        'strokeColor=#6c8ebf;fontSize=12;fontFamily=Tahoma;'
+    )
+    entity_style = (
+        'rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;'
+        'spacingLeft=10;spacingTop=10;fillColor=#d5e8d4;'
+        'strokeColor=#82b366;fontSize=12;fontFamily=Tahoma;'
+    )
+    uses_style = (
+        'endArrow=open;html=1;strokeColor=#000000;dashed=1;'
+        'fontSize=12;fontFamily=Tahoma;'
+    )
+    has_style = (
+        'endArrow=ERmany;html=1;strokeColor=#000000;'
+        'fontSize=12;fontFamily=Tahoma;'
+    )
     write_file(
         '01_top_level/class.drawio',
         wrap_in_drawio(
             'Class Diagram - QUIZIFY (Service Modules + Domain)',
             [
-                # Title
-                f'<mxCell id="title" value="Class Diagram: QUIZIFY (service modules + domain entities)" style="{STYLE_TITLE}" vertex="1" parent="1">'
-                f'<mxGeometry x="100" y="30" width="900" height="30" as="geometry"/></mxCell>',
-                # Service modules
-                f'<mxCell id="materials_service" value="«service» materials.service&#xa;+listMaterials()&#xa;+uploadMaterial(file, meta)&#xa;+deleteMaterial(id)&#xa;+deleteCourseMaterials(code)&#xa;+deleteChapterMaterials(code)&#xa;+reindexMaterial(id)&#xa;+repairIndex()" '
-                f'style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=10;spacingTop=10;'
-                f'fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;fontFamily=Tahoma;" vertex="1" parent="1">'
-                f'<mxGeometry x="40" y="100" width="240" height="120" as="geometry"/></mxCell>',
-                f'<mxCell id="courses_service" value="«service» courses.service&#xa;+listMiniCourses()&#xa;+listAvailableCourses()&#xa;+getCourseTopics(code)&#xa;+reindexOutline(code)&#xa;+generateCoursePreview(req)&#xa;+confirmAndSaveCourse(req)&#xa;+deleteMiniCourse(id)" '
-                f'style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=10;spacingTop=10;'
-                f'fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;fontFamily=Tahoma;" vertex="1" parent="1">'
-                f'<mxGeometry x="320" y="100" width="240" height="120" as="geometry"/></mxCell>',
-                f'<mxCell id="rag_service" value="«service» rag.service&#xa;+extractText(file)&#xa;+chunkText(text)&#xa;+embedChunks(chunks)&#xa;+matchChunks(code, embed)&#xa;+extractAndSaveOutline(material)&#xa;+getStoredOutline(code)" '
-                f'style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=10;spacingTop=10;'
-                f'fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;fontFamily=Tahoma;" vertex="1" parent="1">'
-                f'<mxGeometry x="600" y="100" width="240" height="120" as="geometry"/></mxCell>',
-                f'<mxCell id="ai_service" value="«service» ai.service&#xa;+generateLesson(ctx, opts)&#xa;+generateQuiz(lesson, opts)&#xa;+embed(text)" '
-                f'style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=10;spacingTop=10;'
-                f'fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;fontFamily=Tahoma;" vertex="1" parent="1">'
-                f'<mxGeometry x="40" y="260" width="240" height="100" as="geometry"/></mxCell>',
-                f'<mxCell id="quiz_service" value="«service» quiz.service&#xa;+getPublicCourse(token)&#xa;+submitQuiz(token, payload)&#xa;+computeAnalytics(courseId)&#xa;+getStudentAttempts(userId)" '
-                f'style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=10;spacingTop=10;'
-                f'fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;fontFamily=Tahoma;" vertex="1" parent="1">'
-                f'<mxGeometry x="320" y="260" width="240" height="100" as="geometry"/></mxCell>',
-                f'<mxCell id="outlines_service" value="«service» outlines.service&#xa;+extractAndSaveOutline(material)&#xa;+getStoredOutline(code)" '
-                f'style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=10;spacingTop=10;'
-                f'fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;fontFamily=Tahoma;" vertex="1" parent="1">'
-                f'<mxGeometry x="600" y="260" width="240" height="100" as="geometry"/></mxCell>',
-                # Domain entities
-                f'<mxCell id="materials" value="«entity» materials&#xa;&#xa;id, course_code,&#xa;material_type,&#xa;chapter, file_name,&#xa;storage_path, status" '
-                f'style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=10;spacingTop=10;'
-                f'fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;fontFamily=Tahoma;" vertex="1" parent="1">'
-                f'<mxGeometry x="40" y="400" width="200" height="120" as="geometry"/></mxCell>',
-                f'<mxCell id="material_chunks" value="«entity» material_chunks&#xa;&#xa;id, material_id,&#xa;course_code,&#xa;chunk_index, chunk_text,&#xa;embedding vector(1536)" '
-                f'style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=10;spacingTop=10;'
-                f'fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;fontFamily=Tahoma;" vertex="1" parent="1">'
-                f'<mxGeometry x="280" y="400" width="200" height="120" as="geometry"/></mxCell>',
-                f'<mxCell id="mini_courses" value="«entity» mini_courses&#xa;&#xa;id, title, course_code,&#xa;topics, lesson_content,&#xa;status, share_token,&#xa;pass_percentage" '
-                f'style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=10;spacingTop=10;'
-                f'fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;fontFamily=Tahoma;" vertex="1" parent="1">'
-                f'<mxGeometry x="520" y="400" width="200" height="120" as="geometry"/></mxCell>',
-                f'<mxCell id="quizzes" value="«entity» quizzes&#xa;&#xa;id, mini_course_id,&#xa;title, question_count" '
-                f'style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=10;spacingTop=10;'
-                f'fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;fontFamily=Tahoma;" vertex="1" parent="1">'
-                f'<mxGeometry x="40" y="560" width="200" height="80" as="geometry"/></mxCell>',
-                f'<mxCell id="questions" value="«entity» questions&#xa;&#xa;id, quiz_id, prompt,&#xa;option_a..d,&#xa;correct_option_index,&#xa;explanations, metadata" '
-                f'style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=10;spacingTop=10;'
-                f'fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;fontFamily=Tahoma;" vertex="1" parent="1">'
-                f'<mxGeometry x="280" y="560" width="200" height="80" as="geometry"/></mxCell>',
-                f'<mxCell id="quiz_attempts" value="«entity» quiz_attempts&#xa;&#xa;id, mini_course_id,&#xa;student_name, score,&#xa;percentage,&#xa;submitted_answers" '
-                f'style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=10;spacingTop=10;'
-                f'fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;fontFamily=Tahoma;" vertex="1" parent="1">'
-                f'<mxGeometry x="520" y="560" width="200" height="80" as="geometry"/></mxCell>',
-                # Dependencies
-                f'<mxCell id="d1" value="«uses»" style="endArrow=open;html=1;strokeColor=#000000;dashed=1;fontSize=12;fontFamily=Tahoma;" edge="1" parent="1" '
-                f'source="materials_service" target="materials"><mxGeometry relative="1" as="geometry"/></mxCell>',
-                f'<mxCell id="d2" value="«uses»" style="endArrow=open;html=1;strokeColor=#000000;dashed=1;fontSize=12;fontFamily=Tahoma;" edge="1" parent="1" '
-                f'source="courses_service" target="materials_service"><mxGeometry relative="1" as="geometry"/></mxCell>',
-                f'<mxCell id="d3" value="«uses»" style="endArrow=open;html=1;strokeColor=#000000;dashed=1;fontSize=12;fontFamily=Tahoma;" edge="1" parent="1" '
-                f'source="courses_service" target="rag_service"><mxGeometry relative="1" as="geometry"/></mxCell>',
-                f'<mxCell id="d4" value="«uses»" style="endArrow=open;html=1;strokeColor=#000000;dashed=1;fontSize=12;fontFamily=Tahoma;" edge="1" parent="1" '
-                f'source="courses_service" target="ai_service"><mxGeometry relative="1" as="geometry"/></mxCell>',
-                f'<mxCell id="d5" value="«uses»" style="endArrow=open;html=1;strokeColor=#000000;dashed=1;fontSize=12;fontFamily=Tahoma;" edge="1" parent="1" '
-                f'source="rag_service" target="material_chunks"><mxGeometry relative="1" as="geometry"/></mxCell>',
-                f'<mxCell id="d6" value="«uses»" style="endArrow=open;html=1;strokeColor=#000000;dashed=1;fontSize=12;fontFamily=Tahoma;" edge="1" parent="1" '
-                f'source="quiz_service" target="quiz_attempts"><mxGeometry relative="1" as="geometry"/></mxCell>',
-                f'<mxCell id="d7" value="«uses»" style="endArrow=open;html=1;strokeColor=#000000;dashed=1;fontSize=12;fontFamily=Tahoma;" edge="1" parent="1" '
-                f'source="outlines_service" target="materials"><mxGeometry relative="1" as="geometry"/></mxCell>',
-                f'<mxCell id="d8" value="«has»" style="endArrow=ERmany;html=1;strokeColor=#000000;fontSize=12;fontFamily=Tahoma;" edge="1" parent="1" '
-                f'source="materials" target="material_chunks"><mxGeometry relative="1" as="geometry"/></mxCell>',
-                f'<mxCell id="d9" value="«has»" style="endArrow=ERmany;html=1;strokeColor=#000000;fontSize=12;fontFamily=Tahoma;" edge="1" parent="1" '
-                f'source="mini_courses" target="quizzes"><mxGeometry relative="1" as="geometry"/></mxCell>',
-                f'<mxCell id="d10" value="«has»" style="endArrow=ERmany;html=1;strokeColor=#000000;fontSize=12;fontFamily=Tahoma;" edge="1" parent="1" '
-                f'source="quizzes" target="questions"><mxGeometry relative="1" as="geometry"/></mxCell>',
-                f'<mxCell id="d11" value="«receives»" style="endArrow=ERmany;html=1;strokeColor=#000000;fontSize=12;fontFamily=Tahoma;" edge="1" parent="1" '
-                f'source="mini_courses" target="quiz_attempts"><mxGeometry relative="1" as="geometry"/></mxCell>',
+                c('title', 'Class Diagram: QUIZIFY (service modules + domain entities)',
+                  STYLE_TITLE, 100, 30, 900, 30),
+                c('materials_service',
+                  '«service» materials.service\n+listMaterials()\n+uploadMaterial(file, meta)\n+deleteMaterial(id)\n+deleteCourseMaterials(code)\n+deleteChapterMaterials(code)\n+reindexMaterial(id)\n+repairIndex()',
+                  service_style, 40, 100, 240, 120),
+                c('courses_service',
+                  '«service» courses.service\n+listMiniCourses()\n+listAvailableCourses()\n+getCourseTopics(code)\n+reindexOutline(code)\n+generateCoursePreview(req)\n+confirmAndSaveCourse(req)\n+deleteMiniCourse(id)',
+                  service_style, 320, 100, 240, 120),
+                c('rag_service',
+                  '«service» rag.service\n+extractText(file)\n+chunkText(text)\n+embedChunks(chunks)\n+matchChunks(code, embed)\n+extractAndSaveOutline(material)\n+getStoredOutline(code)',
+                  service_style, 600, 100, 240, 120),
+                c('ai_service',
+                  '«service» ai.service\n+generateLesson(ctx, opts)\n+generateQuiz(lesson, opts)\n+embed(text)',
+                  service_style, 40, 260, 240, 100),
+                c('quiz_service',
+                  '«service» quiz.service\n+getPublicCourse(token)\n+submitQuiz(token, payload)\n+computeAnalytics(courseId)\n+getStudentAttempts(userId)',
+                  service_style, 320, 260, 240, 100),
+                c('outlines_service',
+                  '«service» outlines.service\n+extractAndSaveOutline(material)\n+getStoredOutline(code)',
+                  service_style, 600, 260, 240, 100),
+                c('materials',
+                  '«entity» materials\n\nid, course_code,\nmaterial_type,\nchapter, file_name,\nstorage_path, status',
+                  entity_style, 40, 400, 200, 120),
+                c('material_chunks',
+                  '«entity» material_chunks\n\nid, material_id,\ncourse_code,\nchunk_index, chunk_text,\nembedding vector(1536)',
+                  entity_style, 280, 400, 200, 120),
+                c('mini_courses',
+                  '«entity» mini_courses\n\nid, title, course_code,\ntopics, lesson_content,\nstatus, share_token,\npass_percentage',
+                  entity_style, 520, 400, 200, 120),
+                c('quizzes',
+                  '«entity» quizzes\n\nid, mini_course_id,\ntitle, question_count',
+                  entity_style, 40, 560, 200, 80),
+                c('questions',
+                  '«entity» questions\n\nid, quiz_id, prompt,\noption_a..d,\ncorrect_option_index,\nexplanations, metadata',
+                  entity_style, 280, 560, 200, 80),
+                c('quiz_attempts',
+                  '«entity» quiz_attempts\n\nid, mini_course_id,\nstudent_name, score,\npercentage,\nsubmitted_answers',
+                  entity_style, 520, 560, 200, 80),
+                c_edge('d1', '«uses»', uses_style, 'materials_service', 'materials'),
+                c_edge('d2', '«uses»', uses_style, 'courses_service', 'materials_service'),
+                c_edge('d3', '«uses»', uses_style, 'courses_service', 'rag_service'),
+                c_edge('d4', '«uses»', uses_style, 'courses_service', 'ai_service'),
+                c_edge('d5', '«uses»', uses_style, 'rag_service', 'material_chunks'),
+                c_edge('d6', '«uses»', uses_style, 'quiz_service', 'quiz_attempts'),
+                c_edge('d7', '«uses»', uses_style, 'outlines_service', 'materials'),
+                c_edge('d8', '«has»', has_style, 'materials', 'material_chunks'),
+                c_edge('d9', '«has»', has_style, 'mini_courses', 'quizzes'),
+                c_edge('d10', '«has»', has_style, 'quizzes', 'questions'),
+                c_edge('d11', '«receives»', has_style, 'mini_courses', 'quiz_attempts'),
             ],
             page_width=900, page_height=700
         )
@@ -817,44 +830,32 @@ def build_class(content):
 # ---------------------------------------------------------------------------
 
 def build_state_mini_course(content):
+    initial_style = 'ellipse;html=1;fillColor=#000000;strokeColor=#000000;'
+    final_outer = 'ellipse;html=1;fillColor=#FFFFFF;strokeColor=#000000;strokeWidth=2;'
+    final_inner = 'ellipse;html=1;fillColor=#000000;strokeColor=#000000;'
     write_file(
         '01_top_level/state_mini_course.drawio',
         wrap_in_drawio(
             'State Machine: MINI_COURSE',
             [
-                # Title
-                f'<mxCell id="title" value="State Machine: MINI_COURSE (3 states per Supabase CHECK)" style="{STYLE_TITLE}" vertex="1" parent="1">'
-                f'<mxGeometry x="200" y="30" width="700" height="30" as="geometry"/></mxCell>',
-                # Initial
-                f'<mxCell id="initial" value="" style="ellipse;html=1;fillColor=#000000;strokeColor=#000000;" vertex="1" parent="1">'
-                f'<mxGeometry x="60" y="160" width="20" height="20" as="geometry"/></mxCell>',
-                # Generating
-                f'<mxCell id="generating" value="Generating&#xa;(RAG pipeline running)" style="{STYLE_PROCESS}" vertex="1" parent="1">'
-                f'<mxGeometry x="180" y="140" width="220" height="70" as="geometry"/></mxCell>',
-                # Ready
-                f'<mxCell id="ready" value="Ready&#xa;(lesson + quiz stored)" style="{STYLE_PROCESS}" vertex="1" parent="1">'
-                f'<mxGeometry x="480" y="140" width="220" height="70" as="geometry"/></mxCell>',
-                # Shared
-                f'<mxCell id="shared" value="Shared&#xa;(public link active)" style="{STYLE_PROCESS}" vertex="1" parent="1">'
-                f'<mxGeometry x="480" y="280" width="220" height="70" as="geometry"/></mxCell>',
-                # Terminal
-                f'<mxCell id="final" value="" style="ellipse;html=1;fillColor=#FFFFFF;strokeColor=#000000;strokeWidth=2;" vertex="1" parent="1">'
-                f'<mxGeometry x="780" y="297" width="26" height="26" as="geometry"/></mxCell>',
-                f'<mxCell id="finalInner" value="" style="ellipse;html=1;fillColor=#000000;strokeColor=#000000;" vertex="1" parent="1">'
-                f'<mxGeometry x="786" y="303" width="14" height="14" as="geometry"/></mxCell>',
-                # Transitions
-                f'<mxCell id="t1" value="" style="{STYLE_EDGE}" edge="1" parent="1" '
-                f'source="initial" target="generating"><mxGeometry relative="1" as="geometry"/></mxCell>',
-                f'<mxCell id="t2" value="Generation success" style="{STYLE_EDGE}" edge="1" parent="1" '
-                f'source="generating" target="ready"><mxGeometry relative="1" as="geometry"/></mxCell>',
-                f'<mxCell id="t3" value="Share link created" style="{STYLE_EDGE}" edge="1" parent="1" '
-                f'source="ready" target="shared"><mxGeometry relative="1" as="geometry"/></mxCell>',
-                f'<mxCell id="t4" value="Link expires / removed" style="{STYLE_EDGE}" edge="1" parent="1" '
-                f'source="shared" target="final"><mxGeometry relative="1" as="geometry"/></mxCell>',
-                # Note
-                f'<mxCell id="note" value="Only 3 states per Supabase CHECK constraint&#xa;(Generating, Ready, Shared). Failures are reported at the API level&#xa;and stored in materials.error_message." '
-                f'style="{STYLE_NOTE}" vertex="1" parent="1">'
-                f'<mxGeometry x="100" y="380" width="500" height="60" as="geometry"/></mxCell>',
+                c('title', 'State Machine: MINI_COURSE (3 states per Supabase CHECK)',
+                  STYLE_TITLE, 200, 30, 700, 30),
+                c('initial', '', initial_style, 60, 160, 20, 20),
+                c('generating', 'Generating\n(RAG pipeline running)',
+                  STYLE_PROCESS, 180, 140, 220, 70),
+                c('ready', 'Ready\n(lesson + quiz stored)',
+                  STYLE_PROCESS, 480, 140, 220, 70),
+                c('shared', 'Shared\n(public link active)',
+                  STYLE_PROCESS, 480, 280, 220, 70),
+                c('final', '', final_outer, 780, 297, 26, 26),
+                c('finalInner', '', final_inner, 786, 303, 14, 14),
+                c_edge('t1', '', STYLE_EDGE, 'initial', 'generating'),
+                c_edge('t2', 'Generation success', STYLE_EDGE, 'generating', 'ready'),
+                c_edge('t3', 'Share link created', STYLE_EDGE, 'ready', 'shared'),
+                c_edge('t4', 'Link expires / removed', STYLE_EDGE, 'shared', 'final'),
+                c('note',
+                  'Only 3 states per Supabase CHECK constraint\n(Generating, Ready, Shared). Failures are reported at the API level\nand stored in materials.error_message.',
+                  STYLE_NOTE, 100, 380, 500, 60),
             ],
             page_width=900, page_height=500
         )
