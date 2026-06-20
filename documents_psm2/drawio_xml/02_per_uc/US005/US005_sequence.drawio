@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net" modified="2026-06-20T00:00:00.000Z" agent="Mozilla/5.0" version="22.1.0">
+  <diagram name="US005 - Sequence Diagram (View Analytics)" id="diagram-us005---sequence-diagram-view-analytics">
+    <mxGraphModel dx="1400" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="900" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="7J1mdU0mRvrNOPTbfz2r-1" parent="1" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;container=1;dropTarget=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;newEdgeStyle={&quot;edgeStyle&quot;:&quot;elbowEdgeStyle&quot;,&quot;elbow&quot;:&quot;vertical&quot;,&quot;curved&quot;:0,&quot;rounded&quot;:0};participant=umlActor;verticalAlign=bottom;labelPosition=center;verticalLabelPosition=top;align=center;size=65;fontFamily=Tahoma;fontSize=16;fillColor=#1ba1e2;fontColor=#000000;strokeColor=#006EAF;" value="Lecturer" vertex="1">
+          <mxGeometry height="644" width="35" x="-2054" y="-113" as="geometry" />
+        <mxCell id="7J1mdU0mRvrNOPTbfz2r-2" parent="1" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;container=1;dropTarget=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;newEdgeStyle={&quot;edgeStyle&quot;:&quot;elbowEdgeStyle&quot;,&quot;elbow&quot;:&quot;vertical&quot;,&quot;curved&quot;:0,&quot;rounded&quot;:0};size=65;fontFamily=Tahoma;fontSize=16;fillColor=#1ba1e2;fontColor=#000000;strokeColor=#006EAF;" value="Web UI" vertex="1">
+          <mxGeometry height="644" width="150" x="-1768" y="-113" as="geometry" />
+        <mxCell id="7J1mdU0mRvrNOPTbfz2r-3" parent="7J1mdU0mRvrNOPTbfz2r-2" style="points=[];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;portConstraint=eastwest;newEdgeStyle={&quot;edgeStyle&quot;:&quot;elbowEdgeStyle&quot;,&quot;elbow&quot;:&quot;vertical&quot;,&quot;curved&quot;:0,&quot;rounded&quot;:0};fontFamily=Tahoma;fontSize=16;fillColor=#1ba1e2;fontColor=#000000;strokeColor=#006EAF;" value="" vertex="1">
+          <mxGeometry height="446" width="10" x="70" y="103" as="geometry" />
+        <mxCell id="7J1mdU0mRvrNOPTbfz2r-4" parent="1" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;container=1;dropTarget=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;newEdgeStyle={&quot;edgeStyle&quot;:&quot;elbowEdgeStyle&quot;,&quot;elbow&quot;:&quot;vertical&quot;,&quot;curved&quot;:0,&quot;rounded&quot;:0};size=65;fontFamily=Tahoma;fontSize=16;fillColor=#1ba1e2;fontColor=#000000;strokeColor=#006EAF;" value="Backend API" vertex="1">
+          <mxGeometry height="644" width="150" x="-1389" y="-113" as="geometry" />
+        <mxCell id="7J1mdU0mRvrNOPTbfz2r-5" parent="7J1mdU0mRvrNOPTbfz2r-4" style="points=[];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;portConstraint=eastwest;newEdgeStyle={&quot;edgeStyle&quot;:&quot;elbowEdgeStyle&quot;,&quot;elbow&quot;:&quot;vertical&quot;,&quot;curved&quot;:0,&quot;rounded&quot;:0};fontFamily=Tahoma;fontSize=16;fillColor=#1ba1e2;fontColor=#000000;strokeColor=#006EAF;" value="" vertex="1">
+          <mxGeometry height="378" width="10" x="70" y="151" as="geometry" />
+        <mxCell id="7J1mdU0mRvrNOPTbfz2r-6" parent="1" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;container=1;dropTarget=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;newEdgeStyle={&quot;edgeStyle&quot;:&quot;elbowEdgeStyle&quot;,&quot;elbow&quot;:&quot;vertical&quot;,&quot;curved&quot;:0,&quot;rounded&quot;:0};size=65;fontFamily=Tahoma;fontSize=16;fillColor=#1ba1e2;fontColor=#000000;strokeColor=#006EAF;" value="Supabase" vertex="1">
+          <mxGeometry height="644" width="150" x="-1115" y="-113" as="geometry" />
+        <mxCell id="7J1mdU0mRvrNOPTbfz2r-7" parent="7J1mdU0mRvrNOPTbfz2r-6" style="points=[];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;portConstraint=eastwest;newEdgeStyle={&quot;edgeStyle&quot;:&quot;elbowEdgeStyle&quot;,&quot;elbow&quot;:&quot;vertical&quot;,&quot;curved&quot;:0,&quot;rounded&quot;:0};fontFamily=Tahoma;fontSize=16;fillColor=#1ba1e2;fontColor=#000000;strokeColor=#006EAF;" value="" vertex="1">
+          <mxGeometry height="38" width="10" x="70" y="199" as="geometry" />
+        <mxCell id="7J1mdU0mRvrNOPTbfz2r-8" parent="1" style="shape=umlFrame;dashed=1;pointerEvents=0;dropTarget=0;strokeColor=#006EAF;height=20;width=30;fontFamily=Tahoma;fontSize=16;fillColor=#1ba1e2;fontColor=#000000;" value="alt" vertex="1">
+          <mxGeometry height="282" width="691" x="-1990" y="154" as="geometry" />
+        <mxCell id="7J1mdU0mRvrNOPTbfz2r-9" parent="7J1mdU0mRvrNOPTbfz2r-8" style="text;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;fontFamily=Tahoma;fontSize=16;fontColor=#000000;" value="[[submissions exist]]" vertex="1">
+          <mxGeometry height="20" width="661" x="30" as="geometry" />
+        <mxCell id="7J1mdU0mRvrNOPTbfz2r-10" parent="7J1mdU0mRvrNOPTbfz2r-8" style="shape=line;dashed=1;whiteSpace=wrap;verticalAlign=top;labelPosition=center;verticalLabelPosition=middle;align=center;strokeColor=#B3B3B3;fontFamily=Tahoma;fontSize=16;fontColor=#000000;" value="[[no submissions]]" vertex="1">
+          <mxGeometry height="4" width="691" y="146" as="geometry" />
+        <mxCell id="7J1mdU0mRvrNOPTbfz2r-11" edge="1" parent="1" source="7J1mdU0mRvrNOPTbfz2r-1" style="verticalAlign=bottom;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;endArrow=block;fontSize=16;startSize=8;endSize=8;fontFamily=Tahoma;fontColor=#000000;" target="7J1mdU0mRvrNOPTbfz2r-3" value="Open analytics dashboard">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="-1827" y="-10" />
+        <mxCell id="7J1mdU0mRvrNOPTbfz2r-12" edge="1" parent="1" source="7J1mdU0mRvrNOPTbfz2r-3" style="verticalAlign=bottom;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;endArrow=block;fontSize=16;startSize=8;endSize=8;fontFamily=Tahoma;fontColor=#000000;" target="7J1mdU0mRvrNOPTbfz2r-5" value="GET /mini-courses/{courseId}/submissions">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="-1493" y="38" />
+        <mxCell id="7J1mdU0mRvrNOPTbfz2r-13" edge="1" parent="1" source="7J1mdU0mRvrNOPTbfz2r-5" style="verticalAlign=bottom;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;endArrow=block;fontSize=16;startSize=8;endSize=8;fontFamily=Tahoma;fontColor=#000000;" target="7J1mdU0mRvrNOPTbfz2r-7" value="Aggregate attempts + question metadata">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="-1166" y="86" />
+        <mxCell id="7J1mdU0mRvrNOPTbfz2r-14" edge="1" parent="1" source="7J1mdU0mRvrNOPTbfz2r-6" style="verticalAlign=bottom;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;dashed=1;dashPattern=2 3;endArrow=block;fontSize=16;startSize=8;endSize=8;fontFamily=Tahoma;fontColor=#000000;" target="7J1mdU0mRvrNOPTbfz2r-5" value="Aggregated rows">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="-1165" y="134" />
+        <mxCell id="7J1mdU0mRvrNOPTbfz2r-15" edge="1" parent="1" source="7J1mdU0mRvrNOPTbfz2r-5" style="verticalAlign=bottom;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;dashed=1;dashPattern=2 3;endArrow=block;fontSize=16;startSize=8;endSize=8;fontFamily=Tahoma;fontColor=#000000;" target="7J1mdU0mRvrNOPTbfz2r-3" value="CourseAnalytics (KPIs, score distribution, topic / Bloom / SOLO, cross-matrix, attempts)">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="-1492" y="227" />
+        <mxCell id="7J1mdU0mRvrNOPTbfz2r-16" edge="1" parent="1" source="7J1mdU0mRvrNOPTbfz2r-3" style="verticalAlign=bottom;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;dashed=1;dashPattern=2 3;endArrow=block;fontSize=16;startSize=8;endSize=8;fontFamily=Tahoma;fontColor=#000000;" target="7J1mdU0mRvrNOPTbfz2r-1" value="Render dashboard">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="-1826" y="275" />
+        <mxCell id="7J1mdU0mRvrNOPTbfz2r-17" edge="1" parent="1" source="7J1mdU0mRvrNOPTbfz2r-5" style="verticalAlign=bottom;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;dashed=1;dashPattern=2 3;endArrow=block;fontSize=16;startSize=8;endSize=8;fontFamily=Tahoma;fontColor=#000000;" target="7J1mdU0mRvrNOPTbfz2r-3" value="Empty list">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="-1492" y="368" />
+        <mxCell id="7J1mdU0mRvrNOPTbfz2r-18" edge="1" parent="1" source="7J1mdU0mRvrNOPTbfz2r-3" style="verticalAlign=bottom;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;dashed=1;dashPattern=2 3;endArrow=block;fontSize=16;startSize=8;endSize=8;fontFamily=Tahoma;fontColor=#000000;" target="7J1mdU0mRvrNOPTbfz2r-1" value="Display &quot;No submissions yet&quot;">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="-1826" y="416" />
+        <mxCell id="7J1mdU0mRvrNOPTbfz2r-19" parent="1" style="swimlane;startSize=40;fillColor=#eeeeee;strokeColor=#36393d;fontStyle=1;fontSize=16;fontFamily=Tahoma;" value="User" vertex="1">
+          <mxGeometry height="711" width="370" x="-829" y="-117" as="geometry" />
+        <mxCell id="7J1mdU0mRvrNOPTbfz2r-20" parent="7J1mdU0mRvrNOPTbfz2r-19" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;fillColor=#000000;strokeColor=#000000;fontFamily=Tahoma;fontSize=16;" value="" vertex="1">
+          <mxGeometry height="30" width="30" x="187" y="51" as="geometry" />
+        <mxCell id="7J1mdU0mRvrNOPTbfz2r-21" parent="7J1mdU0mRvrNOPTbfz2r-19" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#000000;arcSize=20;fontFamily=Tahoma;fontSize=16;" value="Open analytics dashboard" vertex="1">
+          <mxGeometry height="60" width="280" x="62" y="120" as="geometry" />
+        <mxCell id="7J1mdU0mRvrNOPTbfz2r-22" edge="1" parent="7J1mdU0mRvrNOPTbfz2r-19" source="7J1mdU0mRvrNOPTbfz2r-20" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#000000;endArrow=classic;fontFamily=Tahoma;fontSize=16;" target="7J1mdU0mRvrNOPTbfz2r-21" value="">
+          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="7J1mdU0mRvrNOPTbfz2r-23" parent="1" style="swimlane;startSize=40;fillColor=#eeeeee;strokeColor=#36393d;fontStyle=1;fontSize=16;fontFamily=Tahoma;" value="System" vertex="1">
+          <mxGeometry height="711" width="526" x="-459" y="-117" as="geometry" />
+        <mxCell id="7J1mdU0mRvrNOPTbfz2r-24" parent="7J1mdU0mRvrNOPTbfz2r-23" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#000000;arcSize=20;fontFamily=Tahoma;fontSize=16;" value="Fetch submission results" vertex="1">
+          <mxGeometry height="60" width="280" x="70" y="120" as="geometry" />
+        <mxCell id="7J1mdU0mRvrNOPTbfz2r-25" parent="7J1mdU0mRvrNOPTbfz2r-23" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#000000;fontFamily=Tahoma;fontSize=16;" value="Any submissions?" vertex="1">
+          <mxGeometry height="160" width="160" x="130" y="236" as="geometry" />
+        <mxCell id="7J1mdU0mRvrNOPTbfz2r-26" edge="1" parent="7J1mdU0mRvrNOPTbfz2r-23" source="7J1mdU0mRvrNOPTbfz2r-24" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#000000;endArrow=classic;fontFamily=Tahoma;fontSize=16;" target="7J1mdU0mRvrNOPTbfz2r-25" value="">
+          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="7J1mdU0mRvrNOPTbfz2r-27" parent="7J1mdU0mRvrNOPTbfz2r-23" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#000000;arcSize=20;fontFamily=Tahoma;fontSize=16;" value="Render dashboard" vertex="1">
+          <mxGeometry height="60" width="300" x="60" y="472" as="geometry" />
+        <mxCell id="7J1mdU0mRvrNOPTbfz2r-28" edge="1" parent="7J1mdU0mRvrNOPTbfz2r-23" source="7J1mdU0mRvrNOPTbfz2r-25" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#000000;endArrow=classic;exitX=0.5;exitY=1;exitDx=0;exitDy=0;fontFamily=Tahoma;fontSize=16;" target="7J1mdU0mRvrNOPTbfz2r-27" value="[true]">
+          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="7J1mdU0mRvrNOPTbfz2r-29" parent="7J1mdU0mRvrNOPTbfz2r-23" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#000000;arcSize=20;fontFamily=Tahoma;fontSize=16;" value="Display &#39;No submissions yet&#39;" vertex="1">
+          <mxGeometry height="60" width="280" x="234" y="572" as="geometry" />
+        <mxCell id="7J1mdU0mRvrNOPTbfz2r-30" edge="1" parent="7J1mdU0mRvrNOPTbfz2r-23" source="7J1mdU0mRvrNOPTbfz2r-25" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#000000;endArrow=classic;exitX=1;exitY=0.5;exitDx=0;exitDy=0;fontFamily=Tahoma;fontSize=16;" target="7J1mdU0mRvrNOPTbfz2r-29" value="[false]">
+          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="7J1mdU0mRvrNOPTbfz2r-31" parent="7J1mdU0mRvrNOPTbfz2r-23" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;fillColor=#FFFFFF;strokeColor=#000000;strokeWidth=3;fontFamily=Tahoma;fontSize=16;" value="" vertex="1">
+          <mxGeometry height="40" width="40" x="190" y="648" as="geometry" />
+        <mxCell id="7J1mdU0mRvrNOPTbfz2r-32" parent="7J1mdU0mRvrNOPTbfz2r-23" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;fillColor=#000000;strokeColor=#000000;fontFamily=Tahoma;fontSize=16;" value="" vertex="1">
+          <mxGeometry height="24" width="24" x="198" y="656" as="geometry" />
+        <mxCell id="7J1mdU0mRvrNOPTbfz2r-33" edge="1" parent="7J1mdU0mRvrNOPTbfz2r-23" source="7J1mdU0mRvrNOPTbfz2r-27" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#000000;endArrow=classic;fontFamily=Tahoma;fontSize=16;" target="7J1mdU0mRvrNOPTbfz2r-31" value="">
+          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="7J1mdU0mRvrNOPTbfz2r-34" edge="1" parent="7J1mdU0mRvrNOPTbfz2r-23" source="7J1mdU0mRvrNOPTbfz2r-29" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#000000;endArrow=classic;fontFamily=Tahoma;fontSize=16;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" target="7J1mdU0mRvrNOPTbfz2r-31" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="369" y="632" />
+        <mxCell id="7J1mdU0mRvrNOPTbfz2r-35" parent="1" style="shape=line;strokeWidth=1;strokeColor=#000000;direction=north;" value="" vertex="1">
+          <mxGeometry height="1960" x="2073" y="900" as="geometry" />
+        <mxCell id="7J1mdU0mRvrNOPTbfz2r-36" edge="1" parent="1" source="7J1mdU0mRvrNOPTbfz2r-21" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#000000;endArrow=classic;exitX=1;exitY=0.5;exitDx=0;exitDy=0;fontFamily=Tahoma;fontSize=16;" target="7J1mdU0mRvrNOPTbfz2r-24" value="">
+          <mxGeometry relative="1" as="geometry" />
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
