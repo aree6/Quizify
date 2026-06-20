@@ -1,111 +1,173 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <mxfile host="app.diagrams.net" modified="2026-06-20T00:00:00.000Z" agent="Mozilla/5.0" version="22.1.0">
-  <diagram name="US004 - Sequence Diagram (Create Quizzes)" id="diagram-us004---sequence-diagram-create-quizzes">
+  <diagram name="US004 - Activity + Sequence (Create Quizzes)" id="diagram-us004---activity--sequence-create-quizzes">
     <mxGraphModel dx="1400" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
       <root>
         <mxCell id="0"/>
         <mxCell id="1" parent="0"/>
         <mxCell id="vokJg7HpGPeSaTTnsTay-1" parent="1" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;container=1;dropTarget=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;newEdgeStyle={&quot;edgeStyle&quot;:&quot;elbowEdgeStyle&quot;,&quot;elbow&quot;:&quot;vertical&quot;,&quot;curved&quot;:0,&quot;rounded&quot;:0};participant=umlActor;verticalAlign=bottom;labelPosition=center;verticalLabelPosition=top;align=center;size=65;fontSize=16;fontFamily=Tahoma;fillColor=#1ba1e2;fontColor=#000000;strokeColor=#006EAF;" value="Lecturer" vertex="1">
           <mxGeometry height="660" width="35" x="1348" y="1313" as="geometry" />
+        </mxCell>
         <mxCell id="vokJg7HpGPeSaTTnsTay-2" parent="1" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;container=1;dropTarget=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;newEdgeStyle={&quot;edgeStyle&quot;:&quot;elbowEdgeStyle&quot;,&quot;elbow&quot;:&quot;vertical&quot;,&quot;curved&quot;:0,&quot;rounded&quot;:0};size=65;fontSize=16;fontFamily=Tahoma;fillColor=#1ba1e2;fontColor=#000000;strokeColor=#006EAF;" value="Web UI" vertex="1">
           <mxGeometry height="660" width="150" x="1568" y="1313" as="geometry" />
+        </mxCell>
         <mxCell id="vokJg7HpGPeSaTTnsTay-3" parent="vokJg7HpGPeSaTTnsTay-2" style="points=[];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;portConstraint=eastwest;newEdgeStyle={&quot;edgeStyle&quot;:&quot;elbowEdgeStyle&quot;,&quot;elbow&quot;:&quot;vertical&quot;,&quot;curved&quot;:0,&quot;rounded&quot;:0};fontSize=16;fontFamily=Tahoma;fillColor=#1ba1e2;fontColor=#000000;strokeColor=#006EAF;" value="" vertex="1">
           <mxGeometry height="460" width="10" x="70" y="105" as="geometry" />
+        </mxCell>
         <mxCell id="vokJg7HpGPeSaTTnsTay-4" parent="1" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;container=1;dropTarget=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;newEdgeStyle={&quot;edgeStyle&quot;:&quot;elbowEdgeStyle&quot;,&quot;elbow&quot;:&quot;vertical&quot;,&quot;curved&quot;:0,&quot;rounded&quot;:0};size=65;fontSize=16;fontFamily=Tahoma;fillColor=#1ba1e2;fontColor=#000000;strokeColor=#006EAF;" value="Course API" vertex="1">
           <mxGeometry height="660" width="150" x="1793" y="1313" as="geometry" />
+        </mxCell>
         <mxCell id="vokJg7HpGPeSaTTnsTay-5" parent="vokJg7HpGPeSaTTnsTay-4" style="points=[];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;portConstraint=eastwest;newEdgeStyle={&quot;edgeStyle&quot;:&quot;elbowEdgeStyle&quot;,&quot;elbow&quot;:&quot;vertical&quot;,&quot;curved&quot;:0,&quot;rounded&quot;:0};fontSize=16;fontFamily=Tahoma;fillColor=#1ba1e2;fontColor=#000000;strokeColor=#006EAF;" value="" vertex="1">
           <mxGeometry height="390" width="10" x="70" y="155" as="geometry" />
+        </mxCell>
         <mxCell id="vokJg7HpGPeSaTTnsTay-6" parent="1" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;container=1;dropTarget=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;newEdgeStyle={&quot;edgeStyle&quot;:&quot;elbowEdgeStyle&quot;,&quot;elbow&quot;:&quot;vertical&quot;,&quot;curved&quot;:0,&quot;rounded&quot;:0};size=65;fontSize=16;fontFamily=Tahoma;fillColor=#1ba1e2;fontColor=#000000;strokeColor=#006EAF;" value="Backend API" vertex="1">
           <mxGeometry height="660" width="150" x="2194" y="1313" as="geometry" />
+        </mxCell>
         <mxCell id="vokJg7HpGPeSaTTnsTay-7" parent="vokJg7HpGPeSaTTnsTay-6" style="points=[];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;portConstraint=eastwest;newEdgeStyle={&quot;edgeStyle&quot;:&quot;elbowEdgeStyle&quot;,&quot;elbow&quot;:&quot;vertical&quot;,&quot;curved&quot;:0,&quot;rounded&quot;:0};fontSize=16;fontFamily=Tahoma;fillColor=#1ba1e2;fontColor=#000000;strokeColor=#006EAF;" value="" vertex="1">
           <mxGeometry height="40" width="10" x="70" y="205" as="geometry" />
+        </mxCell>
         <mxCell id="vokJg7HpGPeSaTTnsTay-8" parent="1" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;container=1;dropTarget=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;newEdgeStyle={&quot;edgeStyle&quot;:&quot;elbowEdgeStyle&quot;,&quot;elbow&quot;:&quot;vertical&quot;,&quot;curved&quot;:0,&quot;rounded&quot;:0};size=65;fontSize=16;fontFamily=Tahoma;fillColor=#1ba1e2;fontColor=#000000;strokeColor=#006EAF;" value="Supabase" vertex="1">
           <mxGeometry height="660" width="150" x="2394" y="1313" as="geometry" />
+        </mxCell>
         <mxCell id="vokJg7HpGPeSaTTnsTay-9" parent="vokJg7HpGPeSaTTnsTay-8" style="points=[];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;portConstraint=eastwest;newEdgeStyle={&quot;edgeStyle&quot;:&quot;elbowEdgeStyle&quot;,&quot;elbow&quot;:&quot;vertical&quot;,&quot;curved&quot;:0,&quot;rounded&quot;:0};fontSize=16;fontFamily=Tahoma;fillColor=#1ba1e2;fontColor=#000000;strokeColor=#006EAF;" value="" vertex="1">
           <mxGeometry height="40" width="10" x="70" y="350" as="geometry" />
+        </mxCell>
         <mxCell id="vokJg7HpGPeSaTTnsTay-10" parent="1" style="shape=umlFrame;dashed=1;pointerEvents=0;dropTarget=0;strokeColor=#006EAF;height=20;width=30;fontSize=16;fontFamily=Tahoma;fillColor=#1ba1e2;fontColor=#000000;" value="alt" vertex="1">
           <mxGeometry height="326" width="896" x="1602" y="1584" as="geometry" />
+        </mxCell>
         <mxCell id="vokJg7HpGPeSaTTnsTay-11" parent="vokJg7HpGPeSaTTnsTay-10" style="text;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;fontSize=16;fontFamily=Tahoma;fontColor=#000000;" value="[[quiz generated]]" vertex="1">
           <mxGeometry height="22.482758620689655" width="864.5981308411214" x="31.4018691588785" as="geometry" />
+        </mxCell>
         <mxCell id="vokJg7HpGPeSaTTnsTay-12" parent="vokJg7HpGPeSaTTnsTay-10" style="shape=line;dashed=1;whiteSpace=wrap;verticalAlign=top;labelPosition=center;verticalLabelPosition=middle;align=center;strokeColor=#B3B3B3;fontSize=16;fontFamily=Tahoma;fontColor=#000000;" value="[[generation failed]]" vertex="1">
           <mxGeometry height="4.496551724137931" width="895.9999999999999" y="224.82758620689657" as="geometry" />
+        </mxCell>
         <mxCell id="vokJg7HpGPeSaTTnsTay-13" edge="1" parent="1" source="vokJg7HpGPeSaTTnsTay-1" style="verticalAlign=bottom;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;endArrow=block;fontSize=16;startSize=8;endSize=8;fontFamily=Tahoma;fontColor=#000000;" target="vokJg7HpGPeSaTTnsTay-3" value="Continue generation">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
               <mxPoint x="1542" y="1418" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
         <mxCell id="vokJg7HpGPeSaTTnsTay-14" edge="1" parent="1" source="vokJg7HpGPeSaTTnsTay-3" style="verticalAlign=bottom;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;endArrow=block;fontSize=16;startSize=8;endSize=8;fontFamily=Tahoma;fontColor=#000000;" target="vokJg7HpGPeSaTTnsTay-5" value="Generate quiz">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
               <mxPoint x="1766" y="1468" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
         <mxCell id="vokJg7HpGPeSaTTnsTay-15" edge="1" parent="1" source="vokJg7HpGPeSaTTnsTay-5" style="verticalAlign=bottom;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;endArrow=block;fontSize=16;startSize=8;endSize=8;fontFamily=Tahoma;fontColor=#000000;" target="vokJg7HpGPeSaTTnsTay-7" value="Generate MCQ with Bloom/SOLO metadata + per-option explanations">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
               <mxPoint x="2079" y="1518" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
         <mxCell id="vokJg7HpGPeSaTTnsTay-16" edge="1" parent="1" source="vokJg7HpGPeSaTTnsTay-6" style="verticalAlign=bottom;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;dashed=1;dashPattern=2 3;endArrow=block;fontSize=16;startSize=8;endSize=8;fontFamily=Tahoma;fontColor=#000000;" target="vokJg7HpGPeSaTTnsTay-5" value="Questions with option_a..d, explanations, metadata">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
               <mxPoint x="2080" y="1568" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
         <mxCell id="vokJg7HpGPeSaTTnsTay-17" edge="1" parent="1" source="vokJg7HpGPeSaTTnsTay-5" style="verticalAlign=bottom;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;endArrow=block;fontSize=16;startSize=8;endSize=8;fontFamily=Tahoma;fontColor=#000000;" target="vokJg7HpGPeSaTTnsTay-9" value="INSERT INTO questions (option_a..d, explanations, metadata)">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
               <mxPoint x="2179" y="1663" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
         <mxCell id="vokJg7HpGPeSaTTnsTay-18" edge="1" parent="1" source="vokJg7HpGPeSaTTnsTay-8" style="verticalAlign=bottom;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;dashed=1;dashPattern=2 3;endArrow=block;fontSize=16;startSize=8;endSize=8;fontFamily=Tahoma;fontColor=#000000;" target="vokJg7HpGPeSaTTnsTay-5" value="Questions saved">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
               <mxPoint x="2180" y="1713" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
         <mxCell id="vokJg7HpGPeSaTTnsTay-19" edge="1" parent="1" source="vokJg7HpGPeSaTTnsTay-5" style="verticalAlign=bottom;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;dashed=1;dashPattern=2 3;endArrow=block;fontSize=16;startSize=8;endSize=8;fontFamily=Tahoma;fontColor=#000000;" target="vokJg7HpGPeSaTTnsTay-3" value="Quiz ready">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
               <mxPoint x="1767" y="1763" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
         <mxCell id="vokJg7HpGPeSaTTnsTay-20" edge="1" parent="1" source="vokJg7HpGPeSaTTnsTay-5" style="verticalAlign=bottom;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;dashed=1;dashPattern=2 3;endArrow=block;fontSize=16;startSize=8;endSize=8;fontFamily=Tahoma;fontColor=#000000;" target="vokJg7HpGPeSaTTnsTay-3" value="502 Generation error">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
               <mxPoint x="1767" y="1858" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
         <mxCell id="vokJg7HpGPeSaTTnsTay-21" parent="1" style="swimlane;startSize=40;fillColor=#eeeeee;strokeColor=#36393d;fontStyle=1;fontSize=16;fontFamily=Tahoma;" value="Lecturer" vertex="1">
           <mxGeometry height="672" width="325" x="2727" y="1307" as="geometry" />
+        </mxCell>
         <mxCell id="vokJg7HpGPeSaTTnsTay-22" parent="vokJg7HpGPeSaTTnsTay-21" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;fillColor=#000000;strokeColor=#000000;fontSize=16;fontFamily=Tahoma;" value="" vertex="1">
           <mxGeometry height="30" width="30" x="154" y="54" as="geometry" />
+        </mxCell>
         <mxCell id="vokJg7HpGPeSaTTnsTay-23" parent="vokJg7HpGPeSaTTnsTay-21" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#000000;arcSize=20;fontSize=16;fontFamily=Tahoma;" value="Proceed with mini-course generation" vertex="1">
           <mxGeometry height="60" width="232" x="53" y="118" as="geometry" />
+        </mxCell>
         <mxCell id="vokJg7HpGPeSaTTnsTay-24" edge="1" parent="vokJg7HpGPeSaTTnsTay-21" source="vokJg7HpGPeSaTTnsTay-22" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#000000;endArrow=classic;fontSize=16;fontFamily=Tahoma;" target="vokJg7HpGPeSaTTnsTay-23" value="">
           <mxGeometry relative="1" as="geometry" />
+        </mxCell>
         <mxCell id="vokJg7HpGPeSaTTnsTay-25" parent="1" style="swimlane;startSize=40;fillColor=#eeeeee;strokeColor=#36393d;fontStyle=1;fontSize=16;fontFamily=Tahoma;" value="System" vertex="1">
           <mxGeometry height="671" width="549" x="3052" y="1307" as="geometry" />
+        </mxCell>
         <mxCell id="vokJg7HpGPeSaTTnsTay-26" parent="vokJg7HpGPeSaTTnsTay-25" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#000000;arcSize=20;fontSize=16;fontFamily=Tahoma;" value="Generate quiz questions and options (MCQ)" vertex="1">
           <mxGeometry height="70" width="350" x="18" y="118" as="geometry" />
+        </mxCell>
         <mxCell id="vokJg7HpGPeSaTTnsTay-27" parent="vokJg7HpGPeSaTTnsTay-25" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#000000;fontSize=16;fontFamily=Tahoma;" value="Quiz generated?" vertex="1">
           <mxGeometry height="140" width="170" x="108" y="225" as="geometry" />
+        </mxCell>
         <mxCell id="vokJg7HpGPeSaTTnsTay-28" edge="1" parent="vokJg7HpGPeSaTTnsTay-25" source="vokJg7HpGPeSaTTnsTay-26" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#000000;endArrow=classic;fontSize=16;fontFamily=Tahoma;" target="vokJg7HpGPeSaTTnsTay-27" value="">
           <mxGeometry relative="1" as="geometry" />
+        </mxCell>
         <mxCell id="vokJg7HpGPeSaTTnsTay-29" parent="vokJg7HpGPeSaTTnsTay-25" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#000000;arcSize=20;fontSize=16;fontFamily=Tahoma;" value="Store quiz questions &amp;amp; options" vertex="1">
           <mxGeometry height="60" width="280" x="53" y="411" as="geometry" />
+        </mxCell>
         <mxCell id="vokJg7HpGPeSaTTnsTay-30" edge="1" parent="vokJg7HpGPeSaTTnsTay-25" source="vokJg7HpGPeSaTTnsTay-27" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#000000;endArrow=classic;exitX=0.5;exitY=1;exitDx=0;exitDy=0;fontSize=16;fontFamily=Tahoma;" target="vokJg7HpGPeSaTTnsTay-29" value="[true]">
           <mxGeometry relative="1" as="geometry" />
+        </mxCell>
         <mxCell id="vokJg7HpGPeSaTTnsTay-31" parent="vokJg7HpGPeSaTTnsTay-25" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#000000;arcSize=20;fontSize=16;fontFamily=Tahoma;" value="Return quiz for preview" vertex="1">
           <mxGeometry height="60" width="210" x="88" y="523" as="geometry" />
+        </mxCell>
         <mxCell id="vokJg7HpGPeSaTTnsTay-32" edge="1" parent="vokJg7HpGPeSaTTnsTay-25" source="vokJg7HpGPeSaTTnsTay-29" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#000000;endArrow=classic;fontSize=16;fontFamily=Tahoma;" target="vokJg7HpGPeSaTTnsTay-31" value="">
           <mxGeometry relative="1" as="geometry" />
+        </mxCell>
         <mxCell id="vokJg7HpGPeSaTTnsTay-33" parent="vokJg7HpGPeSaTTnsTay-25" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#000000;arcSize=20;fontSize=16;fontFamily=Tahoma;" value="Return generation error" vertex="1">
           <mxGeometry height="60" width="220" x="319" y="474" as="geometry" />
+        </mxCell>
         <mxCell id="vokJg7HpGPeSaTTnsTay-34" edge="1" parent="vokJg7HpGPeSaTTnsTay-25" source="vokJg7HpGPeSaTTnsTay-27" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#000000;endArrow=classic;exitX=1;exitY=0.5;exitDx=0;exitDy=0;fontSize=16;fontFamily=Tahoma;" target="vokJg7HpGPeSaTTnsTay-33" value="[false]">
           <mxGeometry relative="1" as="geometry" />
+        </mxCell>
         <mxCell id="vokJg7HpGPeSaTTnsTay-35" parent="vokJg7HpGPeSaTTnsTay-25" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;fillColor=#FFFFFF;strokeColor=#000000;strokeWidth=3;fontSize=16;fontFamily=Tahoma;" value="" vertex="1">
           <mxGeometry height="30" width="30" x="178" y="615" as="geometry" />
+        </mxCell>
         <mxCell id="vokJg7HpGPeSaTTnsTay-36" edge="1" parent="vokJg7HpGPeSaTTnsTay-25" source="vokJg7HpGPeSaTTnsTay-31" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#000000;endArrow=classic;fontSize=16;fontFamily=Tahoma;" value="">
           <mxGeometry relative="1" as="geometry">
             <mxPoint x="193" y="614" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
         <mxCell id="vokJg7HpGPeSaTTnsTay-37" edge="1" parent="vokJg7HpGPeSaTTnsTay-25" source="vokJg7HpGPeSaTTnsTay-33" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#000000;endArrow=classic;fontSize=16;fontFamily=Tahoma;" value="">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
               <mxPoint x="429" y="629" />
+            </Array>
+            <mxPoint x="207.99988465930255" y="629.0588235294122" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
         <mxCell id="vokJg7HpGPeSaTTnsTay-40" parent="vokJg7HpGPeSaTTnsTay-25" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;fillColor=#000000;strokeColor=#000000;fontSize=16;fontFamily=Tahoma;" value="" vertex="1">
           <mxGeometry height="19" width="19" x="183.5" y="620.5" as="geometry" />
+        </mxCell>
         <mxCell id="vokJg7HpGPeSaTTnsTay-38" parent="1" style="shape=line;strokeWidth=1;strokeColor=#000000;direction=north;" value="" vertex="1">
           <mxGeometry height="1960" x="3412" y="1353" as="geometry" />
+        </mxCell>
         <mxCell id="vokJg7HpGPeSaTTnsTay-39" edge="1" parent="1" source="vokJg7HpGPeSaTTnsTay-23" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#000000;endArrow=classic;exitX=1;exitY=0.5;exitDx=0;exitDy=0;fontSize=16;fontFamily=Tahoma;" target="vokJg7HpGPeSaTTnsTay-26" value="">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
               <mxPoint x="3026" y="1456" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
       </root>
     </mxGraphModel>
   </diagram>

@@ -87,6 +87,15 @@ def parse_source():
         return f.read()
 
 
+def xe(s):
+    """Escape a string for safe use as an XML attribute value."""
+    return (s.replace('&', '&amp;')
+             .replace('<', '&lt;')
+             .replace('>', '&gt;')
+             .replace('"', '&quot;')
+             .replace("'", '&apos;'))
+
+
 def extract_page_body(content, page_name):
     pattern = re.compile(
         rf'<diagram [^>]*name="{re.escape(page_name)}"[^>]*>(.*?)</diagram>',
@@ -97,28 +106,82 @@ def extract_page_body(content, page_name):
 
 
 def extract_all_cells(page_body):
+    """Extract complete <mxCell> elements (both self-closing and multi-line).
+    Uses a balanced-tag approach so it correctly handles cells that contain
+    self-closing inner elements like <mxPoint .../>."""
     cells = []
-    for m in re.finditer(r'<mxCell\b.*?(?:/>|</mxCell>)', page_body, re.DOTALL):
-        cells.append(m.group(0))
+    i = 0
+    n = len(page_body)
+    while i < n:
+        idx = page_body.find('<mxCell', i)
+        if idx == -1:
+            break
+        end_open = page_body.find('>', idx)
+        if end_open == -1:
+            break
+        if page_body[end_open - 1] == '/':
+            # self-closing
+            cells.append(page_body[idx:end_open + 1])
+            i = end_open + 1
+            continue
+        # multi-line: balance tags
+        depth = 1
+        j = end_open + 1
+        while j < n and depth > 0:
+            nopen = page_body.find('<mxCell', j)
+            nclose = page_body.find('</mxCell>', j)
+            if nclose == -1:
+                break
+            if nopen != -1 and nopen < nclose:
+                # is this one self-closing?
+                no_end = page_body.find('>', nopen)
+                if no_end != -1 and page_body[no_end - 1] == '/':
+                    j = no_end + 1
+                    continue
+                depth += 1
+                j = no_end + 1
+            else:
+                depth -= 1
+                if depth == 0:
+                    cells.append(page_body[idx:nclose + len('</mxCell>')])
+                    j = nclose + len('</mxCell>')
+                    break
+                j = nclose + len('</mxCell>')
+        i = j
     return cells
 
 
 def extract_cells_by_prefix(page_body, prefix):
-    cells = []
-    for m in re.finditer(r'<mxCell\b.*?(?:/>|</mxCell>)', page_body, re.DOTALL):
-        cell_xml = m.group(0)
-        id_match = re.search(r'id="([^"]+)"', cell_xml)
+    cells = extract_all_cells(page_body)
+    result = []
+    for cell in cells:
+        id_match = re.search(r'id="([^"]+)"', cell)
         if id_match and id_match.group(1).startswith(prefix):
-            cells.append(cell_xml)
-    return cells
+            result.append(cell)
+    return result
 
 
 def apply_text_replacements(cells, replacements):
+    """Replace text in `value="..."` attributes, properly escaping the
+    replacement so the resulting XML stays well-formed."""
     result = []
     for cell in cells:
         for old, new in replacements.items():
-            if old in cell:
-                cell = cell.replace(f'value="{old}"', f'value="{new}"')
+            escaped_old = (
+                old.replace('&', '&amp;')
+                   .replace('<', '&lt;')
+                   .replace('>', '&gt;')
+                   .replace('"', '&quot;')
+                   .replace("'", '&apos;')
+            )
+            escaped_new = (
+                new.replace('&', '&amp;')
+                   .replace('<', '&lt;')
+                   .replace('>', '&gt;')
+                   .replace('"', '&quot;')
+                   .replace("'", '&apos;')
+            )
+            cell = cell.replace(f'value="{escaped_old}"', f'value="{escaped_new}"')
         result.append(cell)
     return result
 
@@ -132,7 +195,7 @@ def wrap_in_drawio(diagram_name, cells_xml, page_width=1169, page_height=827):
         '<mxfile host="app.diagrams.net" '
         'modified="2026-06-20T00:00:00.000Z" '
         'agent="Mozilla/5.0" version="22.1.0">\n'
-        f'  <diagram name="{diagram_name}" id="{diagram_id}">\n'
+        f'  <diagram name="{xe(diagram_name)}" id="{xe(diagram_id)}">\n'
         '    <mxGraphModel dx="1400" dy="800" grid="1" gridSize="10" '
         'guides="1" tooltips="1" connect="1" arrows="1" fold="1" '
         'page="1" pageScale="1" '
@@ -312,20 +375,29 @@ def build_us001(content):
 # ---------------------------------------------------------------------------
 
 def build_us002(content):
-    # Sequence: RAG Service / Database -> Supabase
-    seq_repl = {
+    # In US002, the activity and sequence share the same prefix
+    # (t8_QiU6RuQ1PiE6QdoqK). The state is on a different prefix.
+    # The replacements below apply to both activity and sequence,
+    # but the activity cells don't contain the text being replaced
+    # (e.g., "RAG Service" is only in the sequence lanes), so it's safe.
+    repl = {
         'RAG Service': 'Supabase',
         'Database': 'Supabase',
         'Start RAG pipeline': 'match_material_chunks(course_code)',
         'Load course materials metadata': 'SELECT chunks WHERE course_code = $1',
         'Extract learning outcomes + relevant content': 'match_material_chunks returns top-k chunks',
         'Extracted context': 'Relevant context',
-        'Context ready': 'Context ready',
     }
-    process_per_uc(content, 'US002', 'MgEQ3kEXpOo1suhsOIaA',
-                   'US002 - Sequence Diagram (Extract)',
-                   '02_per_uc/US002/US002_sequence.drawio',
-                   seq_repl)
+    # Combined activity + sequence file (share prefix)
+    process_per_uc(content, 'US002', 't8_QiU6RuQ1PiE6QdoqK',
+                   'US002 - Activity + Sequence (Extract)',
+                   '02_per_uc/US002/US002_activity_and_sequence.drawio',
+                   repl)
+    # State file (separate prefix)
+    process_per_uc(content, 'US002', 'kmrL4DUcZzDR0eLYHlnu',
+                   'US002 - State Machine (Extract)',
+                   '02_per_uc/US002/US002_state.drawio',
+                   {})
 
 
 # ---------------------------------------------------------------------------
@@ -333,8 +405,9 @@ def build_us002(content):
 # ---------------------------------------------------------------------------
 
 def build_us004(content):
-    # Sequence: Save QuizQuestion + QuizOption -> questions table
-    seq_repl = {
+    # In US004, the activity and sequence share the same prefix
+    # (vokJg7HpGPeSaTTnsTay).
+    repl = {
         'RAG Service': 'Backend API',
         'Database': 'Supabase',
         'Generate MCQ quiz set (questions + options)': 'Generate MCQ with Bloom/SOLO metadata + per-option explanations',
@@ -342,10 +415,16 @@ def build_us004(content):
         'Save QuizQuestion + QuizOption': 'INSERT INTO questions (option_a..d, explanations, metadata)',
         'Quiz saved': 'Questions saved',
     }
+    # Combined activity + sequence file (share prefix)
     process_per_uc(content, 'US004', 'vokJg7HpGPeSaTTnsTay',
-                   'US004 - Sequence Diagram (Create Quizzes)',
-                   '02_per_uc/US004/US004_sequence.drawio',
-                   seq_repl)
+                    'US004 - Activity + Sequence (Create Quizzes)',
+                    '02_per_uc/US004/US004_activity_and_sequence.drawio',
+                    repl)
+    # State file (separate prefix)
+    process_per_uc(content, 'US004', '7RZ_7jwqV0-FieZ22xGC',
+                   'US004 - State Machine (Create Quizzes)',
+                   '02_per_uc/US004/US004_state.drawio',
+                   {})
 
 
 # ---------------------------------------------------------------------------
@@ -354,16 +433,18 @@ def build_us004(content):
 
 def build_us005(content):
     # Activity: flat table -> rich dashboard
+    # Activity prefix: l44Lz8qBxJvDF45rMrCk
     act_repl = {
         'Display results table': 'Display analytics dashboard',
         'Display \'No submissions yet\'': 'Display "No submissions yet"',
     }
-    process_per_uc(content, 'US005', '7J1mdU0mRvrNOPTbfz2r',
+    process_per_uc(content, 'US005', 'l44Lz8qBxJvDF45rMrCk',
                    'US005 - Activity Diagram (View Analytics)',
                    '02_per_uc/US005/US005_activity.drawio',
                    act_repl)
 
     # Sequence: flat submissions -> CourseAnalytics
+    # Sequence prefix: 7J1mdU0mRvrNOPTbfz2r
     seq_repl = {
         'Analytics API': 'Backend API',
         'Database': 'Supabase',
@@ -385,17 +466,19 @@ def build_us005(content):
 
 def build_us007(content):
     # Activity: PDF only -> PDF+PPTX, add processing step
+    # Activity prefix: 6jDys-sbq3-s8nwrOBOR
     act_repl = {
         'Select lecture slides (PDF)': 'Select lecture slides (PDF or PPTX)',
         'Upload slides to storage': 'Upload slides to storage',
     }
-    process_per_uc(content, 'US007', 'GC4UL6wOE1EOq1ZxUgT2',
+    process_per_uc(content, 'US007', '6jDys-sbq3-s8nwrOBOR',
                    'US007 - Activity Diagram (Update Materials)',
                    '02_per_uc/US007/US007_activity.drawio',
                    act_repl,
                    page_width=1400, page_height=1100)
 
     # Sequence: PDF only -> PDF+PPTX
+    # Sequence prefix: GC4UL6wOE1EOq1ZxUgT2
     seq_repl = {
         'File Storage': 'Supabase Storage',
         'Database': 'Supabase',
