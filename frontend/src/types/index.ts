@@ -5,6 +5,12 @@ export interface User {
   role: 'Lecturer' | 'Admin' | 'Student';
 }
 
+/**
+ * Auto is a UI-only role-picker value. It is never persisted on the User
+ * object — it tells the resolver to infer the role from the email address.
+ */
+export type RoleSelection = 'Auto' | 'Lecturer' | 'Admin' | 'Student';
+
 export interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
