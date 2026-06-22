@@ -58,7 +58,12 @@ describe('Public Learning (TC007-TC008)', () => {
   });
 
   describe('TC008: Take Quiz', () => {
-    it('TC008_01: accepts valid quiz submission', async () => {
+    it('TC008_01: accepts valid quiz submission from authenticated student', async () => {
+      mockAuth.getUser.mockResolvedValue({
+        data: { user: { id: 's1', email: 'student@graduate.utm.my', user_metadata: { name: 'Ali' } } },
+        error: null,
+      });
+
       vi.mocked(submitQuizAttempt).mockResolvedValue({
         attemptId: 'att-1',
         submittedAt: '2026-01-01T00:00:00Z',
@@ -72,8 +77,8 @@ describe('Public Learning (TC007-TC008)', () => {
 
       const res = await request
         .post('/api/public/course/test-token/submit')
+        .set('Authorization', 'Bearer student-token')
         .send({
-          studentName: 'Ali',
           answers: [
             { questionId: 'q1', selectedOptionIndex: 0 },
             { questionId: 'q2', selectedOptionIndex: 1 },
@@ -83,55 +88,55 @@ describe('Public Learning (TC007-TC008)', () => {
       expect(res.status).toBe(200);
       expect(res.body.score).toBe(4);
       expect(res.body.passed).toBe(true);
+      // Identity is derived from token, not body
+      expect(submitQuizAttempt).toHaveBeenCalledWith(
+        expect.objectContaining({
+          studentEmail: 'student@graduate.utm.my',
+          studentName: 'Ali',
+        }),
+      );
     });
 
-    it('TC008_02: rejects submission when student name is blank', async () => {
+    it('TC008_02: rejects submission without auth', async () => {
       const res = await request
         .post('/api/public/course/test-token/submit')
         .send({
-          studentName: '',
           answers: [{ questionId: 'q1', selectedOptionIndex: 0 }],
         });
 
-      expect(res.status).toBe(400);
-      expect(res.body.message).toContain('Student name');
-    });
-
-    it('TC008_02: rejects submission when student name is too short', async () => {
-      const res = await request
-        .post('/api/public/course/test-token/submit')
-        .send({
-          studentName: 'A',
-          answers: [{ questionId: 'q1', selectedOptionIndex: 0 }],
-        });
-
-      expect(res.status).toBe(400);
-      expect(res.body.message).toContain('Student name');
+      expect(res.status).toBe(401);
+      // requireAuth middleware emits "Authentication required" before reaching
+      // the controller, which would emit "Sign in to submit a quiz attempt".
+      // Either is acceptable; the contract is that unauthenticated requests are 401.
+      expect(['Authentication required', 'Sign in to submit a quiz attempt']).toContain(res.body.message);
     });
 
     it('rejects submission without answers', async () => {
+      mockAuth.getUser.mockResolvedValue({
+        data: { user: { id: 's1', email: 'student@graduate.utm.my', user_metadata: { name: 'Ali' } } },
+        error: null,
+      });
+
       const res = await request
         .post('/api/public/course/test-token/submit')
-        .send({
-          studentName: 'Ali',
-          answers: [],
-        });
+        .set('Authorization', 'Bearer student-token')
+        .send({ answers: [] });
 
       expect(res.status).toBe(400);
       expect(res.body.message).toContain('Answers');
     });
 
-    it('accepts submission with optional auth', async () => {
+    it('ignores studentName in body and uses token identity', async () => {
       mockAuth.getUser.mockResolvedValue({
-        data: { user: { id: 's1', email: 'student@graduate.utm.my', user_metadata: {} } },
+        data: { user: { id: 's1', email: 'student@graduate.utm.my', user_metadata: { name: 'Ali' } } },
         error: null,
       });
 
       vi.mocked(submitQuizAttempt).mockResolvedValue({
-        attemptId: 'att-2',
+        attemptId: 'att-3',
         submittedAt: '2026-01-01T00:00:00Z',
-        score: 5,
-        total: 5,
+        score: 1,
+        total: 1,
         percentage: 100,
         passed: true,
         passPercentage: 40,
@@ -142,11 +147,14 @@ describe('Public Learning (TC007-TC008)', () => {
         .post('/api/public/course/test-token/submit')
         .set('Authorization', 'Bearer student-token')
         .send({
-          studentName: 'Ali',
+          studentName: 'WRONG_NAME',
           answers: [{ questionId: 'q1', selectedOptionIndex: 0 }],
         });
 
       expect(res.status).toBe(200);
+      expect(submitQuizAttempt).toHaveBeenCalledWith(
+        expect.objectContaining({ studentName: 'Ali' }),
+      );
     });
   });
 });

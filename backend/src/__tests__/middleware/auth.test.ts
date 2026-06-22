@@ -67,7 +67,7 @@ describe('requireAuth', () => {
         user: {
           id: 'user-123',
           email: 'lecturer@utm.my',
-          user_metadata: { role: 'Lecturer' },
+          user_metadata: { role: 'Lecturer', name: 'Dr. Ahmad' },
         },
       },
       error: null,
@@ -79,8 +79,55 @@ describe('requireAuth', () => {
       expect(req.authUser).toEqual({
         id: 'user-123',
         email: 'lecturer@utm.my',
+        name: 'Dr. Ahmad',
         role: 'Lecturer',
       });
+    });
+  });
+
+  it('grants Lecturer role to LECTURER_OVERRIDE_EMAILS (mohammadar336@gmail.com) with non-UTM Gmail', async () => {
+    req.headers = { authorization: 'Bearer valid-token' };
+    mockAuth.getUser.mockResolvedValue({
+      data: {
+        user: {
+          id: 'user-336',
+          email: 'mohammadar336@gmail.com',
+          user_metadata: { name: 'Areeb' },
+        },
+      },
+      error: null,
+    });
+
+    requireAuth(req as Request, res as Response, next);
+    await vi.waitFor(() => {
+      expect(next).toHaveBeenCalled();
+      expect(req.authUser).toEqual({
+        id: 'user-336',
+        email: 'mohammadar336@gmail.com',
+        name: 'Areeb',
+        role: 'Lecturer',
+      });
+    });
+  });
+
+  it('rejects a non-UTM email that is not in any allow-list (role stays undefined)', async () => {
+    req.headers = { authorization: 'Bearer valid-token' };
+    mockAuth.getUser.mockResolvedValue({
+      data: {
+        user: {
+          id: 'user-999',
+          email: 'random@gmail.com',
+          user_metadata: { role: 'Admin', name: 'Spoofer' },
+        },
+      },
+      error: null,
+    });
+
+    requireAuth(req as Request, res as Response, next);
+    await vi.waitFor(() => {
+      expect(next).toHaveBeenCalled();
+      expect(req.authUser?.role).toBeUndefined();
+      expect(req.authUser?.email).toBe('random@gmail.com');
     });
   });
 
@@ -121,7 +168,7 @@ describe('optionalAuth', () => {
         user: {
           id: 'student-789',
           email: 'student@graduate.utm.my',
-          user_metadata: {},
+          user_metadata: { name: 'Student' },
         },
       },
       error: null,
@@ -133,6 +180,7 @@ describe('optionalAuth', () => {
       expect(req.authUser).toEqual({
         id: 'student-789',
         email: 'student@graduate.utm.my',
+        name: 'Student',
       });
     });
   });

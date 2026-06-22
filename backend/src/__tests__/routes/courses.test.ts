@@ -41,7 +41,7 @@ function validLecturer() {
 
 function validAdmin() {
   mockAuth.getUser.mockResolvedValue({
-    data: { user: { id: 'a1', email: 'admin@utm.my', user_metadata: { role: 'Admin' } } },
+    data: { user: { id: 'a1', email: 'Mohammadareeb34@gmail.com', user_metadata: { role: 'Admin', name: 'Admin User' } } },
     error: null,
   });
 }

@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import multer from 'multer';
 import { asyncHandler } from '../middleware/async-handler.js';
-import { optionalAuth, requireAuth } from '../middleware/auth.js';
+import { requireAuth } from '../middleware/auth.js';
 import { healthCheck } from '../controllers/health.controller.js';
 import {
   deleteChapterMaterials,
@@ -55,9 +55,10 @@ router.post('/api/courses/preview', requireAuth, asyncHandler(previewCourse));
 router.post('/api/courses/confirm', requireAuth, asyncHandler(confirmCourse));
 router.delete('/api/courses/:id', requireAuth, asyncHandler(deleteCourse));
 
-// Public (student-facing, with optional auth for identity linking)
+// Public read (lesson); quiz submission requires the student to be signed in
+// so the attempt is always associated with their account.
 router.get('/api/public/course/:token', asyncHandler(publicCourse));
-router.post('/api/public/course/:token/submit', optionalAuth, asyncHandler(submitQuiz));
+router.post('/api/public/course/:token/submit', requireAuth, asyncHandler(submitQuiz));
 
 // Student history (requires auth)
 router.get('/api/students/attempts', requireAuth, asyncHandler(studentAttempts));

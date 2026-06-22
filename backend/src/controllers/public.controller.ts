@@ -15,24 +15,24 @@ export async function submitQuiz(req: Request, res: Response): Promise<void> {
   const token = pathParam(req.params.token);
   if (!token) throw new HttpError(400, 'token is required');
 
-  const { studentName, answers } = req.body as {
-    studentName?: string;
+  if (!req.authUser) {
+    throw new HttpError(401, 'Sign in to submit a quiz attempt');
+  }
+
+  const { answers } = req.body as {
     answers?: Array<{ questionId: string; selectedOptionIndex: number }>;
   };
-
-  if (!studentName || typeof studentName !== 'string' || studentName.trim().length < 2) {
-    throw new HttpError(400, 'Student name is required');
-  }
 
   if (!Array.isArray(answers) || answers.length === 0) {
     throw new HttpError(400, 'Answers are required');
   }
 
+  // Identity is derived from the verified token, never from the request body.
   const result = await submitQuizAttempt({
     token,
-    studentName,
+    studentName: req.authUser.name,
     answers,
-    studentEmail: req.authUser?.email,
+    studentEmail: req.authUser.email,
   });
   res.json(result);
 }
