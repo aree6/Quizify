@@ -3,7 +3,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import {
   BarChart3,
   ClipboardList,
-  ExternalLink,
   FileQuestion,
   FileText,
   PlusCircle,
@@ -92,8 +91,8 @@ function StudentDashboard() {
     navigate(`/quiz?token=${encodeURIComponent(token)}`);
   };
 
-  const handleRetry = (shareToken: string) => {
-    navigate(`/quiz?token=${encodeURIComponent(shareToken)}`);
+  const handleViewBreakdown = (attemptId: string) => {
+    navigate(`/student/attempts/${encodeURIComponent(attemptId)}`);
   };
 
   return (
@@ -205,12 +204,12 @@ function StudentDashboard() {
                     </div>
                     <button
                       type="button"
-                      onClick={() => handleRetry(attempt.shareToken)}
+                      onClick={() => handleViewBreakdown(attempt.id)}
                       className="pill-secondary flex items-center gap-1 text-xs"
-                      title="Retry this quiz"
+                      title="View detailed breakdown"
                     >
-                      <ExternalLink className="w-3.5 h-3.5" />
-                      Retry
+                      <ClipboardList className="w-3.5 h-3.5" />
+                      View breakdown
                     </button>
                   </div>
                 </li>

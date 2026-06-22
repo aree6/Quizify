@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { ToastProvider } from './components/common/Toast';
 import { LoginPage } from './pages/Login';
 import { DashboardPage } from './pages/Dashboard';
+import { AttemptDetailPage } from './pages/AttemptDetail';
 import { MaterialsPage } from './pages/Materials';
 import { CreateCoursePage } from './pages/CreateCourse';
 import { MyCoursesPage } from './pages/MyCourses';
@@ -69,6 +70,7 @@ function AppRoutes() {
 
       <Route path="/:role" element={<RoleLayout />}>
         <Route path="dashboard" element={<DashboardPage />} />
+        <Route path="attempts/:attemptId" element={<AttemptDetailPage />} />
         <Route
           path="materials"
           element={

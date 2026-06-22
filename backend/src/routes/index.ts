@@ -24,7 +24,7 @@ import {
 } from '../controllers/courses.controller.js';
 import { publicCourse, submitQuiz } from '../controllers/public.controller.js';
 import { analytics } from '../controllers/analytics.controller.js';
-import { studentAttempts } from '../controllers/students.controller.js';
+import { studentAttempts, studentAttemptDetail } from '../controllers/students.controller.js';
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -62,6 +62,7 @@ router.post('/api/public/course/:token/submit', requireAuth, asyncHandler(submit
 
 // Student history (requires auth)
 router.get('/api/students/attempts', requireAuth, asyncHandler(studentAttempts));
+router.get('/api/students/attempts/:attemptId', requireAuth, asyncHandler(studentAttemptDetail));
 
 // Analytics
 router.get('/api/analytics/:courseId', requireAuth, asyncHandler(analytics));

@@ -205,40 +205,50 @@ export interface StudentAttemptSummary {
 }
 
 export async function getStudentAttempts(studentEmail: string): Promise<StudentAttemptSummary[]> {
-  const { data, error } = await supabase
+  const { data: attempts, error: attemptsError } = await supabase
     .from('quiz_attempts')
-    .select(`
-      id,
-      score,
-      total_questions,
-      percentage,
-      submitted_at,
-      mini_course_id,
-      mini_courses(id, title, share_token, pass_percentage)
-    `)
+    .select('id, score, total_questions, percentage, submitted_at, mini_course_id')
     .eq('student_email', studentEmail)
     .order('submitted_at', { ascending: false });
 
-  if (error) throw new HttpError(500, 'Failed to fetch student attempts');
+  if (attemptsError) throw new HttpError(500, 'Failed to fetch student attempts');
 
-  return (data ?? [])
-    .map((row: {
+  const attemptRows = (attempts ?? []) as Array<{
+    id: string;
+    score: number;
+    total_questions: number;
+    percentage: number;
+    submitted_at: string;
+    mini_course_id: string;
+  }>;
+
+  if (attemptRows.length === 0) return [];
+
+  const miniCourseIds = Array.from(
+    new Set(attemptRows.map((a) => a.mini_course_id).filter((id): id is string => Boolean(id))),
+  );
+
+  const { data: courses, error: coursesError } = await supabase
+    .from('mini_courses')
+    .select('id, title, share_token, pass_percentage')
+    .in('id', miniCourseIds);
+
+  if (coursesError) throw new HttpError(500, 'Failed to fetch course details');
+
+  const courseMap = new Map(
+    ((courses ?? []) as Array<{
       id: string;
-      score: number;
-      total_questions: number;
-      percentage: number;
-      submitted_at: string;
-      mini_course_id: string;
-      mini_courses: Array<{
-        id: string;
-        title: string;
-        share_token: string;
-        pass_percentage: number;
-      }>;
-    }) => {
-      const mc = row.mini_courses[0];
+      title: string;
+      share_token: string;
+      pass_percentage: number;
+    }>).map((c) => [c.id, c]),
+  );
+
+  return attemptRows
+    .map((row) => {
+      const mc = courseMap.get(row.mini_course_id);
       if (!mc) {
-        console.warn('[getStudentAttempts] dropping attempt with missing course join', {
+        console.warn('[getStudentAttempts] dropping attempt with missing course', {
           attemptId: row.id,
           miniCourseId: row.mini_course_id,
           studentEmail,
@@ -261,9 +271,78 @@ export async function getStudentAttempts(studentEmail: string): Promise<StudentA
     .filter((x): x is StudentAttemptSummary => x !== null);
 }
 
+export interface StudentAttemptDetailResponse extends StudentAttemptDetail {
+  courseId: string;
+  courseTitle: string;
+}
+
+export async function getStudentAttemptDetail(
+  attemptId: string,
+  studentEmail: string,
+): Promise<StudentAttemptDetailResponse> {
+  const { data: attempt, error: attemptError } = await supabase
+    .from('quiz_attempts')
+    .select('id, student_name, student_email, score, total_questions, percentage, submitted_at, submitted_answers, mini_course_id')
+    .eq('id', attemptId)
+    .maybeSingle();
+
+  if (attemptError) throw new HttpError(500, 'Failed to fetch attempt');
+  if (!attempt) throw new HttpError(404, 'Attempt not found');
+  if (attempt.student_email !== studentEmail) throw new HttpError(404, 'Attempt not found');
+
+  const { data: course } = await supabase
+    .from('mini_courses')
+    .select('id, title, pass_percentage')
+    .eq('id', attempt.mini_course_id)
+    .maybeSingle();
+
+  const passPercentage = course?.pass_percentage ?? env.defaultPassPercentage;
+
+  const { data: quizData } = await supabase
+    .from('quizzes')
+    .select('id, questions(id, prompt, option_a, option_b, option_c, option_d, correct_option_index, explanations, metadata)')
+    .eq('mini_course_id', attempt.mini_course_id)
+    .maybeSingle();
+
+  const questionMap = new Map<string, QuestionDetail>();
+  for (const q of ((quizData?.questions ?? []) as QuestionRow[])) {
+    const opts = [q.option_a, q.option_b, q.option_c, q.option_d].filter((o): o is string => o !== null);
+    const meta = parseMetadata(q.metadata);
+    questionMap.set(q.id, {
+      prompt: q.prompt,
+      options: opts,
+      correctOptionIndex: q.correct_option_index,
+      explanations: Array.isArray(q.explanations) ? q.explanations : [],
+      metadata: meta,
+    });
+  }
+
+  const attemptRow: AttemptRow = {
+    id: attempt.id,
+    student_name: attempt.student_name,
+    score: attempt.score,
+    total_questions: attempt.total_questions,
+    percentage: attempt.percentage,
+    submitted_at: attempt.submitted_at,
+    submitted_answers: Array.isArray(attempt.submitted_answers)
+      ? (attempt.submitted_answers as SubmittedAnswer[])
+      : [],
+  };
+
+  const detail = buildStudentAttemptDetail(attemptRow, questionMap, passPercentage);
+
+  return {
+    courseId: attempt.mini_course_id,
+    courseTitle: course?.title ?? '',
+    ...detail,
+  };
+}
+
 interface AttemptRow {
   id: string;
   student_name: string;
+  student_email?: string | null;
+  mini_course_id?: string;
   score: number;
   total_questions: number;
   percentage: number;
@@ -289,6 +368,118 @@ interface QuestionRow {
   correct_option_index: number;
   explanations: string[] | null;
   metadata: QuestionMetadata | null;
+}
+
+interface QuestionDetail {
+  prompt: string;
+  options: string[];
+  correctOptionIndex: number;
+  explanations: string[];
+  metadata: QuestionMetadata;
+}
+
+interface StudentAttemptDetail {
+  attemptId: string;
+  studentName: string;
+  score: number;
+  total: number;
+  percentage: number;
+  passed: boolean;
+  submittedAt: string;
+  weakTopics: Array<{ topic: string; correct: number; total: number; percentage: number }>;
+  strongestTopic: string | null;
+  weakestBloomLevel: string | null;
+  answers: Array<{
+    questionId: string;
+    prompt: string;
+    options: string[];
+    selectedOptionIndex: number;
+    correctOptionIndex: number;
+    isCorrect: boolean;
+    explanations: string[];
+    metadata: QuestionMetadata;
+  }>;
+}
+
+function buildStudentAttemptDetail(
+  attempt: AttemptRow,
+  questionMap: Map<string, QuestionDetail>,
+  passPercentage: number,
+): StudentAttemptDetail {
+  const raw = attempt.submitted_answers as unknown;
+  const answers: SubmittedAnswer[] = Array.isArray(raw) ? (raw as SubmittedAnswer[]) : [];
+
+  const topicCorrectMap = new Map<string, { correct: number; total: number }>();
+  const bloomCorrectMap = new Map<string, { correct: number; total: number }>();
+
+  const toPct = (correct: number, total: number) => (total > 0 ? Math.round((correct / total) * 100) : 0);
+
+  const answerDetails = answers.map((entry) => {
+    const qInfo = questionMap.get(entry.questionId);
+    const m = parseMetadata(entry.metadata, qInfo?.metadata);
+    const topic = m.topic || 'General';
+    const bloom = m.bloomLevel || 'understand';
+
+    if (!topicCorrectMap.has(topic)) topicCorrectMap.set(topic, { correct: 0, total: 0 });
+    const te = topicCorrectMap.get(topic)!;
+    te.total += 1;
+    if (entry.isCorrect) te.correct += 1;
+
+    if (!bloomCorrectMap.has(bloom)) bloomCorrectMap.set(bloom, { correct: 0, total: 0 });
+    const be = bloomCorrectMap.get(bloom)!;
+    be.total += 1;
+    if (entry.isCorrect) be.correct += 1;
+
+    return {
+      questionId: entry.questionId,
+      prompt: qInfo?.prompt ?? '',
+      options: qInfo?.options ?? [],
+      selectedOptionIndex: entry.selectedOptionIndex,
+      correctOptionIndex: entry.correctOptionIndex,
+      isCorrect: entry.isCorrect,
+      explanations: qInfo?.explanations ?? [],
+      metadata: m,
+    };
+  });
+
+  const weakTopics = Array.from(topicCorrectMap.entries())
+    .map(([topic, v]) => ({
+      topic,
+      correct: v.correct,
+      total: v.total,
+      percentage: toPct(v.correct, v.total),
+    }))
+    .filter((t) => t.percentage < 70)
+    .sort((a, b) => a.percentage - b.percentage);
+
+  let weakestBloomLevel: string | null = null;
+  let weakestBloomPct = 100;
+  for (const [level, v] of bloomCorrectMap) {
+    const pct = toPct(v.correct, v.total);
+    if (pct < weakestBloomPct && v.total > 0) {
+      weakestBloomPct = pct;
+      weakestBloomLevel = level;
+    }
+  }
+
+  const strongTopics = Array.from(topicCorrectMap.entries())
+    .filter(([, v]) => v.total > 0)
+    .sort((a, b) => toPct(b[1].correct, b[1].total) - toPct(a[1].correct, a[1].total));
+  const strongestTopic = strongTopics.length > 0 ? (strongTopics[0]?.[0] ?? null) : null;
+
+  return {
+    attemptId: attempt.id,
+    studentName: attempt.student_name,
+    score: attempt.score,
+    total: attempt.total_questions,
+    percentage: attempt.percentage,
+    passed: Number(attempt.percentage) >= passPercentage,
+    submittedAt: attempt.submitted_at,
+    weakTopics,
+    strongestTopic,
+    weakestBloomLevel,
+    answers: answerDetails,
+  };
 }
 
 const SCORE_BUCKETS = [
@@ -390,13 +581,7 @@ export async function getCourseAnalytics(courseId: string) {
     };
   }
 
-  let questionMap = new Map<string, {
-    prompt: string;
-    options: string[];
-    correctOptionIndex: number;
-    explanations: string[];
-    metadata: QuestionMetadata;
-  }>();
+  let questionMap = new Map<string, QuestionDetail>();
 
   if (quizId) {
     const { data: qData } = await supabase
@@ -554,80 +739,9 @@ export async function getCourseAnalytics(courseId: string) {
     })
     .sort((a, b) => a.percentage - b.percentage);
 
-  const studentAnalytics = attempts.map((a) => {
-    const raw = a.submitted_answers as unknown;
-    const answers: SubmittedAnswer[] = Array.isArray(raw) ? (raw as SubmittedAnswer[]) : [];
-
-    const topicCorrectMap = new Map<string, { correct: number; total: number }>();
-    let bloomCorrectMap = new Map<string, { correct: number; total: number }>();
-
-    const answerDetails = answers.map((entry) => {
-      const qInfo = questionMap.get(entry.questionId);
-      const m = parseMetadata(entry.metadata, qInfo?.metadata);
-      const topic = m.topic || 'General';
-      const bloom = m.bloomLevel || 'understand';
-
-      if (!topicCorrectMap.has(topic)) topicCorrectMap.set(topic, { correct: 0, total: 0 });
-      const te = topicCorrectMap.get(topic)!;
-      te.total += 1;
-      if (entry.isCorrect) te.correct += 1;
-
-      if (!bloomCorrectMap.has(bloom)) bloomCorrectMap.set(bloom, { correct: 0, total: 0 });
-      const be = bloomCorrectMap.get(bloom)!;
-      be.total += 1;
-      if (entry.isCorrect) be.correct += 1;
-
-      return {
-        questionId: entry.questionId,
-        prompt: qInfo?.prompt ?? '',
-        options: qInfo?.options ?? [],
-        selectedOptionIndex: entry.selectedOptionIndex,
-        correctOptionIndex: entry.correctOptionIndex,
-        isCorrect: entry.isCorrect,
-        explanations: qInfo?.explanations ?? [],
-        metadata: m,
-      };
-    });
-
-    const weakTopics = Array.from(topicCorrectMap.entries())
-      .map(([topic, v]) => ({
-        topic,
-        correct: v.correct,
-        total: v.total,
-        percentage: toPct(v.correct, v.total),
-      }))
-      .filter((t) => t.percentage < 70)
-      .sort((a, b) => a.percentage - b.percentage);
-
-    let weakestBloomLevel: string | null = null;
-    let weakestBloomPct = 100;
-    for (const [level, v] of bloomCorrectMap) {
-      const pct = toPct(v.correct, v.total);
-      if (pct < weakestBloomPct && v.total > 0) {
-        weakestBloomPct = pct;
-        weakestBloomLevel = level;
-      }
-    }
-
-    const strongTopics = Array.from(topicCorrectMap.entries())
-      .filter(([, v]) => v.total > 0)
-      .sort((a, b) => toPct(b[1].correct, b[1].total) - toPct(a[1].correct, a[1].total));
-    const strongestTopic = strongTopics.length > 0 ? (strongTopics[0]?.[0] ?? null) : null;
-
-    return {
-      attemptId: a.id,
-      studentName: a.student_name,
-      score: a.score,
-      total: a.total_questions,
-      percentage: a.percentage,
-      passed: Number(a.percentage) >= passPercentage,
-      submittedAt: a.submitted_at,
-      weakTopics,
-      strongestTopic,
-      weakestBloomLevel,
-      answers: answerDetails,
-    };
-  });
+  const studentAnalytics = attempts.map((a) =>
+    buildStudentAttemptDetail(a, questionMap, passPercentage),
+  );
 
   return {
     courseId,
