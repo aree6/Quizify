@@ -214,41 +214,51 @@ export async function getStudentAttempts(studentEmail: string): Promise<StudentA
       percentage,
       submitted_at,
       mini_course_id,
-      mini_courses!inner(id, title, share_token, pass_percentage)
+      mini_courses(id, title, share_token, pass_percentage)
     `)
     .eq('student_email', studentEmail)
     .order('submitted_at', { ascending: false });
 
   if (error) throw new HttpError(500, 'Failed to fetch student attempts');
 
-  return (data ?? []).map((row: {
-    id: string;
-    score: number;
-    total_questions: number;
-    percentage: number;
-    submitted_at: string;
-    mini_course_id: string;
-    mini_courses: Array<{
+  return (data ?? [])
+    .map((row: {
       id: string;
-      title: string;
-      share_token: string;
-      pass_percentage: number;
-    }>;
-  }) => {
-    const mc = row.mini_courses[0]!;
-    return {
-      id: row.id,
-      courseId: mc.id,
-      courseTitle: mc.title,
-      shareToken: mc.share_token,
-      score: row.score,
-      totalQuestions: row.total_questions,
-      percentage: row.percentage,
-      passed: row.percentage >= (mc.pass_percentage ?? 40),
-      passPercentage: mc.pass_percentage ?? 40,
-      submittedAt: row.submitted_at,
-    };
-  });
+      score: number;
+      total_questions: number;
+      percentage: number;
+      submitted_at: string;
+      mini_course_id: string;
+      mini_courses: Array<{
+        id: string;
+        title: string;
+        share_token: string;
+        pass_percentage: number;
+      }>;
+    }) => {
+      const mc = row.mini_courses[0];
+      if (!mc) {
+        console.warn('[getStudentAttempts] dropping attempt with missing course join', {
+          attemptId: row.id,
+          miniCourseId: row.mini_course_id,
+          studentEmail,
+        });
+        return null;
+      }
+      return {
+        id: row.id,
+        courseId: mc.id,
+        courseTitle: mc.title,
+        shareToken: mc.share_token,
+        score: row.score,
+        totalQuestions: row.total_questions,
+        percentage: row.percentage,
+        passed: row.percentage >= (mc.pass_percentage ?? 40),
+        passPercentage: mc.pass_percentage ?? 40,
+        submittedAt: row.submitted_at,
+      };
+    })
+    .filter((x): x is StudentAttemptSummary => x !== null);
 }
 
 interface AttemptRow {
