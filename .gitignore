@@ -145,9 +145,18 @@ skills-lock.json
 logbook.md
 progress1.md
 psm2-reports/
+output/
+sdd_assets_uml_v2 copy/
+output_v2/
+srs_assets copy/
+documents_psm2/
+base/
+Mohammad_Areeb/
+
 
 # macOS
 .DS_Store
 
 # Netlify
 .netlify/
+
