@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Check, X } from 'lucide-react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { ChevronLeft, ChevronRight, Check, X, LogIn } from 'lucide-react';
 import { apiService } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { setReturnUrl } from '../services/auth';
 import { CollapsibleLesson } from '../components/common/CollapsibleLesson';
 import { SegmentControl } from '../components/common/SegmentControl';
 import type { SegmentOption } from '../components/common/SegmentControl';
@@ -31,24 +32,17 @@ function parseTitleParts(fullTitle: string): { courseName: string; entries: stri
 export function QuizPage() {
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token') || '';
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  const navigate = useNavigate();
 
   const [course, setCourse] = useState<PublicCourse | null>(null);
   const [view, setView] = useState<QuizView>('course');
-  const [studentName, setStudentName] = useState(user?.name || '');
-  const [nameConfirmed, setNameConfirmed] = useState(isAuthenticated);
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [result, setResult] = useState<QuizSubmissionResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
-
-  useEffect(() => {
-    if (user?.name && !studentName) {
-      setStudentName(user.name);
-    }
-  }, [user]);
 
   useEffect(() => {
     if (!token) {
@@ -101,8 +95,8 @@ export function QuizPage() {
     try {
       setSubmitting(true);
       setError('');
+      // Identity (student name + email) is derived from the auth token server-side.
       const response = await apiService.submitQuiz(token, {
-        studentName,
         answers: course.questions.map((q) => ({
           questionId: q.id,
           selectedOptionIndex: answers[q.id],
@@ -117,7 +111,13 @@ export function QuizPage() {
     }
   };
 
-  if (loading) {
+  const handleSignIn = () => {
+    // Remember the quiz link so the user is returned here after OAuth.
+    setReturnUrl(window.location.pathname + window.location.search);
+    navigate('/login');
+  };
+
+  if (loading || authLoading) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <p className="text-body-gray">Loading quiz...</p>
@@ -142,6 +142,7 @@ export function QuizPage() {
   }
 
   const optionLabels = ['A', 'B', 'C', 'D'];
+  const quizLocked = !isAuthenticated;
 
   return (
     <div className="min-h-screen bg-white py-6 sm:py-8 px-4">
@@ -168,7 +169,7 @@ export function QuizPage() {
           </div>
         </div>
 
-        {/* Course View */}
+        {/* Course View (always public) */}
         {view === 'course' && (
           <div className="surface-card p-6 sm:p-8">
             <CollapsibleLesson
@@ -179,38 +180,40 @@ export function QuizPage() {
           </div>
         )}
 
-        {/* Quiz View - Name Entry */}
-        {view === 'quiz' && !result && !nameConfirmed && (
-          <div className="surface-card p-6">
-            <label className="block text-sm font-semibold text-near-black mb-2">
-              Enter your name to begin
-            </label>
-            <input
-              className="field mb-3"
-              value={studentName}
-              onChange={(e) => setStudentName(e.target.value)}
-              placeholder="Your full name"
-              autoFocus
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && studentName.trim().length >= 2) {
-                  e.preventDefault();
-                  setNameConfirmed(true);
-                }
-              }}
-            />
+        {/* Quiz View - locked for anonymous visitors */}
+        {view === 'quiz' && quizLocked && !result && (
+          <div className="surface-card p-6 sm:p-8 text-center">
+            <div className="mx-auto w-12 h-12 rounded-full bg-light-mint flex items-center justify-center mb-3">
+              <LogIn className="w-6 h-6 text-positive" />
+            </div>
+            <h2 className="text-lg font-bold text-near-black mb-2">
+              Sign in to take this quiz
+            </h2>
+            <p className="text-sm text-body-gray mb-1">
+              Quiz attempts are recorded against your account so you can review
+              your history in the Student Dashboard.
+            </p>
+            <p className="text-xs text-muted-gray mb-5">
+              The course lesson above is still viewable without signing in.
+            </p>
             <button
               type="button"
-              onClick={() => setNameConfirmed(true)}
-              disabled={studentName.trim().length < 2}
-              className="pill-primary disabled:opacity-50"
+              onClick={handleSignIn}
+              className="pill-primary inline-flex items-center gap-2"
             >
-              Start Quiz
+              <LogIn className="w-4 h-4" /> Sign in with Google
             </button>
+            {user && (
+              <p className="text-xs text-muted-gray mt-3">
+                Signed in as {user.email} ({user.role}) — but the quiz attempt
+                could not be linked. Try signing out and back in.
+              </p>
+            )}
           </div>
         )}
 
-        {/* Quiz View - Taking */}
-        {view === 'quiz' && !result && nameConfirmed && (
+        {/* Quiz View - taking (authenticated) */}
+        {view === 'quiz' && !result && isAuthenticated && (
           <div className="space-y-4">
             {/* Question card */}
             {currentQuestion && (
@@ -342,6 +345,11 @@ export function QuizPage() {
               <p className="text-sm text-body-gray">
                 {result.percentage}% score
               </p>
+              {user && (
+                <p className="text-xs text-muted-gray mt-2">
+                  Attempt saved against {user.email}
+                </p>
+              )}
             </div>
 
             {/* Per-question review */}

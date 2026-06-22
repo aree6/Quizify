@@ -82,7 +82,7 @@ export const apiService = {
 
   async submitQuiz(
     token: string,
-    payload: { studentName: string; answers: Array<{ questionId: string; selectedOptionIndex: number }> },
+    payload: { answers: Array<{ questionId: string; selectedOptionIndex: number }> },
   ) {
     const { data } = await http.post<QuizSubmissionResult>(
       `/api/public/course/${encodeURIComponent(token)}/submit`,
