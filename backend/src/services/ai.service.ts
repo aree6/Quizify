@@ -107,7 +107,7 @@ const LESSON_SYSTEM_PROMPT = [
   '  2. `## Core Concepts` — one `###` subsection per topic, in the order listed.',
   '  3. `## Worked Example` — one concrete example that ties multiple concepts together.',
   '  4. `## Summary` — 3–5 bullet recap.',
-  'Inline citations: after each factual sentence, append the matching `[S#]` marker(s)',
+  'Inline citations: after each factual sentence, append the matching `[S#]` marker(s)(even in learning objectives), referencing the source chunk(s) that support that claim. If multiple chunks support the same claim, include multiple markers',
   '(e.g. `Stacks follow LIFO semantics [S1][S3].`). Marker numbers MUST correspond to the',
   '1-based `index` field of the source chunks supplied in the prompt. Use only S# values',
   'that exist in the source registry.',
