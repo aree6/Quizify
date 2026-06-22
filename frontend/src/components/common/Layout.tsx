@@ -5,7 +5,6 @@ import {
   PlusCircle,
   BookOpen,
   BarChart3,
-  FileQuestion,
   LogOut,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -25,7 +24,10 @@ const navItems: NavItem[] = [
   { path: 'create-course', label: 'Create Course', icon: PlusCircle, roles: ['Lecturer'] },
   { path: 'my-courses', label: 'My Courses', icon: BookOpen, roles: ['Lecturer'] },
   { path: 'analytics', label: 'Analytics', icon: BarChart3, roles: ['Lecturer'] },
-  { path: '/quiz', label: 'Take Quiz', icon: FileQuestion, roles: ['Student'], absolute: true },
+  // Note: Student "Take Quiz" is integrated into the Student Dashboard
+  // (paste-link input + recent attempts). The Quiz page itself is only
+  // reached via a share link that includes ?token=...; it is not a
+  // top-level destination, so it is intentionally not in the top nav.
 ];
 
 export function Layout({ children }: { children: React.ReactNode }) {
