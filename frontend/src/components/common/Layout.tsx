@@ -48,7 +48,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="app-shell min-h-screen">
-      <header className="sticky top-0 z-50 bg-white">
+      <header className="sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8 py-2 sm:py-3">
           <div className="flex items-center justify-center gap-1  overflow-x-auto pb-1 scrollbar-hide">
             <div className="shrink-0 sm:mr-4">
@@ -89,7 +89,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       </header>
 
       <main>
-        <div className="max-w-7xl mx-auto p-2">{children}</div>
+        <div className="max-w-7xl mx-auto px-4 py-2 sm:px-6 lg:px-8">{children}</div>
       </main>
     </div>
   );

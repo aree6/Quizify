@@ -38,8 +38,10 @@
 }
 
 body {
-  background: var(--pure-white);
   color: var(--near-black);
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0.85)),
+    url('./assets/bg.jpg') center / cover no-repeat fixed;
 }
 
 button,
@@ -52,8 +54,12 @@ button,
   transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease, opacity 150ms ease;
 }
 
-.pulse-hover:hover {
+.pulse-hover:not(:disabled):hover {
   opacity: 0.95;
+}
+
+.pulse-hover:disabled {
+  cursor: not-allowed;
 }
 
 .card-hover {
@@ -62,11 +68,11 @@ button,
 
 @layer components {
   .app-shell {
-    @apply min-h-screen bg-pure-white;
+    @apply min-h-screen;
   }
 
   .section-title {
-    @apply text-[2rem] sm:text-[2.5rem] font-bold text-near-black;
+    @apply text-[1.5rem] sm:text-[2.5rem] font-bold text-near-black;
     line-height: 1.1;
   }
 
@@ -82,45 +88,93 @@ button,
   }
 
   .surface-card {
-    @apply bg-white rounded-lg;
+    @apply rounded-lg;
   }
 
   .ring-card {
-    @apply bg-white rounded-lg;
+    @apply rounded-lg;
     box-shadow: var(--card-ring);
   }
 
   .pill-primary {
-    @apply inline-flex items-center justify-center px-5 py-2.5 text-sm font-semibold rounded-[999px] bg-lime text-dark-green border border-transparent cursor-pointer;
+    @apply inline-flex items-center justify-center px-5 py-2.5 text-sm font-semibold rounded-[999px] bg-lime text-dark-green border border-transparent;
     transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease, opacity 150ms ease;
+  }
+
+  .pill-primary:not(:disabled) {
+    cursor: pointer;
+  }
+
+  .pill-primary:disabled {
+    cursor: not-allowed;
   }
 
   .pill-dark {
-    @apply inline-flex items-center justify-center px-5 py-2.5 text-sm font-semibold rounded-[999px] bg-near-black text-white border border-transparent cursor-pointer;
+    @apply inline-flex items-center justify-center px-5 py-2.5 text-sm font-semibold rounded-[999px] bg-near-black text-white border border-transparent;
     transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease, opacity 150ms ease;
+  }
+
+  .pill-dark:not(:disabled) {
+    cursor: pointer;
+  }
+
+  .pill-dark:disabled {
+    cursor: not-allowed;
   }
 
   .pill-secondary {
-    @apply inline-flex items-center justify-center px-5 py-2.5 text-sm font-semibold rounded-[999px] bg-chip-gray text-near-black border border-transparent cursor-pointer;
+    @apply inline-flex items-center justify-center px-5 py-2.5 text-sm font-semibold rounded-[999px] bg-chip-gray text-near-black border border-transparent;
     transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease, opacity 150ms ease;
+  }
+
+  .pill-secondary:not(:disabled) {
+    cursor: pointer;
+  }
+
+  .pill-secondary:disabled {
+    cursor: not-allowed;
   }
 
   .pill-icon {
-    @apply inline-flex items-center justify-center w-9 h-9 rounded-[999px] bg-chip-gray text-near-black border border-transparent cursor-pointer;
+    @apply inline-flex items-center justify-center w-9 h-9 rounded-[999px] bg-chip-gray text-near-black border border-transparent;
     transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease, opacity 150ms ease;
   }
 
+  .pill-icon:not(:disabled) {
+    cursor: pointer;
+  }
+
+  .pill-icon:disabled {
+    cursor: not-allowed;
+  }
+
   .chip {
-    @apply inline-flex items-center px-4 py-2 text-sm font-medium rounded-[999px] bg-chip-gray text-near-black border border-transparent cursor-pointer;
+    @apply inline-flex items-center px-4 py-2 text-sm font-medium rounded-[999px] bg-chip-gray text-near-black border border-transparent;
     transition: background-color 150ms ease, color 150ms ease, opacity 150ms ease;
   }
 
+  .chip:not(:disabled) {
+    cursor: pointer;
+  }
+
+  .chip:disabled {
+    cursor: not-allowed;
+  }
+
   .chip-active {
-    @apply inline-flex items-center px-4 py-2 text-sm font-medium rounded-[999px] bg-near-black text-white border border-near-black cursor-pointer;
+    @apply inline-flex items-center px-4 py-2 text-sm font-medium rounded-[999px] bg-near-black text-white border border-near-black;
+  }
+
+  .chip-active:not(:disabled) {
+    cursor: pointer;
+  }
+
+  .chip-active:disabled {
+    cursor: not-allowed;
   }
 
   .field {
-    @apply w-full px-4 py-3 text-sm rounded-lg bg-white text-near-black;
+    @apply w-full px-4 py-3 text-sm rounded-lg text-near-black;
     border: 1px solid #afafaf;
   }
 
@@ -131,7 +185,7 @@ button,
   }
 
   .top-stat {
-    @apply p-6 rounded-lg bg-white;
+    @apply p-6 rounded-lg;
     box-shadow: var(--card-ring);
   }
 
@@ -153,29 +207,29 @@ button,
   }
 
   .loading-screen {
-    @apply min-h-screen flex items-center justify-center text-body-gray bg-white;
+    @apply min-h-screen flex items-center justify-center text-body-gray;
   }
 }
 
-.pill-primary:hover,
-.pill-dark:hover,
-.pill-secondary:hover,
-.pill-icon:hover,
-.chip:hover {
+.pill-primary:not(:disabled):hover,
+.pill-dark:not(:disabled):hover,
+.pill-secondary:not(:disabled):hover,
+.pill-icon:not(:disabled):hover,
+.chip:not(:disabled):hover {
   opacity: 1;
 }
 
-.pill-primary:hover {
+.pill-primary:not(:disabled):hover {
   border-color: var(--near-black);
 }
 
-.pill-dark:hover {
+.pill-dark:not(:disabled):hover {
   border-color: var(--lime);
 }
 
-.pill-secondary:hover,
-.pill-icon:hover,
-.chip:hover {
+.pill-secondary:not(:disabled):hover,
+.pill-icon:not(:disabled):hover,
+.chip:not(:disabled):hover {
   border-color: var(--near-black);
 }
 

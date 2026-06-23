@@ -75,7 +75,15 @@ export function QuizPage() {
 
   const answerCurrent = (optionIndex: number) => {
     if (!currentQuestion || result) return;
-    setAnswers((prev) => ({ ...prev, [currentQuestion.id]: optionIndex }));
+    setAnswers((prev) => {
+      const current = prev[currentQuestion.id];
+      if (current === optionIndex) {
+        const next = { ...prev };
+        delete next[currentQuestion.id];
+        return next;
+      }
+      return { ...prev, [currentQuestion.id]: optionIndex };
+    });
   };
 
   const goToQuestion = (idx: number) => {
@@ -119,7 +127,7 @@ export function QuizPage() {
 
   if (loading || authLoading) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <p className="text-body-gray">Loading quiz...</p>
       </div>
     );
@@ -127,15 +135,15 @@ export function QuizPage() {
 
   if (error && !course) {
     return (
-      <div className="min-h-screen bg-white p-6">
-        <PageError error={error} />
+      <div className="min-h-screen p-6">
+        <div className="max-w-3xl mx-auto"><PageError error={error} /></div>
       </div>
     );
   }
 
   if (!course) {
     return (
-      <div className="min-h-screen bg-white p-6 text-body-gray">
+      <div className="min-h-screen p-6 text-body-gray">
         Course unavailable.
       </div>
     );
@@ -145,7 +153,7 @@ export function QuizPage() {
   const quizLocked = !isAuthenticated;
 
   return (
-    <div className="min-h-screen bg-white py-6 sm:py-8 px-4">
+    <div className="min-h-screen py-6 sm:py-8 px-4">
       <div className="max-w-3xl mx-auto">
         {/* Header */}
         <div className="mb-6 text-center">
@@ -171,7 +179,7 @@ export function QuizPage() {
 
         {/* Course View (always public) */}
         {view === 'course' && (
-          <div className="surface-card p-6 sm:p-8">
+          <div className="surface-card  sm:p-8">
             <CollapsibleLesson
               markdown={course.lessonContent}
               sources={course.sources}
@@ -182,11 +190,11 @@ export function QuizPage() {
 
         {/* Quiz View - locked for anonymous visitors */}
         {view === 'quiz' && quizLocked && !result && (
-          <div className="surface-card p-6 sm:p-8 text-center">
+          <div className="surface-card sm:p-8 text-center">
             <div className="mx-auto w-12 h-12 rounded-full bg-light-mint flex items-center justify-center mb-3">
               <LogIn className="w-6 h-6 text-positive" />
             </div>
-            <h2 className="text-lg font-bold text-near-black mb-2">
+            <h2 className="text-base sm:text-lg font-bold text-near-black mb-2">
               Sign in to take this quiz
             </h2>
             <p className="text-sm text-body-gray mb-1">
@@ -217,7 +225,7 @@ export function QuizPage() {
           <div className="space-y-4">
             {/* Question card */}
             {currentQuestion && (
-              <div className="surface-card p-6">
+              <div className="surface-card sm:p-6">
                 {/* Progress bar */}
                 <div className="mb-4">
                   <div className="flex items-center justify-between mb-2">
@@ -251,7 +259,7 @@ export function QuizPage() {
                         className={`w-full flex items-center gap-3 p-3 rounded-lg border text-left cursor-pointer transition-colors ${
                           selected
                             ? 'border-lime bg-light-mint'
-                            : 'border-muted-gray bg-white hover:border-hover-gray'
+                            : 'border-hover-gray bg-white hover:border-lime'
                         }`}
                       >
                         <span
@@ -280,7 +288,7 @@ export function QuizPage() {
                 type="button"
                 onClick={() => goToQuestion(currentQuestionIndex - 1)}
                 disabled={currentQuestionIndex === 0}
-                className="pill-secondary flex items-center gap-1.5 disabled:opacity-40"
+                className="pill-secondary flex items-center gap-1.5 disabled:opacity-40 min-w-[100px] justify-center"
               >
                 <ChevronLeft className="w-4 h-4" /> Previous
               </button>
@@ -309,7 +317,7 @@ export function QuizPage() {
                 type="button"
                 onClick={() => goToQuestion(currentQuestionIndex + 1)}
                 disabled={currentQuestionIndex >= totalQuestions - 1}
-                className="pill-secondary flex items-center gap-1.5 disabled:opacity-40"
+                className="pill-secondary flex items-center gap-1.5 disabled:opacity-40 min-w-[100px] justify-center"
               >
                 Next <ChevronRight className="w-4 h-4" />
               </button>
@@ -335,11 +343,11 @@ export function QuizPage() {
         {view === 'quiz' && result && (
           <div className="space-y-5">
             {/* Score card */}
-            <div className="surface-card p-6 sm:p-8 text-center">
+            <div className="surface-card sm:p-8 text-center">
               <p className={`text-lg font-bold mb-2 ${result.passed ? 'text-positive' : 'text-danger'}`}>
                 {result.passed ? 'Passed' : 'Not Passed'}
               </p>
-              <p className="text-3xl font-extrabold text-near-black mb-1">
+              <p className="text-2xl sm:text-3xl font-extrabold text-near-black mb-1">
                 {result.score}/{result.total}
               </p>
               <p className="text-sm text-body-gray">
@@ -361,7 +369,7 @@ export function QuizPage() {
                 const isCorrect = answer?.isCorrect ?? false;
 
                 return (
-                  <div key={question.id} className="surface-card p-5">
+                  <div key={question.id} className="surface-card p-4 sm:p-5">
                     <div className="flex items-start gap-2 mb-3">
                       {isCorrect ? (
                         <Check className="w-5 h-5 text-positive flex-shrink-0 mt-0.5" />
