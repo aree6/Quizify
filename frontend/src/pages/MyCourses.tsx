@@ -5,22 +5,9 @@ import { apiService } from '../services/api';
 import { PageLoading, PageEmpty, PageError } from '../components/common/PageState';
 import { useConfirmDialog } from '../components/common/useConfirmDialog';
 import { useToast } from '../components/common/Toast';
+import { timeAgo, parseTitleParts, pluralize } from '../utils/helpers';
 
 type SortKey = 'recent' | 'courseCode' | 'title' | 'questions' | 'attempts';
-
-function timeAgo(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return 'Just now';
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  const days = Math.floor(hrs / 24);
-  if (days < 30) return `${days}d ago`;
-  const months = Math.floor(days / 30);
-  if (months < 12) return `${months}mo ago`;
-  return `${Math.floor(months / 12)}y ago`;
-}
 
 export function MyCoursesPage() {
   const [courses, setCourses] = useState<CourseSummary[]>([]);
@@ -115,12 +102,23 @@ export function MyCoursesPage() {
       ) : (
         <div className="space-y-3">
           {confirmDialog}
-          {sorted.map((course) => (
-            <div key={course.id} className="surface-card border border-chip-gray p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <div>
-                <p className="text-base font-bold text-near-black">{course.title}</p>
-                <p className="text-sm text-body-gray">
-                  {course.courseCode} • {course.questionCount} questions • {course.attempts} attempts • {timeAgo(course.createdAt)}
+          {sorted.map((course) => {
+            const { courseName, entries } = parseTitleParts(course.title);
+            return (
+            <div key={course.id} className="surface-card border border-chip-gray p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-base font-bold text-near-black truncate">{courseName}</p>
+                {entries.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {entries.map((entry) => (
+                      <span key={entry} className="px-2 py-0.5 text-[11px] rounded-full bg-chip-gray text-body-gray font-medium">
+                        {entry}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <p className="text-sm text-body-gray mt-1.5">
+                  {course.courseCode} • {pluralize(course.questionCount, 'question')} • {pluralize(course.attempts, 'attempt')} • {timeAgo(course.createdAt)}
                 </p>
               </div>
 
@@ -145,7 +143,8 @@ export function MyCoursesPage() {
                 </button>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

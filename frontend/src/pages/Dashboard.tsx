@@ -12,6 +12,8 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { apiService } from '../services/api';
 import { PageEmpty, PageError, PageLoading } from '../components/common/PageState';
+import { timeAgo } from '../utils/helpers';
+import { barColor } from '../components/common/analyticsTokens';
 import type { StudentAttempt } from '../types';
 
 interface DashboardCard {
@@ -39,14 +41,16 @@ function cardSet(role?: 'Lecturer' | 'Admin' | 'Student') {
   return [];
 }
 
-function formatAttemptDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-MY', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+function parseTitleParts(fullTitle: string): { courseName: string; entries: string[] } {
+  const idx = fullTitle.indexOf(' — ');
+  if (idx === -1) return { courseName: fullTitle, entries: [] };
+  const courseName = fullTitle.slice(0, idx).trim();
+  const entries = fullTitle
+    .slice(idx + 3)
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  return { courseName, entries };
 }
 
 function extractToken(input: string): string {
@@ -105,13 +109,13 @@ function StudentDashboard() {
       </div>
 
       {/* Take Quiz — the central hub */}
-      <div className="surface-card p-6 sm:p-8">
+      <div className="surface-card sm:p-8">
         <div className="flex items-center gap-3 mb-4">
           <div className="w-11 h-11 rounded-full bg-light-mint flex items-center justify-center">
             <FileQuestion className="w-5 h-5 text-positive" />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-near-black">Take Quiz</h2>
+            <h2 className="text-lg sm:text-xl font-bold text-near-black">Take Quiz</h2>
             <p className="text-xs text-muted-gray">
               Open available quiz links and submit attempts.
             </p>
@@ -119,7 +123,7 @@ function StudentDashboard() {
         </div>
 
         {/* Open an available quiz link */}
-        <div className="rounded-lg border border-chip-gray p-4 mb-5">
+        <div className="rounded-lg border border-chip-gray p-2 mb-5">
           <label
             htmlFor="quiz-link"
             className="block text-sm font-semibold text-near-black mb-2"
@@ -176,44 +180,47 @@ function StudentDashboard() {
             <PageEmpty message="No quiz attempts yet. Paste a quiz link above to get started." />
           ) : (
             <ul className="space-y-2">
-              {attempts.map((attempt) => (
+              {attempts.map((attempt) => {
+                const { courseName, entries } = parseTitleParts(attempt.courseTitle);
+                return (
                 <li
                   key={attempt.id}
-                  className="flex items-center justify-between gap-3 p-3.5 rounded-lg border border-chip-gray hover:border-hover-gray transition-colors bg-white"
+                  className="p-3 rounded-lg border border-chip-gray hover:border-hover-gray transition-colors"
                 >
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-near-black truncate">
-                      {attempt.courseTitle}
+                  <p className="text-sm font-semibold text-near-black truncate">
+                    {courseName}
+                  </p>
+                  <div className="flex items-center justify-between gap-2 flex-wrap mt-1.5">
+                    <p className="text-xs text-muted-gray">
+                      {timeAgo(attempt.submittedAt)}
                     </p>
-                    <p className="text-xs text-muted-gray mt-0.5">
-                      {formatAttemptDate(attempt.submittedAt)}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-3 shrink-0">
-                    <div className="text-right">
-                      <p className="text-sm font-bold text-near-black">
-                        {attempt.score}/{attempt.totalQuestions}
+                    <div className="flex items-center gap-3">
+                      <p className="text-sm font-bold" style={{ color: barColor(attempt.percentage) }}>
+                        {attempt.percentage}%
                       </p>
-                      <p
-                        className={`text-xs font-semibold ${
-                          attempt.passed ? 'text-positive' : 'text-danger'
-                        }`}
+                      <button
+                        type="button"
+                        onClick={() => handleViewBreakdown(attempt.id)}
+                        className="pill-secondary flex items-center gap-1 text-xs"
+                        title="View detailed breakdown"
                       >
-                        {attempt.percentage}% {attempt.passed ? 'Passed' : 'Failed'}
-                      </p>
+                        <ClipboardList className="w-3.5 h-3.5" />
+                        View breakdown
+                      </button>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => handleViewBreakdown(attempt.id)}
-                      className="pill-secondary flex items-center gap-1 text-xs"
-                      title="View detailed breakdown"
-                    >
-                      <ClipboardList className="w-3.5 h-3.5" />
-                      View breakdown
-                    </button>
                   </div>
+                  {entries.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {entries.map((entry) => (
+                        <span key={entry} className="px-2 py-0.5 text-[11px] rounded-full bg-chip-gray text-body-gray font-medium">
+                          {entry}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </li>
-              ))}
+                );
+              })}
             </ul>
           )}
         </div>
@@ -245,7 +252,7 @@ export function DashboardPage() {
               <div className="w-12 h-12 rounded-full bg-chip-gray flex items-center justify-center mb-4">
                 <Icon className="w-5 h-5 text-near-black" />
               </div>
-              <h3 className="text-xl font-bold text-near-black mb-1">{card.title}</h3>
+              <h3 className="text-lg sm:text-xl font-bold text-near-black mb-1">{card.title}</h3>
               <p className="text-sm text-body-gray mb-4">{card.desc}</p>
               <Link to={card.path} className="pill-primary">
                 {card.cta}
@@ -256,7 +263,7 @@ export function DashboardPage() {
       </div>
 
       <div className="mt-8 surface-card p-6">
-        <h3 className="text-lg font-bold text-near-black mb-2">Recent Activity</h3>
+        <h3 className="text-base sm:text-lg font-bold text-near-black mb-2">Recent Activity</h3>
         <PageEmpty
           message="No activity yet. Start by uploading materials or creating a mini-course."
         />

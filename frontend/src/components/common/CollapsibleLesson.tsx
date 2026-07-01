@@ -149,7 +149,7 @@ export function CollapsibleLesson({ markdown, sources, className }: CollapsibleL
               <button
                 type="button"
                 onClick={() => toggleSection(idx)}
-                className="w-full flex items-center gap-2 px-4 py-3 bg-chip-gray/60 hover:bg-chip-gray cursor-pointer text-left"
+                className="w-full flex items-center gap-2 px-4 py-3 cursor-pointer text-left"
               >
                 {isExpanded ? (
                   <ChevronDown className="w-4 h-4 text-body-gray flex-shrink-0" />
@@ -165,7 +165,7 @@ export function CollapsibleLesson({ markdown, sources, className }: CollapsibleL
                 </span>
               </button>
               {isExpanded && (
-                <div className="px-5 py-3 bg-white text-sm text-body-gray leading-relaxed markdown-content">
+                <div className="px-2 sm:px-5 py-3 text-sm text-body-gray leading-relaxed markdown-content">
                   {renderMarkdown(section.content)}
                 </div>
               )}

@@ -34,6 +34,7 @@ import type {
 import { apiService } from '../services/api';
 import { PageLoading, PageEmpty, PageError } from '../components/common/PageState';
 import { Breadcrumbs } from '../components/common/Breadcrumbs';
+import { timeAgo, pluralize } from '../utils/helpers';
 import {
   BLOOM_LABELS,
   SOLO_LABELS,
@@ -56,20 +57,6 @@ function cellTextColor(pct: number): string {
   return SCORE_COLORS.weak;
 }
 
-function timeAgo(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return 'Just now';
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  const days = Math.floor(hrs / 24);
-  if (days < 30) return `${days}d ago`;
-  const months = Math.floor(days / 30);
-  if (months < 12) return `${months}mo ago`;
-  return `${Math.floor(months / 12)}y ago`;
-}
-
 type StudentSort = 'name' | 'score' | 'percentage' | 'date';
 
 function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ value: number }>; label?: string }) {
@@ -87,7 +74,7 @@ function CountTooltip({ active, payload, label }: { active?: boolean; payload?: 
   return (
     <div className="bg-white rounded-lg p-2 ring-card text-sm">
       <p className="font-semibold text-near-black">{label}</p>
-      <p className="text-body-gray">{payload[0].value} students</p>
+      <p className="text-body-gray">{pluralize(payload[0].value, 'student')}</p>
     </div>
   );
 }
@@ -108,7 +95,7 @@ function KpiCard({ icon: Icon, label, value, color, sub }: KpiCardProps) {
       </div>
       <div>
         <p className="text-xs text-body-gray mb-0.5">{label}</p>
-        <p className="text-2xl font-bold" style={{ color: color ?? SCORE_COLORS.nearBlack }}>
+        <p className="text-xl sm:text-2xl font-bold" style={{ color: color ?? SCORE_COLORS.nearBlack }}>
           {value}
         </p>
         {sub && <p className="text-xs text-muted-gray mt-0.5">{sub}</p>}
@@ -359,7 +346,7 @@ function StudentRow({ student, rank, expanded, onToggle }: StudentRowProps) {
       </div>
 
       {expanded && (
-        <div className="px-4 pb-4 md:col-span-7">
+        <div className="px-4 pt-4 pb-4 md:col-span-7">
           <StudentDiagnostic student={student} />
         </div>
       )}

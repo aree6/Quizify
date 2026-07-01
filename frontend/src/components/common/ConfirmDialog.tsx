@@ -36,7 +36,7 @@ export function ConfirmDialog({
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-near-black/40" onClick={onCancel} />
       <div className="relative bg-white rounded-lg shadow-xl p-6 w-full max-w-sm mx-4">
-        <h3 className="text-lg font-bold text-near-black mb-2">{title}</h3>
+        <h3 className="text-base sm:text-lg font-bold text-near-black mb-2">{title}</h3>
         <p className="text-sm text-body-gray mb-6">{message}</p>
         <div className="flex items-center justify-end gap-3">
           <button type="button" onClick={onCancel} className="pill-secondary px-4 py-2 text-sm">
