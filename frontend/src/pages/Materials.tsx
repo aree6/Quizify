@@ -8,6 +8,7 @@ import { useConfirmDialog } from '../components/common/useConfirmDialog';
 import { useToast } from '../components/common/Toast';
 import { Breadcrumbs } from '../components/common/Breadcrumbs';
 import { SegmentControl } from '../components/common/SegmentControl';
+import { pluralize } from '../utils/helpers';
 import type { SegmentOption } from '../components/common/SegmentControl';
 
 type ViewMode = 'view' | 'upload';
@@ -243,7 +244,9 @@ export function MaterialsPage() {
   const folderInputRef = useRef<HTMLInputElement>(null);
   const replaceInputRef = useRef<HTMLInputElement>(null);
   const [replaceTarget, setReplaceTarget] = useState<Material | null>(null);
+  const [replacing, setReplacing] = useState<Set<string>>(new Set());
   const [reindexing, setReindexing] = useState<Set<string>>(new Set());
+  const abortRef = useRef(false);
 
   const loadMaterials = async () => {
     try {
@@ -306,15 +309,6 @@ export function MaterialsPage() {
     return filtered;
   }, [groupedStoredByCourse, courseQuery]);
 
-  const stats = useMemo(
-    () => ({
-      files: materials.length,
-      chunks: materials.reduce((sum, item) => sum + Number(item.chunk_count || 0), 0),
-      bytes: materials.reduce((sum, item) => sum + Number(item.file_size || 0), 0),
-    }),
-    [materials],
-  );
-
   const appendQueue = (items: QueueItem[]) => {
     if (items.length === 0) {
       setError('No supported files found. Upload PDF or PPTX.');
@@ -359,11 +353,16 @@ export function MaterialsPage() {
     setUploading(true);
     setUploadProgress(0);
     setError('');
+    abortRef.current = false;
 
     let completed = 0;
     const total = pending.length;
 
     for (const item of pending) {
+      if (abortRef.current) {
+        setQueue((prev) => prev.map((q) => (q.status === 'uploading' ? { ...q, status: 'pending', error: undefined } : q)));
+        break;
+      }
       setQueue((prev) => prev.map((q) => (q.id === item.id ? { ...q, status: 'uploading', error: undefined } : q)));
       try {
         const resp = await apiService.uploadMaterialAdvanced({
@@ -444,6 +443,12 @@ export function MaterialsPage() {
       setUploadProgress(Math.round((completed / total) * 100));
     }
 
+    if (abortRef.current) {
+      setUploading(false);
+      setUploadProgress(0);
+      return;
+    }
+
     setUploading(false);
     setUploadProgress(100);
     await loadMaterials();
@@ -509,7 +514,9 @@ export function MaterialsPage() {
     setCollapsedUploadChapters((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
-  const openReplace = (item: Material) => {
+  const openReplace = async (item: Material) => {
+    const yes = await confirm(`Replace "${item.file_name}" with a new file? This will overwrite the existing material.`, { title: 'Replace Material', confirmLabel: 'Replace', destructive: true });
+    if (!yes) return;
     setReplaceTarget(item);
     replaceInputRef.current?.click();
   };
@@ -518,6 +525,21 @@ export function MaterialsPage() {
     const file = event.target.files?.[0];
     if (!file || !replaceTarget) return;
 
+    const lower = file.name.toLowerCase();
+    if (!lower.endsWith('.pdf') && !lower.endsWith('.pptx')) {
+      setError('Only PDF and PPTX files are supported for replacement.');
+      setReplaceTarget(null);
+      event.target.value = '';
+      return;
+    }
+    if (file.size > MAX_FILE_SIZE) {
+      setError(`File exceeds the 10 MB limit (${formatBytes(file.size)}).`);
+      setReplaceTarget(null);
+      event.target.value = '';
+      return;
+    }
+
+    setReplacing((prev) => new Set(prev).add(replaceTarget.id));
     try {
       await apiService.uploadMaterialAdvanced({
         file,
@@ -525,13 +547,19 @@ export function MaterialsPage() {
         materialType: replaceTarget.material_type,
         chapter: replaceTarget.material_type === 'slide' ? replaceTarget.chapter || undefined : undefined,
         chapterItemLabel: replaceTarget.material_type === 'slide' ? replaceTarget.chapter_item_label || undefined : undefined,
-        fileName: replaceTarget.file_name,
+        fileName: file.name,
         onDuplicate: 'replace',
       });
       await loadMaterials();
+      showToast(`Replaced "${replaceTarget.file_name}" with "${file.name}".`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Replace failed');
     } finally {
+      setReplacing((prev) => {
+        const next = new Set(prev);
+        next.delete(replaceTarget.id);
+        return next;
+      });
       setReplaceTarget(null);
       event.target.value = '';
     }
@@ -558,7 +586,7 @@ export function MaterialsPage() {
 
       {viewMode === 'upload' && (
         <div className="surface-card p-6 mb-6">
-          <div onDragOver={(event) => event.preventDefault()} onDrop={handleDrop} className="ring-card p-8 text-center mb-4">
+          <div onDragOver={(event) => event.preventDefault()} onDrop={handleDrop} className="ring-card p-4 sm:p-8 py-20 sm:py-32 text-center mb-4">
             <Upload className="w-8 h-8 mx-auto text-body-gray mb-2" />
             <p className="text-sm font-semibold text-near-black">Drop files here or click to select</p>
             <p className="text-xs text-body-gray mt-1">PDF / PPTX only · Max 10 MB per file</p>
@@ -598,10 +626,10 @@ export function MaterialsPage() {
               )}
 
               <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-                <p className="text-sm text-body-gray">{queue.length} file(s) ready to upload</p>
+                <p className="text-sm text-body-gray">{pluralize(queue.length, 'file')} ready to upload</p>
               </div>
 
-              <div className="space-y-4 max-h-[500px] overflow-y-auto pr-1 p-4 m-4">
+              <div className="space-y-4 max-h-[500px] overflow-y-auto pr-1 p-3 sm:p-4 sm:m-4">
                 {Object.entries(uploadHierarchy)
                   .sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true }))
                   .map(([courseCode, courseChapters]) => {
@@ -616,7 +644,7 @@ export function MaterialsPage() {
                           <button type="button" className="inline-flex items-center gap-2 min-w-0 flex-1" onClick={() => toggleUploadCourse(courseKey)}>
                             {courseCollapsed ? <ChevronRight className="w-4 h-4 flex-shrink-0" /> : <ChevronDown className="w-4 h-4 flex-shrink-0" />}
                             <p className="text-sm font-semibold text-near-black truncate">{getCourseDisplay(courseCode)}</p>
-                            <span className="text-xs text-body-gray flex-shrink-0">({totalFiles} files)</span>
+                            <span className="text-xs text-body-gray flex-shrink-0">({pluralize(totalFiles, 'file')})</span>
                           </button>
                           <button type="button" onClick={() => setEditingCourseCode(editingCourseCode === courseCode ? null : courseCode)} className="p-1.5 text-body-gray flex-shrink-0">
                             <Edit2 className="w-3.5 h-3.5" />
@@ -649,7 +677,7 @@ export function MaterialsPage() {
                                 const sortedItems = [...chapterItems].sort(compareQueueItems);
 
                                 return (
-                                  <div key={uploadChapterKey} className="border border-hover-gray rounded-lg p-3 bg-chip-gray/60">
+                                  <div key={uploadChapterKey} className="border border-hover-gray rounded-lg p-3">
                                     <button type="button" className="inline-flex items-center gap-2 mb-2" onClick={() => toggleUploadChapter(uploadChapterKey)}>
                                       {chapterCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                                       <span className="text-xs font-semibold text-near-black">{chapterKey}</span>
@@ -661,9 +689,9 @@ export function MaterialsPage() {
                                         {sortedItems.map((item) => {
                                           const chapterValue = item.materialType === 'course_info' ? 'Course Information' : item.chapterLabel || 'Chapter 1';
                                           return (
-                                            <div key={item.id} className="bg-white rounded-md p-3">
-                                              <div className="flex items-start justify-between gap-2 mb-2">
-                                                <div className="min-w-0 flex-1">
+                                            <div key={item.id} className="rounded-md p-3 sm:p-3">
+                                              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1 sm:gap-2 mb-2">
+                                                <div className="min-w-0">
                                                   <p
                                                     className="text-sm font-semibold text-near-black truncate"
                                                     onDoubleClick={() => {
@@ -675,12 +703,12 @@ export function MaterialsPage() {
                                                   </p>
                                                   <p className="text-xs text-body-gray">{formatBytes(item.file.size)}</p>
                                                 </div>
-                                                <div className="flex items-center gap-2 flex-shrink-0">
+                                                <div className="flex items-center gap-2">
                                                   {item.status === 'uploading' && <Loader className="w-4 h-4 text-body-gray animate-spin" />}
                                                   {item.status === 'success' && <CheckCircle className="w-4 h-4 text-positive" />}
                                                   {item.status === 'index_failed' && <AlertCircle className="w-4 h-4 text-body-gray" />}
                                                   {item.status === 'error' && <AlertCircle className="w-4 h-4 text-danger" />}
-                                                  {item.status === 'pending' && (
+                                                  {(item.status === 'pending' || item.status === 'error' || item.status === 'index_failed') && (
                                                     <button type="button" onClick={() => removeFromQueue(item.id)} className="p-1 text-body-gray">
                                                       <X className="w-4 h-4" />
                                                     </button>
@@ -728,7 +756,12 @@ export function MaterialsPage() {
                   })}
               </div>
 
-              <div className="mt-4 flex justify-end">
+              <div className="mt-4 flex justify-end gap-2">
+                {uploading && (
+                  <button type="button" onClick={() => { abortRef.current = true; }} className="pill-secondary text-xs">
+                    Cancel
+                  </button>
+                )}
                 <button type="button" onClick={uploadAll} disabled={uploading || queue.every((item) => item.status !== 'pending')} className="pill-primary text-xs">
                   {uploading ? 'Uploading...' : 'Upload All'}
                 </button>
@@ -774,57 +807,63 @@ export function MaterialsPage() {
 
                   return (
                     <div key={courseCode} className="surface-card overflow-hidden">
-                      <div className="px-4 sm:px-6 py-4 flex flex-wrap items-center justify-between gap-2">
-                        <button type="button" onClick={() => toggleStoredCourse(courseCode)} className="inline-flex items-center gap-2 text-left">
-                          {expanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                          <span className="text-lg font-bold text-near-black">{course?.name || courseCode}</span>
-                          <span className="text-sm text-body-gray">({courseCode})</span>
-                        </button>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm text-body-gray">{items.length} files</span>
-                          <button type="button" className="pill-icon" onClick={() => handleDeleteCourse(courseCode)}>
-                            <Trash2 className="w-4 h-4" />
+                      <div className="px-4 sm:px-6 py-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-2">
+                          <button type="button" onClick={() => toggleStoredCourse(courseCode)} className="inline-flex items-center gap-2 text-left min-w-0">
+                            {expanded ? <ChevronDown className="w-4 h-4 shrink-0" /> : <ChevronRight className="w-4 h-4 shrink-0" />}
+                            <span className="text-base sm:text-lg font-bold text-near-black truncate">{course?.name || courseCode}</span>
                           </button>
+                          <div className="flex items-center gap-2 pl-6 sm:pl-0">
+                            <span className="text-sm text-body-gray shrink-0">({courseCode})</span>
+                            <span className="text-sm text-body-gray shrink-0">{pluralize(items.length, 'file')}</span>
+                            <button type="button" className="pill-icon" onClick={() => handleDeleteCourse(courseCode)}>
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
                         </div>
                       </div>
 
                       {expanded && (
                         <div className="p-3 sm:p-4 tree-level">
                           {ci.length > 0 && (
-                            <div className="bg-white rounded-lg p-3 tree-node ">
+                            <div className="rounded-lg p-3 tree-node ">
                               <p className="text-sm font-semibold text-near-black mb-2">Course Information</p>
                               <div className="tree-level">
                                 {ci.map((item) => (
-                                  <div key={item.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg p-2 tree-node">
-                                    <div className="min-w-0 flex-1">
-                                      <p className="text-sm text-near-black truncate">{item.file_name}</p>
-                                      {item.error_message && <p className="text-xs text-danger mt-0.5">{item.error_message}</p>}
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                      {item.status === 'Active' && (
-                                        <span className={statusBadgeClass(item.status, item)}>{statusLabel(item.status, item)}</span>
-                                      )}
-                                      {item.status === 'Processing' && <span className={statusBadgeClass(item.status, item)}>{statusLabel(item.status, item)}</span>}
-                                      {item.status === 'Failed' && (
-                                        <span className={statusBadgeClass(item.status, item)}>{statusLabel(item.status, item)}</span>
-                                      )}
-                                      {(item.status === 'Failed' || (item.status === 'Active' && item.has_embeddings === false)) && (
-                                        <button
-                                          type="button"
-                                          className="pill-icon text-body-gray"
-                                          title="Retry indexing"
-                                          disabled={reindexing.has(item.id)}
-                                          onClick={() => handleReindex(item.id)}
-                                        >
-                                          {reindexing.has(item.id) ? <Loader className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                                  <div key={item.id} className="rounded-lg p-2 tree-node">
+                                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-2">
+                                      <div className="min-w-0">
+                                        <p className="text-sm text-near-black truncate">{item.file_name}</p>
+                                        {item.error_message && <p className="text-xs text-danger mt-0.5">{item.error_message}</p>}
+                                      </div>
+                                      <div className="flex items-center gap-2 flex-wrap">
+                                        {item.status === 'Active' && (
+                                          <span className={statusBadgeClass(item.status, item)}>{statusLabel(item.status, item)}</span>
+                                        )}
+                                        {item.status === 'Processing' && <span className={statusBadgeClass(item.status, item)}>{statusLabel(item.status, item)}</span>}
+                                        {item.status === 'Failed' && (
+                                          <span className={statusBadgeClass(item.status, item)}>{statusLabel(item.status, item)}</span>
+                                        )}
+                                        {(item.status === 'Failed' || (item.status === 'Active' && item.has_embeddings === false)) && (
+                                          <button
+                                            type="button"
+                                            className="pill-icon text-body-gray"
+                                            title="Retry indexing"
+                                            disabled={reindexing.has(item.id)}
+                                            onClick={() => handleReindex(item.id)}
+                                          >
+                                            {reindexing.has(item.id) ? <Loader className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                                          </button>
+                                        )}
+                                        {replacing.has(item.id) ? <Loader className="w-3.5 h-3.5 animate-spin" /> : (
+                                          <button type="button" className="pill-icon" onClick={() => openReplace(item)}>
+                                            <Edit2 className="w-3.5 h-3.5" />
+                                          </button>
+                                        )}
+                                        <button type="button" onClick={() => handleDelete(item.id)} className="pill-icon">
+                                          <Trash2 className="w-4 h-4" />
                                         </button>
-                                      )}
-                                      <button type="button" className="pill-icon" onClick={() => openReplace(item)}>
-                                        <Edit2 className="w-3.5 h-3.5" />
-                                      </button>
-                                      <button type="button" onClick={() => handleDelete(item.id)} className="pill-icon">
-                                        <Trash2 className="w-4 h-4" />
-                                      </button>
+                                      </div>
                                     </div>
                                   </div>
                                 ))}
@@ -847,7 +886,7 @@ export function MaterialsPage() {
                               });
 
                               return (
-                                <div key={chapter} className="bg-white rounded-lg pr-1 pt-1 pb-1  tree-node ">
+                                <div key={chapter} className="rounded-lg pr-1 pt-1 pb-1  tree-node ">
                                   <div className="flex items-center justify-between mb-2">
                                     <button type="button" onClick={() => toggleChapter(chapterKey)} className="inline-flex items-center gap-2">
                                       {chapterCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
@@ -868,39 +907,43 @@ export function MaterialsPage() {
                                           subgroupItems.map((item) => ({ ...item, _subgroup: subgroup }))
                                         )
                                         .map((item) => (
-                                          <div key={item.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg pt-2 pb-2 pl-2 tree-node">
-                                            <div className="min-w-0 flex-1">
-                                              <p className="text-sm text-near-black truncate">
-                                                <span className="text-muted-gray font-medium">{item._subgroup}</span> {item.file_name}
-                                              </p>
-                                              {item.error_message && <p className="text-xs text-danger mt-0.5">{item.error_message}</p>}
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                              <span className="text-xs text-body-gray">{formatBytes(item.file_size)}</span>
-                                              {item.status === 'Active' && (
-                                                <span className={statusBadgeClass(item.status, item)}>{statusLabel(item.status, item)}</span>
-                                              )}
-                                              {item.status === 'Processing' && <span className={statusBadgeClass(item.status, item)}>{statusLabel(item.status, item)}</span>}
-                                              {item.status === 'Failed' && (
-                                                <span className={statusBadgeClass(item.status, item)}>{statusLabel(item.status, item)}</span>
-                                              )}
-                                              {(item.status === 'Failed' || (item.status === 'Active' && item.has_embeddings === false)) && (
-                                                <button
-                                                  type="button"
-                                                  className="pill-icon text-body-gray"
-                                                  title="Retry indexing"
-                                                  disabled={reindexing.has(item.id)}
-                                                  onClick={() => handleReindex(item.id)}
-                                                >
-                                                  {reindexing.has(item.id) ? <Loader className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                                          <div key={item.id} className="rounded-lg pt-2 pb-2 pl-2 tree-node">
+                                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-2">
+                                              <div className="min-w-0">
+                                                <p className="text-sm text-near-black truncate">
+                                                  <span className="text-muted-gray font-medium">{item._subgroup}</span> {item.file_name}
+                                                </p>
+                                                {item.error_message && <p className="text-xs text-danger mt-0.5">{item.error_message}</p>}
+                                              </div>
+                                              <div className="flex items-center gap-2 flex-wrap">
+                                                <span className="text-xs text-body-gray shrink-0">{formatBytes(item.file_size)}</span>
+                                                {item.status === 'Active' && (
+                                                  <span className={statusBadgeClass(item.status, item)}>{statusLabel(item.status, item)}</span>
+                                                )}
+                                                {item.status === 'Processing' && <span className={statusBadgeClass(item.status, item)}>{statusLabel(item.status, item)}</span>}
+                                                {item.status === 'Failed' && (
+                                                  <span className={statusBadgeClass(item.status, item)}>{statusLabel(item.status, item)}</span>
+                                                )}
+                                                {(item.status === 'Failed' || (item.status === 'Active' && item.has_embeddings === false)) && (
+                                                  <button
+                                                    type="button"
+                                                    className="pill-icon text-body-gray"
+                                                    title="Retry indexing"
+                                                    disabled={reindexing.has(item.id)}
+                                                    onClick={() => handleReindex(item.id)}
+                                                  >
+                                                    {reindexing.has(item.id) ? <Loader className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                                                  </button>
+                                                )}
+                                                {replacing.has(item.id) ? <Loader className="w-3.5 h-3.5 animate-spin" /> : (
+                                                  <button type="button" className="pill-icon" onClick={() => openReplace(item)}>
+                                                    <Edit2 className="w-3.5 h-3.5" />
+                                                  </button>
+                                                )}
+                                                <button type="button" onClick={() => handleDelete(item.id)} className="pill-icon">
+                                                  <Trash2 className="w-4 h-4" />
                                                 </button>
-                                              )}
-                                              <button type="button" className="pill-icon" onClick={() => openReplace(item)}>
-                                                <Edit2 className="w-3.5 h-3.5" />
-                                              </button>
-                                              <button type="button" onClick={() => handleDelete(item.id)} className="pill-icon">
-                                                <Trash2 className="w-4 h-4" />
-                                              </button>
+                                              </div>
                                             </div>
                                           </div>
                                         ))}
@@ -927,22 +970,6 @@ export function MaterialsPage() {
         className="hidden"
       />
 
-      <div className="mt-8 pt-6 ">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="top-stat">
-            <p className="text-xs text-body-gray">Files</p>
-            <p className="text-3xl font-bold text-near-black">{stats.files}</p>
-          </div>
-          <div className="top-stat" title="Number of indexed content segments extracted from your files for AI retrieval">
-            <p className="text-xs text-body-gray">Content segments</p>
-            <p className="text-3xl font-bold text-near-black">{stats.chunks}</p>
-          </div>
-          <div className="top-stat">
-            <p className="text-xs text-body-gray">Storage</p>
-            <p className="text-3xl font-bold text-near-black">{formatBytes(stats.bytes)}</p>
-          </div>
-        </div>
-      </div>
       {confirmDialog}
     </div>
   );

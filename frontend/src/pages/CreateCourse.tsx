@@ -6,6 +6,7 @@ import { LessonWithCitations } from '../components/common/LessonWithCitations';
 import { PromptBuilder } from '../components/common/PromptBuilder';
 import { PageError } from '../components/common/PageState';
 import { Breadcrumbs } from '../components/common/Breadcrumbs';
+import { pluralize } from '../utils/helpers';
 import { DEFAULT_GENERATION_OPTIONS } from '../types';
 import type {
   BloomLevel,
@@ -73,7 +74,7 @@ function CoursePicker({
         />
       </div>
       {open && (
-        <div className="absolute z-20 w-full mt-1 bg-white ring-card max-h-64 overflow-y-auto">
+        <div className="absolute z-20 w-full mt-1 ring-card max-h-64 overflow-y-auto bg-white/90 backdrop-blur-md">
           {filtered.length === 0 ? (
             <div className="p-3 text-sm text-body-gray">
               {courses.length === 0 ? 'No courses with indexed materials.' : 'No matching course.'}
@@ -154,7 +155,7 @@ function TopicSelector({
 
         return (
           <div key={ch.chapter} className="border border-hover-gray rounded-lg overflow-hidden">
-            <div className="flex items-center gap-3 px-4 py-3 bg-chip-gray/60 cursor-pointer select-none">
+            <div className="flex items-center gap-3 px-4 py-3 cursor-pointer select-none">
               <input
                 type="checkbox"
                 checked={allSelected && ch.topics.length > 0}
@@ -178,11 +179,11 @@ function TopicSelector({
               </button>
             </div>
             {isOpen && (
-              <div className="px-4 py-2 space-y-1 bg-white">
+              <div className="px-4 py-2 space-y-1">
                 {ch.topics.map((topic) => (
                   <label
                     key={topic}
-                    className="flex items-center gap-3 py-1.5 px-2 rounded hover:bg-chip-gray/60 cursor-pointer"
+                    className="flex items-center gap-3 py-1.5 px-2 rounded hover:bg-chip-gray/30 cursor-pointer"
                   >
                     <input
                       type="checkbox"
@@ -262,9 +263,9 @@ function PreviewPanel({
           <ArrowLeft className="w-4 h-4" /> Back
         </button>
         <div className="flex-1">
-          <h3 className="text-lg font-bold text-near-black">{preview.title}</h3>
+          <h3 className="text-base sm:text-lg font-bold text-near-black">{preview.title}</h3>
           <p className="text-xs text-body-gray">
-            {preview.generationSource} · {preview.contextChunksUsed} chunks · {preview.questionCount} questions
+            {preview.generationSource} · {pluralize(preview.contextChunksUsed, 'chunk')} · {pluralize(preview.questionCount, 'question')}
           </p>
           {preview.topicCoverage.length > 0 && (
             <p className="text-xs text-body-gray mt-1">
@@ -277,7 +278,7 @@ function PreviewPanel({
       </div>
 
       {/* Lesson content */}
-      <div className="surface-card p-6">
+      <div className="surface-card p-4 sm:p-6">
         <h4 className="text-sm font-semibold text-near-black mb-3">Lesson Content</h4>
         <LessonWithCitations
           markdown={preview.lesson}
@@ -287,7 +288,7 @@ function PreviewPanel({
       </div>
 
       {/* Editable Quiz Questions */}
-      <div className="surface-card p-6">
+      <div className="surface-card p-4 sm:p-6">
         <h4 className="text-sm font-semibold text-near-black mb-4">Quiz Questions (Editable)</h4>
         <div className="space-y-6">
           {editableQuestions.map((q, idx) => (
