@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, CheckCircle2, XCircle } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { apiService } from '../services/api';
 import { PageError, PageLoading } from '../components/common/PageState';
 import { StudentDiagnostic } from '../components/common/StudentDiagnostic';

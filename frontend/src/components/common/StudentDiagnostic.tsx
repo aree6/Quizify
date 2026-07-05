@@ -34,7 +34,6 @@ export function StudentDiagnostic({ student }: { student: StudentAnalyticsData }
   const weakTopicsList = student.weakTopics.filter((w) => !allTopicsStrong.has(w.topic));
   const weakTopicNames = weakTopicsList.slice(0, 2).map((w) => w.topic);
   const bloomAction = student.weakestBloomLevel ? BLOOM_ACTION[student.weakestBloomLevel] : null;
-  const bloomLabel = student.weakestBloomLevel ? (BLOOM_LABELS[student.weakestBloomLevel] ?? student.weakestBloomLevel) : null;
 
   let recommendation: React.ReactNode;
   if (weakTopicsList.length > 0) {
