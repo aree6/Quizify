@@ -4,6 +4,7 @@ import type { CourseSummary } from '../types';
 import { apiService } from '../services/api';
 import { PageLoading, PageEmpty, PageError } from '../components/common/PageState';
 import { useConfirmDialog } from '../components/common/useConfirmDialog';
+import { QrPopover } from '../components/common/QrPopover';
 import { useToast } from '../components/common/Toast';
 import { timeAgo, parseTitleParts, pluralize } from '../utils/helpers';
 
@@ -132,6 +133,9 @@ export function MyCoursesPage() {
                 <a href={course.shareUrl} target="_blank" rel="noreferrer" className="pill-icon" title="Open share link">
                   <ExternalLink className="w-4 h-4" />
                 </a>
+                <QrPopover
+                  url={`${window.location.origin}${course.shareUrl}`}
+                />
                 <button
                   type="button"
                   onClick={() => handleDelete(course.id, course.title)}
