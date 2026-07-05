@@ -56,6 +56,12 @@ function authHeader() {
   return { Authorization: 'Bearer valid' };
 }
 
+/* ─── Materials: TC002 ─────────────────────────────────────────────────────
+ * Covers file upload validation, listing, deletion, and repair/indexing.
+ * TC002_01 — Upload validation (missing file, missing courseCode, missing chapter)
+ * TC002_02 — Invalid file type rejection
+ * Also covers list, delete by id, and repair-reindex.
+ */
 describe('Materials (TC002)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -64,6 +70,7 @@ describe('Materials (TC002)', () => {
 
   describe('TC002_01: Upload validation', () => {
     it('rejects upload without file', async () => {
+      // POST with all fields but no file attachment -> 400
       const res = await request
         .post('/api/materials/upload')
         .set(authHeader())
@@ -76,6 +83,7 @@ describe('Materials (TC002)', () => {
     });
 
     it('rejects upload without courseCode', async () => {
+      // File present but missing courseCode -> 400
       const res = await request
         .post('/api/materials/upload')
         .set(authHeader())
@@ -88,6 +96,7 @@ describe('Materials (TC002)', () => {
     });
 
     it('rejects slide upload without chapter', async () => {
+      // Slide-type materials require a chapter field; missing -> 400
       const res = await request
         .post('/api/materials/upload')
         .set(authHeader())
@@ -102,6 +111,7 @@ describe('Materials (TC002)', () => {
 
   describe('TC002_02: Invalid file types', () => {
     it('rejects unsupported file extensions', async () => {
+      // Only .pdf and .pptx are allowed; .txt -> 400
       const res = await request
         .post('/api/materials/upload')
         .set(authHeader())
@@ -117,6 +127,7 @@ describe('Materials (TC002)', () => {
 
   describe('List materials', () => {
     it('returns empty list when no materials exist', async () => {
+      // No materials uploaded yet -> empty array
       vi.mocked(selectMaterials).mockResolvedValue([]);
       mockFrom.mockReturnValue(createChainable([]));
 
@@ -131,6 +142,7 @@ describe('Materials (TC002)', () => {
 
   describe('Delete material', () => {
     it('deletes a material by id', async () => {
+      // Soft-delete: marks status='Deleted', removes from storage
       mockFrom.mockReturnValue(createChainable(
         { id: 'mat-1', storage_path: 'path/file.pdf', status: 'Active' },
         { single: true },
@@ -147,6 +159,7 @@ describe('Materials (TC002)', () => {
 
   describe('Repair index', () => {
     it('repairs materials with missing embeddings', async () => {
+      // Re-indexes materials where embedding generation failed (status='Failed')
       vi.mocked(repairIndexStatus).mockResolvedValue({ repaired: 2 });
 
       const res = await request

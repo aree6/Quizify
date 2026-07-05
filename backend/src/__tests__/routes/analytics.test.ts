@@ -26,6 +26,11 @@ function validLecturer() {
   });
 }
 
+/* ─── Analytics: TC009 ─────────────────────────────────────────────────────
+ * Lecturer dashboard analytics endpoint.
+ * Tests both populated data (when attempts exist) and empty state (no attempts).
+ * Also verifies 401 when no token is sent.
+ */
 describe('Analytics (TC009)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -33,6 +38,7 @@ describe('Analytics (TC009)', () => {
   });
 
   it('TC009_01: returns full analytics when submissions exist', async () => {
+    // All KPI fields populated with realistic data
     vi.mocked(getCourseAnalytics).mockResolvedValue({
       courseId: 'c1',
       passPercentage: 60,
@@ -82,6 +88,7 @@ describe('Analytics (TC009)', () => {
   });
 
   it('TC009_02: returns analytics with zero values when no submissions', async () => {
+    // No student attempts yet — all KPIs at 0, empty arrays for breakdowns
     vi.mocked(getCourseAnalytics).mockResolvedValue({
       courseId: 'c1',
       passPercentage: 40,
@@ -118,6 +125,7 @@ describe('Analytics (TC009)', () => {
   });
 
   it('returns 401 without auth', async () => {
+    // Analytics is a protected route -> 401 when no token
     const res = await request.get('/api/analytics/c1');
     expect(res.status).toBe(401);
   });

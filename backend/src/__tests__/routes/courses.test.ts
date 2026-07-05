@@ -11,6 +11,7 @@ vi.mock('../../lib/supabase.js', () => ({
   supabase: { auth: mockAuth, from: mockFrom, rpc: vi.fn(), storage: { from: vi.fn() } },
 }));
 
+// Mock services so tests never call real AI endpoints or real Supabase
 vi.mock('../../services/courses.service.js', () => ({
   generateCoursePreview: vi.fn(),
   confirmAndSaveCourse: vi.fn(),
@@ -50,6 +51,14 @@ function authHeader() {
   return { Authorization: 'Bearer valid' };
 }
 
+/* ─── Courses: TC003–TC006 ────────────────────────────────────────────────
+ * Covers the full course lifecycle:
+ *   TC003 — Extract learning outcomes from stored outlines
+ *   TC004 — Generate content preview (lesson + quiz via AI)
+ *   TC005 — Create quizzes with taxonomy metadata
+ *   TC006 — Share course link (confirm & save, mint share token)
+ * Plus list and delete operations.
+ */
 describe('Courses (TC003-TC006)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -58,6 +67,7 @@ describe('Courses (TC003-TC006)', () => {
 
   describe('TC003: Extract Learning Outcomes', () => {
     it('TC003_01: returns stored outline when available', async () => {
+      // Happy path: outline exists in DB -> returned with chapter/topics
       vi.mocked(getStoredOutline).mockResolvedValue({
         synopsis: 'Test synopsis',
         learningOutcomes: ['LO1', 'LO2'],
@@ -76,6 +86,7 @@ describe('Courses (TC003-TC006)', () => {
     });
 
     it('TC003_02: returns fallback when no stored outline and no materials', async () => {
+      // No outline + no materials in DB -> empty fallback response
       vi.mocked(getStoredOutline).mockResolvedValue(null);
       mockFrom.mockReturnValue(createChainable([]));
 
@@ -89,6 +100,7 @@ describe('Courses (TC003-TC006)', () => {
     });
 
     it('returns error when courseCode is missing', async () => {
+      // Whitespace-only course code triggers validation error
       const res = await request
         .get('/api/courses/%20/topics')
         .set(authHeader());
@@ -99,6 +111,7 @@ describe('Courses (TC003-TC006)', () => {
 
   describe('TC004: Generate Content', () => {
     it('TC004_01: generates course preview successfully', async () => {
+      // Full generation flow: topics in -> lesson + questions + sources out
       const mockPreview = {
         title: 'Software Testing',
         courseCode: 'SECJ2203',
@@ -140,6 +153,7 @@ describe('Courses (TC003-TC006)', () => {
     });
 
     it('TC004_02: rejects preview without courseCode', async () => {
+      // Missing required field triggers 400
       const res = await request
         .post('/api/courses/preview')
         .set(authHeader())
@@ -152,6 +166,7 @@ describe('Courses (TC003-TC006)', () => {
 
   describe('TC005: Create Quizzes', () => {
     it('TC005_01: generates quiz with metadata in preview', async () => {
+      // Quiz preview includes Bloom's + SOLO metadata on each question
       const mockPreview = {
         title: 'Testing Quiz',
         courseCode: 'SECJ2203',
@@ -199,6 +214,7 @@ describe('Courses (TC003-TC006)', () => {
 
   describe('TC006: Share Course Link', () => {
     it('TC006_01: creates course with share token on confirm', async () => {
+      // Confirm endpoint creates the mini_course and returns a share token
       vi.mocked(confirmAndSaveCourse).mockResolvedValue({
         id: 'course-123',
         title: 'Test Course',
@@ -225,6 +241,7 @@ describe('Courses (TC003-TC006)', () => {
     });
 
     it('TC006_02: rejects confirmation without required fields', async () => {
+      // Missing lesson and questions triggers 400
       const res = await request
         .post('/api/courses/confirm')
         .set(authHeader())
@@ -234,6 +251,7 @@ describe('Courses (TC003-TC006)', () => {
     });
 
     it('confirms course with optional pass percentage', async () => {
+      // passPercentage is optional; defaults to env.DEFAULT_PASS_PERCENTAGE (40)
       vi.mocked(confirmAndSaveCourse).mockResolvedValue({
         id: 'c1', title: 'T',
         shareToken: 'tok', shareUrl: '/?token=tok', status: 'Ready',
@@ -255,6 +273,7 @@ describe('Courses (TC003-TC006)', () => {
 
   describe('List courses', () => {
     it('returns lecturer courses when authenticated', async () => {
+      // Lecturer sees their own courses filtered by creator_email on server
       vi.mocked(listMiniCourses).mockResolvedValue([
         { id: 'c1', title: 'Course 1', courseCode: 'SECJ2203', topics: [], status: 'Ready', shareToken: 'tok', shareUrl: '/?token=tok', questionCount: 5, attempts: 0, createdAt: '2026-01-01' },
       ]);
@@ -268,6 +287,7 @@ describe('Courses (TC003-TC006)', () => {
     });
 
     it('admin sees all courses', async () => {
+      // Admin sees all courses (no creator_email filter)
       validAdmin();
       vi.mocked(listMiniCourses).mockResolvedValue([]);
 

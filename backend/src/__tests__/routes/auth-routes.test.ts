@@ -19,6 +19,11 @@ import { createApp } from '../../app.js';
 const app = createApp();
 const request = supertest(app);
 
+/* ─── Auth enforcement (TC001) ────────────────────────────────────────────
+ * Every /api/* endpoint except public read must require a valid JWT.
+ * Tests send requests without any token and expect 401.
+ * This is the Network & Security layer required by the PSM2 rubric.
+ */
 describe('Auth-protected routes (TC001)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -39,12 +44,14 @@ describe('Auth-protected routes (TC001)', () => {
 
   describe('Materials endpoints require auth', () => {
     it('GET /api/materials returns 401 without token', async () => {
+      // Unauthenticated request to a materials endpoint
       const res = await request.get('/api/materials');
       expect(res.status).toBe(401);
       expect(res.body.message).toBe('Authentication required');
     });
 
     it('GET /api/materials returns data with valid token', async () => {
+      // With a valid token the same endpoint should NOT return 401
       validToken();
       const res = await request.get('/api/materials').set('Authorization', 'Bearer valid');
       expect(res.status).not.toBe(401);
@@ -85,6 +92,7 @@ describe('Auth-protected routes (TC001)', () => {
 
 describe('Public routes (no auth required)', () => {
   it('GET /api/public/course/:token does not require auth', async () => {
+    // Public course read is the ONLY endpoint that does NOT need a token
     const res = await request.get('/api/public/course/test-token');
     expect(res.status).not.toBe(401);
   });

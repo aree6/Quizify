@@ -21,6 +21,16 @@ vi.mock('../../lib/supabase.js', () => ({
 
 import { getCourseAnalytics, submitQuizAttempt } from '../../services/quiz.service.js';
 
+/* ─── Quiz Service — Scoring & Analytics ──────────────────────────────────
+ * Pure unit tests for the core quiz logic (no HTTP, no routing).
+ * Every test feeds controlled fixture data through mocked Supabase and
+ * asserts on the computed output.
+ *
+ * Sub-sections:
+ *   submitQuizAttempt  — scoring correctness (100%, partial, pass/fail)
+ *   getCourseAnalytics — analytics aggregation (KPIs, topic, Bloom, SOLO,
+ *                        cross-matrix, student diagnostics, score distribution)
+ */
 describe('Quiz Service - Scoring (Input/Output)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -28,6 +38,7 @@ describe('Quiz Service - Scoring (Input/Output)', () => {
 
   describe('submitQuizAttempt', () => {
     it('scores all correct answers as 100%', async () => {
+      // 3 questions, all answered correctly -> 3/3 = 100%, passed
       mockFrom.mockImplementation((table: string) => {
         if (table === 'mini_courses') {
           return createChainable({
@@ -71,6 +82,7 @@ describe('Quiz Service - Scoring (Input/Output)', () => {
     });
 
     it('scores partial answers correctly', async () => {
+      // 5 questions, 1 correct -> 1/5 = 20%, failed (pass = 60)
       mockFrom.mockImplementation((table: string) => {
         if (table === 'mini_courses') {
           return createChainable({
@@ -103,11 +115,11 @@ describe('Quiz Service - Scoring (Input/Output)', () => {
         token: 'test-token',
         studentName: 'Bob',
         answers: [
-          { questionId: 'q1', selectedOptionIndex: 0 },
-          { questionId: 'q2', selectedOptionIndex: 1 },
-          { questionId: 'q3', selectedOptionIndex: 1 },
-          { questionId: 'q4', selectedOptionIndex: 2 },
-          { questionId: 'q5', selectedOptionIndex: 3 },
+          { questionId: 'q1', selectedOptionIndex: 0 }, // correct
+          { questionId: 'q2', selectedOptionIndex: 1 }, // wrong
+          { questionId: 'q3', selectedOptionIndex: 1 }, // wrong
+          { questionId: 'q4', selectedOptionIndex: 2 }, // wrong
+          { questionId: 'q5', selectedOptionIndex: 3 }, // wrong
         ],
       });
 
@@ -121,6 +133,7 @@ describe('Quiz Service - Scoring (Input/Output)', () => {
 
   describe('getCourseAnalytics', () => {
     it('returns empty analytics when no attempts exist', async () => {
+      // No submissions -> all KPIs zero, empty arrays, 5 empty buckets
       mockFrom.mockImplementation((table: string) => {
         if (table === 'quiz_attempts') {
           return createChainable([]);
@@ -145,6 +158,7 @@ describe('Quiz Service - Scoring (Input/Output)', () => {
     });
 
     it('computes topic performance from attempts', async () => {
+      // 2 students, 3 questions each -> KPI aggregation + topic breakdown
       const attempts = [
         {
           id: 'a1',
@@ -196,6 +210,7 @@ describe('Quiz Service - Scoring (Input/Output)', () => {
 
       const result = await getCourseAnalytics('c1');
 
+      // KPI correctness
       expect(result.totalSubmissions).toBe(2);
       expect(result.uniqueStudents).toBe(2);
       expect(result.averageScore).toBe(67);
@@ -203,17 +218,20 @@ describe('Quiz Service - Scoring (Input/Output)', () => {
       expect(result.lowestScore).toBe(33);
       expect(result.passRate).toBe(50);
 
+      // Per-topic aggregates
       const testingTopic = result.topicPerformance.find((t: any) => t.topic === 'Testing');
       expect(testingTopic).toBeDefined();
       const sdlcTopic = result.topicPerformance.find((t: any) => t.topic === 'SDLC');
       expect(sdlcTopic).toBeDefined();
 
+      // Bloom performance includes all 6 levels (some with 0, some populated)
       expect(result.bloomPerformance).toHaveLength(6);
       const understandBloom = result.bloomPerformance.find((b: any) => b.bloomLevel === 'understand');
       expect(understandBloom).toBeDefined();
     });
 
     it('computes cross-matrix from attempts', async () => {
+      // Topic x Bloom's cross-matrix entries for the heatmap
       const attempts = [
         {
           id: 'a1', student_name: 'Ali', score: 2, total_questions: 2, percentage: 100, submitted_at: '2026-01-01',
@@ -243,6 +261,8 @@ describe('Quiz Service - Scoring (Input/Output)', () => {
     });
 
     it('computes student analytics with weak topics', async () => {
+      // Per-student diagnostic: identifies weak topics (<70%), strongest topic,
+      // weakest Bloom level, and answer breakdown
       const attempts = [
         {
           id: 'a1', student_name: 'Ali', score: 1, total_questions: 2, percentage: 50, submitted_at: '2026-01-01',
@@ -269,13 +289,16 @@ describe('Quiz Service - Scoring (Input/Output)', () => {
       expect(result.studentAnalytics).toHaveLength(1);
       const student = result.studentAnalytics[0]!;
       expect(student.studentName).toBe('Ali');
+      // SDLC is weak (0/1 correct = 0% < 70% threshold)
       expect(student.weakTopics).toHaveLength(1);
       expect(student.weakTopics[0]!.topic).toBe('SDLC');
+      // Testing is strongest (1/1 = 100%)
       expect(student.strongestTopic).toBe('Testing');
       expect(student.answers).toHaveLength(2);
     });
 
     it('computes score distribution correctly', async () => {
+      // 5 students with exactly one per bucket -> each bucket has count=1
       const attempts = [
         { id: 'a1', student_name: 'S1', score: 1, total_questions: 5, percentage: 20, submitted_at: '2026-01-01', submitted_answers: [] },
         { id: 'a2', student_name: 'S2', score: 2, total_questions: 5, percentage: 40, submitted_at: '2026-01-02', submitted_answers: [] },
@@ -302,6 +325,7 @@ describe('Quiz Service - Scoring (Input/Output)', () => {
     });
 
     it('computes average score and pass rate correctly', async () => {
+      // 3 students: scores 40, 60, 80 -> avg = 60, pass (>=40) = 3/3 = 100%
       const attempts = [
         { id: 'a1', student_name: 'S1', score: 2, total_questions: 5, percentage: 40, submitted_at: '2026-01-01', submitted_answers: [] },
         { id: 'a2', student_name: 'S2', score: 3, total_questions: 5, percentage: 60, submitted_at: '2026-01-02', submitted_answers: [] },

@@ -20,6 +20,11 @@ import { getPublicCourse, submitQuizAttempt } from '../../services/quiz.service.
 const app = createApp();
 const request = supertest(app);
 
+/* ─── Public Learning: TC007–TC008 ────────────────────────────────────────
+ * TC007 — Student accesses mini-course via public share link (no auth needed)
+ * TC008 — Student submits quiz answers (auth required, identity from token)
+ * Also verifies the body-to- token identity override (bulletproof auth).
+ */
 describe('Public Learning (TC007-TC008)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -27,6 +32,7 @@ describe('Public Learning (TC007-TC008)', () => {
 
   describe('TC007: Access Mini-Course', () => {
     it('TC007_01: returns course for valid token', async () => {
+      // Student opens a share link -> lesson is public (no auth)
       vi.mocked(getPublicCourse).mockResolvedValue({
         id: 'c1',
         title: 'Test Mini-Course',
@@ -47,6 +53,7 @@ describe('Public Learning (TC007-TC008)', () => {
     });
 
     it('TC007_02: returns error for invalid token', async () => {
+      // Random/non-existent token -> 500 (service throws)
       vi.mocked(getPublicCourse).mockRejectedValue(
         Object.assign(new Error('Course not found'), { status: 404 }),
       );
@@ -59,6 +66,7 @@ describe('Public Learning (TC007-TC008)', () => {
 
   describe('TC008: Take Quiz', () => {
     it('TC008_01: accepts valid quiz submission from authenticated student', async () => {
+      // Authenticated student submits answers -> score calculated
       mockAuth.getUser.mockResolvedValue({
         data: { user: { id: 's1', email: 'student@graduate.utm.my', user_metadata: { name: 'Ali' } } },
         error: null,
@@ -88,7 +96,8 @@ describe('Public Learning (TC007-TC008)', () => {
       expect(res.status).toBe(200);
       expect(res.body.score).toBe(4);
       expect(res.body.passed).toBe(true);
-      // Identity is derived from token, not body
+
+      // Identity is derived from token, not from request body
       expect(submitQuizAttempt).toHaveBeenCalledWith(
         expect.objectContaining({
           studentEmail: 'student@graduate.utm.my',
@@ -98,6 +107,7 @@ describe('Public Learning (TC007-TC008)', () => {
     });
 
     it('TC008_02: rejects submission without auth', async () => {
+      // No auth header -> 401 from requireAuth middleware
       const res = await request
         .post('/api/public/course/test-token/submit')
         .send({
@@ -105,13 +115,11 @@ describe('Public Learning (TC007-TC008)', () => {
         });
 
       expect(res.status).toBe(401);
-      // requireAuth middleware emits "Authentication required" before reaching
-      // the controller, which would emit "Sign in to submit a quiz attempt".
-      // Either is acceptable; the contract is that unauthenticated requests are 401.
       expect(['Authentication required', 'Sign in to submit a quiz attempt']).toContain(res.body.message);
     });
 
     it('rejects submission without answers', async () => {
+      // Authenticated but empty answers array -> 400
       mockAuth.getUser.mockResolvedValue({
         data: { user: { id: 's1', email: 'student@graduate.utm.my', user_metadata: { name: 'Ali' } } },
         error: null,
@@ -127,6 +135,8 @@ describe('Public Learning (TC007-TC008)', () => {
     });
 
     it('ignores studentName in body and uses token identity', async () => {
+      // Security: client sends "WRONG_NAME" in body but server uses the
+      // name from the verified Google token — prevents identity spoofing
       mockAuth.getUser.mockResolvedValue({
         data: { user: { id: 's1', email: 'student@graduate.utm.my', user_metadata: { name: 'Ali' } } },
         error: null,
