@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Search, ChevronDown, ChevronRight, Loader2, ArrowLeft, X } from 'lucide-react';
+import { Search, ChevronDown, ChevronRight, Loader2, ArrowLeft, X, Maximize2 } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
+import { QrOverlay } from '../components/common/QrPopover';
 import { useAuth } from '../context/AuthContext';
 import { apiService } from '../services/api';
 import { LessonWithCitations } from '../components/common/LessonWithCitations';
 import { PromptBuilder } from '../components/common/PromptBuilder';
 import { PageError } from '../components/common/PageState';
 import { Breadcrumbs } from '../components/common/Breadcrumbs';
-import { pluralize } from '../utils/helpers';
+import { pluralize, parseTitleParts } from '../utils/helpers';
 import { DEFAULT_GENERATION_OPTIONS } from '../types';
 import type {
   BloomLevel,
@@ -263,8 +265,24 @@ function PreviewPanel({
           <ArrowLeft className="w-4 h-4" /> Back
         </button>
         <div className="flex-1">
-          <h3 className="text-base sm:text-lg font-bold text-near-black">{preview.title}</h3>
-          <p className="text-xs text-body-gray">
+          {(() => {
+            const { courseName, entries } = parseTitleParts(preview.title);
+            return (
+              <>
+                <h3 className="text-base sm:text-lg font-bold text-near-black">{courseName}</h3>
+                {entries.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {entries.map((e) => (
+                      <span key={e} className="px-2.5 py-0.5 text-[11px] rounded-full bg-chip-gray text-body-gray font-medium">
+                        {e}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </>
+            );
+          })()}
+          <p className="text-xs text-body-gray mt-1">
             {preview.generationSource} · {pluralize(preview.contextChunksUsed, 'chunk')} · {pluralize(preview.questionCount, 'question')}
           </p>
           {preview.topicCoverage.length > 0 && (
@@ -500,6 +518,7 @@ export function CreateCoursePage() {
   // Result
   const [error, setError] = useState('');
   const [createdLink, setCreatedLink] = useState('');
+  const [showQrOverlay, setShowQrOverlay] = useState(false);
 
   // Fetch available courses on mount
   useEffect(() => {
@@ -662,8 +681,23 @@ export function CreateCoursePage() {
         {/* Success (after confirm) */}
         {createdLink && (
           <div className="p-4 rounded-lg bg-light-mint text-positive text-sm">
-            <p className="font-semibold mb-1">Mini-course created and published.</p>
-            <p className="break-all">{createdLink}</p>
+            <p className="font-semibold mb-3 text-center">Mini-course created and published.</p>
+            <div className="flex flex-col items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setShowQrOverlay(true)}
+                className="relative bg-white p-2 rounded-lg cursor-pointer group"
+              >
+                <QRCodeSVG value={createdLink} size={180} level="M" marginSize={2} />
+                <div className="absolute inset-0 flex items-center justify-center bg-near-black/0 group-hover:bg-near-black/10 rounded-lg transition-colors">
+                  <Maximize2 className="w-5 h-5 text-near-black opacity-0 group-hover:opacity-60 transition-opacity" />
+                </div>
+              </button>
+              <p className="break-all text-center">{createdLink}</p>
+            </div>
+            {showQrOverlay && (
+              <QrOverlay url={createdLink} onClose={() => setShowQrOverlay(false)} />
+            )}
           </div>
         )}
 
