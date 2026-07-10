@@ -1,7 +1,7 @@
 import type { Request, Response } from 'express';
 import { HttpError } from '../middleware/error-handler.js';
 import { pathParam } from '../middleware/async-handler.js';
-import { getPublicCourse, submitQuizAttempt } from '../services/quiz.service.js';
+import { getPublicCourse, submitQuizAttempt, generatePracticeCourse } from '../services/quiz.service.js';
 
 export async function publicCourse(req: Request, res: Response): Promise<void> {
   const token = pathParam(req.params.token);
@@ -34,5 +34,25 @@ export async function submitQuiz(req: Request, res: Response): Promise<void> {
     answers,
     studentEmail: req.authUser.email,
   });
+  res.json(result);
+}
+
+export async function practiceWeakTopics(req: Request, res: Response): Promise<void> {
+  const token = pathParam(req.params.token);
+  if (!token) throw new HttpError(400, 'token is required');
+
+  if (!req.authUser) {
+    throw new HttpError(401, 'Sign in to practice weak topics');
+  }
+
+  const { attemptId } = req.body as { attemptId?: string };
+  if (!attemptId) throw new HttpError(400, 'attemptId is required');
+
+  const result = await generatePracticeCourse(
+    token,
+    attemptId,
+    req.authUser.email,
+    req.authUser.name,
+  );
   res.json(result);
 }

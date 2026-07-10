@@ -92,6 +92,20 @@ export const apiService = {
     return data;
   },
 
+  async practiceWeakTopics(token: string, attemptId: string) {
+    const { data } = await http.post<{
+      shareToken: string;
+      courseId: string;
+      title: string;
+      weakTopics: string[];
+      weakestBloomLevel: string | null;
+    }>(
+      `/api/public/course/${encodeURIComponent(token)}/practice`,
+      { attemptId },
+    );
+    return data;
+  },
+
   async getAnalytics(courseId: string) {
     const { data } = await http.get<CourseAnalytics>(
       `/api/analytics/${encodeURIComponent(courseId)}`,
@@ -107,7 +121,7 @@ export const apiService = {
   },
 
   async getStudentAttempt(attemptId: string) {
-    const { data } = await http.get<StudentAnalyticsData & { courseId: string; courseTitle: string }>(
+    const { data } = await http.get<StudentAnalyticsData & { courseId: string; courseTitle: string; shareToken: string }>(
       `/api/students/attempts/${encodeURIComponent(attemptId)}`,
     );
     return data;

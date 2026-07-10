@@ -1,6 +1,7 @@
 import { supabase } from '../lib/supabase.js';
 import { env } from '../config/env.js';
 import { HttpError } from '../middleware/error-handler.js';
+import { shuffleArray, randomToken, toSlug } from '../lib/utils.js';
 import type { SourceCitation } from '../types/index.js';
 
 interface QuestionMetadata {
@@ -75,9 +76,10 @@ export async function getPublicCourse(token: string) {
   ensureCourseIsLive(course);
 
   const quiz = course.quizzes[0];
-  const questions = (quiz?.questions ?? [])
-    .sort((a, b) => a.order_index - b.order_index)
-    .map((q) => ({
+  const sortedQuestions = (quiz?.questions ?? [])
+    .sort((a, b) => a.order_index - b.order_index);
+  const randomizedQuestions = shuffleArray(sortedQuestions);
+  const questions = randomizedQuestions.map((q) => ({
       id: q.id,
       prompt: q.prompt,
       options: [q.option_a, q.option_b, q.option_c, q.option_d].filter((o): o is string => Boolean(o)),
@@ -114,6 +116,16 @@ export async function submitQuizAttempt(params: {
 
   const course = courseData as StoredCourse;
   ensureCourseIsLive(course);
+
+  if (params.studentEmail) {
+    const { data: existing } = await supabase
+      .from('quiz_attempts')
+      .select('id')
+      .eq('mini_course_id', (course as any).id)
+      .eq('student_email', params.studentEmail)
+      .maybeSingle();
+    if (existing) throw new HttpError(409, 'You have already submitted this quiz. View your breakdown to practice weak topics.');
+  }
 
   const quiz = course.quizzes[0];
   if (!quiz) throw new HttpError(400, 'Quiz not found for course');
@@ -231,7 +243,8 @@ export async function getStudentAttempts(studentEmail: string): Promise<StudentA
   const { data: courses, error: coursesError } = await supabase
     .from('mini_courses')
     .select('id, title, share_token, pass_percentage')
-    .in('id', miniCourseIds);
+    .in('id', miniCourseIds)
+    .is('parent_course_id', null);
 
   if (coursesError) throw new HttpError(500, 'Failed to fetch course details');
 
@@ -274,6 +287,16 @@ export async function getStudentAttempts(studentEmail: string): Promise<StudentA
 export interface StudentAttemptDetailResponse extends StudentAttemptDetail {
   courseId: string;
   courseTitle: string;
+  shareToken: string;
+  practiceSessions: Array<{
+    id: string;
+    title: string;
+    shareToken: string;
+    attemptId: string | null;
+    percentage: number | null;
+    submittedAt: string | null;
+    topics: string[];
+  }>;
 }
 
 export async function getStudentAttemptDetail(
@@ -292,7 +315,7 @@ export async function getStudentAttemptDetail(
 
   const { data: course } = await supabase
     .from('mini_courses')
-    .select('id, title, pass_percentage')
+    .select('id, title, pass_percentage, share_token')
     .eq('id', attempt.mini_course_id)
     .maybeSingle();
 
@@ -331,9 +354,40 @@ export async function getStudentAttemptDetail(
 
   const detail = buildStudentAttemptDetail(attemptRow, questionMap, passPercentage);
 
+  const practiceSessions: StudentAttemptDetailResponse['practiceSessions'] = [];
+  const { data: childCourses } = await supabase
+    .from('mini_courses')
+    .select('id, title, share_token, topics')
+    .eq('parent_course_id', attempt.mini_course_id)
+    .eq('student_email', studentEmail)
+    .order('created_at', { ascending: true });
+
+  if (childCourses && (childCourses as unknown[]).length > 0) {
+    for (const child of (childCourses as Array<{ id: string; title: string; share_token: string; topics: string[] }>)) {
+      const { data: childAttempt } = await supabase
+        .from('quiz_attempts')
+        .select('id, percentage, submitted_at')
+        .eq('mini_course_id', child.id)
+        .eq('student_email', studentEmail)
+        .maybeSingle();
+
+      practiceSessions.push({
+        id: child.id,
+        title: child.title,
+        shareToken: child.share_token,
+        attemptId: childAttempt?.id ?? null,
+        percentage: childAttempt?.percentage ?? null,
+        submittedAt: childAttempt?.submitted_at ?? null,
+        topics: child.topics ?? [],
+      });
+    }
+  }
+
   return {
     courseId: attempt.mini_course_id,
     courseTitle: course?.title ?? '',
+    shareToken: (course as { share_token?: string } | null)?.share_token ?? '',
+    practiceSessions,
     ...detail,
   };
 }
@@ -538,6 +592,244 @@ function buildOptionDistribution(
     }
   }
   return dist;
+}
+
+export interface PracticeGenerationResult {
+  shareToken: string;
+  courseId: string;
+  title: string;
+  weakTopics: string[];
+  weakestBloomLevel: string | null;
+}
+
+export async function generatePracticeCourse(
+  token: string,
+  attemptId: string,
+  studentEmail: string,
+  studentName: string,
+): Promise<PracticeGenerationResult> {
+  const { data: courseData, error: courseErr } = await supabase
+    .from('mini_courses')
+    .select('id, title, course_code, pass_percentage, status, expires_at')
+    .eq('share_token', token)
+    .single();
+
+  if (courseErr || !courseData) throw new HttpError(404, 'Course not found');
+
+  const course = courseData as {
+    id: string;
+    title: string;
+    course_code: string;
+    pass_percentage: number | null;
+    status: string;
+    expires_at: string | null;
+  };
+
+  ensureCourseIsLive(course as unknown as StoredCourse);
+
+  const { data: attempt, error: attemptErr } = await supabase
+    .from('quiz_attempts')
+    .select('id, student_email, submitted_answers, mini_course_id')
+    .eq('id', attemptId)
+    .eq('student_email', studentEmail)
+    .maybeSingle();
+
+  if (attemptErr || !attempt) throw new HttpError(404, 'Attempt not found');
+  if (attempt.student_email !== studentEmail) throw new HttpError(403, 'Not your attempt');
+
+  const submittedAnswers = Array.isArray(attempt.submitted_answers)
+    ? (attempt.submitted_answers as Array<{
+        questionId: string;
+        isCorrect: boolean;
+        selectedOptionIndex: number;
+        correctOptionIndex: number;
+        metadata: { topic?: string; subtopic?: string; bloomLevel?: string; soloLevel?: string };
+      }>)
+    : [];
+
+  if (submittedAnswers.length === 0) throw new HttpError(400, 'No answers found in attempt');
+
+  const topicCorrectMap = new Map<string, { correct: number; total: number }>();
+  const bloomCorrectMap = new Map<string, { correct: number; total: number }>();
+  const wrongQuestions: Array<{ prompt: string; studentAnswer: string; correctAnswer: string }> = [];
+
+  for (const ans of submittedAnswers) {
+    const topic = ans.metadata?.topic || 'General';
+    const bloom = ans.metadata?.bloomLevel || 'understand';
+
+    if (!topicCorrectMap.has(topic)) topicCorrectMap.set(topic, { correct: 0, total: 0 });
+    const te = topicCorrectMap.get(topic)!;
+    te.total += 1;
+    if (ans.isCorrect) te.correct += 1;
+
+    if (!bloomCorrectMap.has(bloom)) bloomCorrectMap.set(bloom, { correct: 0, total: 0 });
+    const be = bloomCorrectMap.get(bloom)!;
+    be.total += 1;
+    if (ans.isCorrect) be.correct += 1;
+  }
+
+  const weakTopics = Array.from(topicCorrectMap.entries())
+    .filter(([, v]) => v.total > 0 && (v.correct / v.total) < 0.70)
+    .map(([topic]) => topic)
+    .sort();
+
+  const weakTopicScores = Array.from(topicCorrectMap.entries())
+    .filter(([, v]) => v.total > 0 && (v.correct / v.total) < 0.70)
+    .map(([topic, v]) => ({ topic, correct: v.correct, total: v.total, percentage: Math.round((v.correct / v.total) * 100) }));
+
+  let weakestBloomLevel: string | null = null;
+  let weakestPct = 100;
+  for (const [level, v] of bloomCorrectMap) {
+    if (v.total === 0) continue;
+    const pct = (v.correct / v.total) * 100;
+    if (pct < weakestPct) {
+      weakestPct = pct;
+      weakestBloomLevel = level;
+    }
+  }
+
+  let strongestTopic: string | null = null;
+  let strongestPct = 0;
+  for (const [topic, v] of topicCorrectMap) {
+    if (v.total === 0) continue;
+    const pct = (v.correct / v.total) * 100;
+    if (pct > strongestPct) {
+      strongestPct = pct;
+      strongestTopic = topic;
+    }
+  }
+
+  if (weakTopics.length === 0) {
+    throw new HttpError(400, 'Great job! You\'ve mastered all topics. No practice needed.');
+  }
+
+  const wrongQuestionIds = submittedAnswers.filter((a) => !a.isCorrect).map((a) => a.questionId);
+
+  let wrongQuestionList: Array<{ prompt: string; studentAnswer: string; correctAnswer: string }> = [];
+  if (wrongQuestionIds.length > 0) {
+    const attemptRow = attempt as { mini_course_id?: string; quiz_id?: string };
+    let quizId = attemptRow.quiz_id;
+
+    if (!quizId && attemptRow.mini_course_id) {
+      const { data: quizData } = await supabase
+        .from('quizzes')
+        .select('id')
+        .eq('mini_course_id', attemptRow.mini_course_id)
+        .maybeSingle();
+      quizId = quizData?.id;
+    }
+
+    if (quizId) {
+      const { data: wrongQData } = await supabase
+        .from('questions')
+        .select('id, prompt, option_a, option_b, option_c, option_d, correct_option_index')
+        .eq('quiz_id', quizId)
+        .in('id', wrongQuestionIds);
+
+      wrongQuestionList = ((wrongQData ?? []) as Array<{
+        id: string;
+        prompt: string;
+        option_a: string | null;
+        option_b: string | null;
+        option_c: string | null;
+        option_d: string | null;
+        correct_option_index: number;
+      }>).map((q) => {
+        const ans = submittedAnswers.find((a) => a.questionId === q.id);
+        const opts = [q.option_a, q.option_b, q.option_c, q.option_d];
+        const studentLabel = opts[ans?.selectedOptionIndex ?? -1] ?? 'No answer';
+        const correctLabel = opts[q.correct_option_index] ?? '';
+        return { prompt: q.prompt, studentAnswer: studentLabel, correctAnswer: correctLabel };
+      });
+    }
+  }
+
+  const { retrievePerTopic } = await import('./rag.service.js');
+  const { topicContexts, sources } = await retrievePerTopic({
+    courseCode: course.course_code,
+    topics: weakTopics,
+    perTopicLimit: 10,
+    minSimilarity: 0.25,
+  });
+
+  if (topicContexts.length === 0 || sources.length === 0) {
+    throw new HttpError(400, 'Source materials not available for practice generation.');
+  }
+
+  const { generatePracticeLessonAndQuiz } = await import('./ai.service.js');
+  const practiceTitle = `${course.title} [Practice]`;
+
+  const generated = await generatePracticeLessonAndQuiz({
+    title: practiceTitle,
+    courseCode: course.course_code,
+    weakTopics,
+    weakTopicScores,
+    weakestBloomLevel,
+    strongestTopic,
+    wrongQuestions: wrongQuestionList,
+    topicContexts,
+    sources,
+  });
+
+  if (!generated) throw new HttpError(500, 'Practice generation failed. Please try again.');
+
+  const { data: newCourse, error: insertErr } = await supabase
+    .from('mini_courses')
+    .insert({
+      title: practiceTitle,
+      course_code: course.course_code,
+      topics: weakTopics,
+      lesson_content: generated.lesson,
+      sources: generated.sources,
+      status: 'Ready',
+      share_token: `${toSlug(practiceTitle)}-${randomToken(6)}`,
+      pass_percentage: course.pass_percentage ?? env.defaultPassPercentage,
+      created_by_name: studentName,
+      creator_email: studentEmail,
+      parent_course_id: course.id,
+      student_email: studentEmail,
+      expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+    })
+    .select('id, share_token')
+    .single();
+
+  if (insertErr || !newCourse) throw new HttpError(500, 'Failed to save practice course');
+
+  const { data: quiz, error: quizErr } = await supabase
+    .from('quizzes')
+    .insert({
+      mini_course_id: newCourse.id,
+      title: `${practiceTitle} Quiz`,
+      question_count: generated.questions.length,
+    })
+    .select('id')
+    .single();
+
+  if (quizErr || !quiz) throw new HttpError(500, 'Failed to save practice quiz');
+
+  const questionRows = generated.questions.map((q, idx) => ({
+    quiz_id: quiz.id,
+    prompt: q.prompt,
+    option_a: q.options[0] ?? null,
+    option_b: q.options[1] ?? null,
+    option_c: q.options[2] ?? null,
+    option_d: q.options[3] ?? null,
+    correct_option_index: q.correct,
+    order_index: idx,
+    explanations: q.explanations ?? ['', '', '', ''],
+    metadata: q.metadata ?? { topic: '', subtopic: '', bloomLevel: 'understand', soloLevel: 'multistructural' },
+  }));
+
+  const { error: qErr } = await supabase.from('questions').insert(questionRows);
+  if (qErr) throw new HttpError(500, 'Failed to save practice questions');
+
+  return {
+    shareToken: newCourse.share_token as string,
+    courseId: newCourse.id as string,
+    title: practiceTitle,
+    weakTopics,
+    weakestBloomLevel,
+  };
 }
 
 export async function getCourseAnalytics(courseId: string) {

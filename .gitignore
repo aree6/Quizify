@@ -161,3 +161,16 @@ Short_paper/
 # Netlify
 .netlify/
 
+# Documentation context files (not part of the project source)
+documentation/converted/
+documentation/Appendix/
+documentation/Full_Report.docx
+documentation/Full_Report.pdf
+AI_Presentation_Prompt.md
+contextforAISlide.md
+reviewfromExaminers.md
+testing_strategy_image_prompt.md
+Appendix 1 List of Prompts Used/
+Appendix D List of Prompts Used/
+UAT Document Example.pdf
+

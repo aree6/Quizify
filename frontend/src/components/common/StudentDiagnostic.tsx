@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronRight } from 'lucide-react';
+import { ChevronDown, ChevronRight, BookOpen } from 'lucide-react';
 import type { StudentAnalyticsData } from '../../types';
 import { BLOOM_LABELS, SOLO_LABELS } from './analyticsTokens';
 
@@ -19,7 +19,7 @@ function Chip({ children, className = '' }: { children: React.ReactNode; classNa
   );
 }
 
-export function StudentDiagnostic({ student }: { student: StudentAnalyticsData }) {
+export function StudentDiagnostic({ student, onPractice }: { student: StudentAnalyticsData; onPractice?: () => void; practicing?: boolean }) {
   const allTopicsStrong = new Set<string>();
   const topicAgg = new Map<string, { correct: number; total: number }>();
   for (const a of student.answers) {
@@ -79,6 +79,17 @@ export function StudentDiagnostic({ student }: { student: StudentAnalyticsData }
                   <p className="text-[10px] opacity-75 mt-0.5">{w.correct}/{w.total} · {w.percentage}%</p>
                 </div>
               ))}
+            </div>
+          )}
+          {weakTopicsList.length > 0 && onPractice && (
+            <div className="mt-3">
+              <button
+                type="button"
+                onClick={onPractice}
+                className="pill-primary inline-flex items-center gap-1.5 text-xs"
+              >
+                <BookOpen className="w-3.5 h-3.5" /> Practice Weak Topics
+              </button>
             </div>
           )}
         </div>

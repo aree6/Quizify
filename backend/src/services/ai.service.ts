@@ -842,3 +842,155 @@ export async function extractCourseTopics(courseText: string): Promise<ChapterOu
   const profile = await extractCourseProfile(courseText);
   return profile ? profile.chapters : null;
 }
+
+/* ─── Practice Generation (UC009 enhancement) ─── */
+
+export async function generatePracticeLessonAndQuiz(payload: {
+  title: string;
+  courseCode: string;
+  weakTopics: string[];
+  weakTopicScores: Array<{ topic: string; correct: number; total: number; percentage: number }>;
+  weakestBloomLevel: string | null;
+  strongestTopic: string | null;
+  wrongQuestions: Array<{ prompt: string; studentAnswer: string; correctAnswer: string }>;
+  topicContexts: TopicContext[];
+  sources: SourceCitation[];
+}): Promise<GeneratedContent | null> {
+  const practiceSystemPrompt = [
+    'You are an expert tutor helping a university student who struggled with specific topics on a quiz.',
+    'Your job is to TEACH, not just test. Write a grounded mini-lesson in Markdown using ONLY the supplied source chunks.',
+    'Never invent facts; if a chunk does not cover a claim, omit the claim.',
+    'Cover EVERY topic in the "Weak Topics" list as a `###` subsection under `## Core Concepts`.',
+    'Structure the lesson with these sections (in order):',
+    '  1. `## Learning Objectives` — 2-3 clear, measurable objectives for the weak topics.',
+    '  2. `## Core Concepts` — one `###` subsection per weak topic. Start with the most fundamental concept. Use simple language, define all technical terms, and include analogies where helpful.',
+    '  3. `## Worked Example` — one concrete example connecting multiple weak topics.',
+    '  4. `## Summary` — 2-3 bullet recap.',
+    'CRITICAL RULES:',
+    '- Target cognitive depth: UNDERSTAND (explain, summarize, interpret). The student needs clarity, not complexity.',
+    '- Use simple language suitable for a student who previously struggled.',
+    '- Define every technical term clearly the first time it appears.',
+    '- Use analogies and real-world comparisons where helpful.',
+    '- Inline citations: after each factual sentence, append the matching `[S#]` marker(s).',
+    '  Marker numbers MUST correspond to the source registry provided.',
+    '- Include the specific wrong questions that the student missed and explain why the correct answer is right and why the student\'s answer was wrong.',
+    'Return valid JSON only with this exact schema: { "lesson": string }.',
+  ].join(' ');
+
+  const practiceQuizPrompt = [
+    'You are an assessment designer. Read the practice lesson and create MCQs.',
+    'Each question has exactly 4 options (1 correct, 3 distractors).',
+    'Distractors must reflect common beginner misconceptions from the lesson.',
+    'Do NOT invent facts outside the lesson. Strip [S#] markers.',
+    'Calculate how many questions are appropriate based on the number of weak topics and the breadth of material covered.',
+    'Aim for 2-4 questions per topic, distributing evenly across the weak areas.',
+    'Return valid JSON with this exact shape:',
+    '{"questions":[{"prompt":"...","options":["a","b","c","d"],"correctOptionIndex":0,"explanations":["why a","why b","why c","why d"],"metadata":{"topic":"...","subtopic":"...","bloomLevel":"understand","soloLevel":"multistructural"}}]}',
+    'RULES:',
+    '- explanations: 1-2 sentences per option. Correct=why right. Distractors=why wrong/misconception.',
+    '- metadata.bloomLevel: use "remember" or "understand" (foundational levels).',
+    '- metadata.soloLevel: use "unistructural" or "multistructural" (foundational levels).',
+    '- metadata.topic: use the exact topic names from the weak topics list.',
+    '- Include questions that retest the same concepts the student got wrong (see Wrong Questions list).',
+  ].join('\n');
+
+  const weakTopicLines = payload.weakTopicScores
+    .map((wt) => `  - "${wt.topic}": ${wt.correct}/${wt.total} correct (${wt.percentage}%)`)
+    .join('\n');
+
+  const wrongQuestionLines = payload.wrongQuestions.length > 0
+    ? payload.wrongQuestions
+        .map((wq, i) =>
+          `  ${i + 1}. Prompt: "${wq.prompt.slice(0, 200)}"\n     Student answered: "${wq.studentAnswer.slice(0, 150)}"\n     Correct answer: "${wq.correctAnswer.slice(0, 150)}"`)
+        .join('\n')
+    : '  (All questions answered correctly)';
+
+  const sourceRegistryText = payload.sources.length > 0
+    ? payload.sources
+        .map((s) => `[S${s.index}] file="${s.sourceFile}"${s.chapter ? `, chapter="${s.chapter}"` : ''}, similarity=${s.similarity}`)
+        .join('\n')
+    : '(no sources available)';
+
+  const contextText = payload.topicContexts
+    .map(({ topic, chunks }) => {
+      if (chunks.length === 0) return `### Topic: ${topic}\n(no retrieved chunks)`;
+      const body = chunks.map(({ text, citation }) => `[S${citation.index}] ${text}`).join('\n\n');
+      return `### Topic: ${topic}\n${body}`;
+    })
+    .join('\n\n');
+
+  const lessonPromptParts = [
+    practiceSystemPrompt,
+    `Course: ${payload.courseCode}`,
+    '',
+    '--- WEAK TOPICS (student scored below 70%) ---',
+    weakTopicLines || '(none)',
+    '',
+    '--- COGNITIVE PROFILE ---',
+    payload.strongestTopic ? `Strongest topic: "${payload.strongestTopic}"` : 'Strongest topic: not determined',
+    payload.weakestBloomLevel
+      ? `Weakest Bloom\'s cognitive level: "${payload.weakestBloomLevel}". The student struggles with this level — use simpler cognitive depth.`
+      : 'Weakest Bloom level: not determined',
+    '',
+    '--- QUESTIONS THE STUDENT GOT WRONG ---',
+    wrongQuestionLines,
+    '',
+    '--- SOURCE REGISTRY (use these [S#] markers for citations) ---',
+    sourceRegistryText,
+    '',
+    '--- RETRIEVED SOURCE CHUNKS ---',
+    contextText.slice(0, 12000),
+  ].filter(Boolean).join('\n');
+
+  const rawLesson =
+    env.ai.provider === 'gemini'
+      ? await generateJsonGemini(lessonPromptParts, 0.3, LESSON_MAX_OUTPUT_TOKENS)
+      : env.ai.provider === 'deepseek'
+        ? await generateJsonDeepSeek(lessonPromptParts, 0.3, LESSON_MAX_OUTPUT_TOKENS, practiceSystemPrompt)
+        : await generateJsonOpenAI(lessonPromptParts, 0.3, LESSON_MAX_OUTPUT_TOKENS, practiceSystemPrompt);
+
+  const lesson = sanitizeLesson(rawLesson);
+  if (!lesson) {
+    console.error('[ai] Practice lesson generation returned null');
+    return null;
+  }
+
+  const quizPromptParts = [
+    practiceQuizPrompt,
+    `Weak topics: ${payload.weakTopics.join(', ')}`,
+    `Suggested question count: ${Math.max(payload.weakTopics.length * 3, 5)}`,
+    'Lesson:',
+    lesson.length > 6000 ? `${lesson.slice(0, 6000)}\n\n[Lesson truncated — use only concepts shown]` : lesson,
+  ].join('\n\n');
+
+  const rawQuiz =
+    env.ai.provider === 'gemini'
+      ? await generateJsonGemini(quizPromptParts, 0.2, QUIZ_MAX_OUTPUT_TOKENS)
+      : env.ai.provider === 'deepseek'
+        ? await generateJsonDeepSeek(quizPromptParts, 0.2, QUIZ_MAX_OUTPUT_TOKENS, practiceQuizPrompt)
+        : await generateJsonOpenAI(quizPromptParts, 0.2, QUIZ_MAX_OUTPUT_TOKENS, practiceQuizPrompt);
+
+  const questions = sanitizeQuestions(rawQuiz, 30, 'practice-generation');
+  if (questions.length === 0) {
+    console.warn('[ai] Practice quiz returned 0 questions. Retrying with simplified prompt...');
+    const simpleRetry = [
+      'Create MCQs from the lesson below. Return JSON only.',
+      'Each question: prompt, options[4], correctOptionIndex(number), explanations[4], metadata{topic,subtopic,bloomLevel,soloLevel}.',
+      'Target bloom levels: remember, understand. Target SOLO levels: unistructural, multistructural.',
+      `Topics: ${payload.weakTopics.join(', ')}. Generate questions based on topic breadth.`,
+      'Lesson:',
+      lesson.slice(0, 4000),
+    ].join('\n\n');
+    const raw2 =
+      env.ai.provider === 'gemini'
+        ? await generateJsonGemini(simpleRetry, 0.2, QUIZ_MAX_OUTPUT_TOKENS)
+        : env.ai.provider === 'deepseek'
+          ? await generateJsonDeepSeek(simpleRetry, 0.2, QUIZ_MAX_OUTPUT_TOKENS, 'Return valid JSON only.')
+          : await generateJsonOpenAI(simpleRetry, 0.2, QUIZ_MAX_OUTPUT_TOKENS, 'Return valid JSON only.');
+    const questions2 = sanitizeQuestions(raw2, 30, 'practice-retry');
+    if (questions2.length === 0) return null;
+    return { lesson, questions: questions2, sources: payload.sources };
+  }
+
+  return { lesson, questions, sources: payload.sources };
+}

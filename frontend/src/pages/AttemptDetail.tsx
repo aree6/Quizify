@@ -8,7 +8,22 @@ import { barColor } from '../components/common/analyticsTokens';
 import { timeAgo } from '../utils/helpers';
 import type { StudentAnalyticsData } from '../types';
 
-type AttemptDetail = StudentAnalyticsData & { courseId: string; courseTitle: string };
+type PracticeSession = {
+  id: string;
+  title: string;
+  shareToken: string;
+  attemptId: string | null;
+  percentage: number | null;
+  submittedAt: string | null;
+  topics: string[];
+};
+
+type AttemptDetail = StudentAnalyticsData & {
+  courseId: string;
+  courseTitle: string;
+  shareToken: string;
+  practiceSessions: PracticeSession[];
+};
 
 function parseTitleParts(fullTitle: string): { courseName: string; entries: string[] } {
   const idx = fullTitle.indexOf(' — ');
@@ -28,6 +43,8 @@ export function AttemptDetailPage() {
   const [data, setData] = useState<AttemptDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [practicing, setPracticing] = useState(false);
+  const [practiceError, setPracticeError] = useState('');
 
   useEffect(() => {
     if (!attemptId) {
@@ -39,7 +56,7 @@ export function AttemptDetailPage() {
       try {
         setLoading(true);
         const result = await apiService.getStudentAttempt(attemptId);
-        setData(result);
+        setData(result as AttemptDetail);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load attempt');
       } finally {
@@ -48,6 +65,20 @@ export function AttemptDetailPage() {
     };
     load();
   }, [attemptId]);
+
+  const handlePractice = async () => {
+    if (!data || !attemptId) return;
+    try {
+      setPracticing(true);
+      setPracticeError('');
+      const result = await apiService.practiceWeakTopics(data.shareToken, attemptId);
+      navigate(`/quiz?token=${encodeURIComponent(result.shareToken)}`);
+    } catch (err) {
+      setPracticeError(err instanceof Error ? err.message : 'Failed to generate practice');
+    } finally {
+      setPracticing(false);
+    }
+  };
 
   if (loading) return <PageLoading message="Loading your attempt..." />;
   if (error) return <PageError error={error} />;
@@ -71,29 +102,17 @@ export function AttemptDetailPage() {
       <div className="surface-card p-4 sm:p-6">
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-4">
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
-              {/* <div
-                className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
-                style={{ backgroundColor: data.passed ? 'rgba(5,77,40,0.12)' : 'rgba(208,50,56,0.10)' }}
-              >
-                {data.passed ? (
-                  <CheckCircle2 className="w-5 h-5" style={{ color: barColor(data.percentage) }} />
-                ) : (
-                  <XCircle className="w-5 h-5" style={{ color: barColor(data.percentage) }} />
-                )}
-              </div> */}
-              <div className="min-w-0">
-                <h1 className="text-base sm:text-xl font-bold text-near-black truncate">{courseName}</h1>
-                {entries.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mt-0.5">
-                    {entries.map((entry) => (
-                      <span key={entry} className="px-2 py-0.5 text-[11px] rounded-full bg-chip-gray text-body-gray font-medium">
-                        {entry}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
+            <div className="min-w-0">
+              <h1 className="text-base sm:text-xl font-bold text-near-black truncate">{courseName}</h1>
+              {entries.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-0.5">
+                  {entries.map((entry) => (
+                    <span key={entry} className="px-2 py-0.5 text-[11px] rounded-full bg-chip-gray text-body-gray font-medium">
+                      {entry}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -120,8 +139,63 @@ export function AttemptDetailPage() {
       </div>
 
       <div className="surface-card p-4 sm:p-6">
-        <StudentDiagnostic student={data} />
+        <StudentDiagnostic student={data} onPractice={handlePractice} />
+        {practicing && (
+          <p className="text-sm text-body-gray text-center mt-3 animate-pulse">Generating your personalized practice course...</p>
+        )}
+        {practiceError && <p className="text-sm text-danger text-center mt-2">{practiceError}</p>}
       </div>
+
+      {data.practiceSessions && data.practiceSessions.length > 0 && (
+        <div className="surface-card p-4 sm:p-6">
+          <h2 className="text-sm font-semibold text-near-black mb-3">Practice Sessions</h2>
+          <ul className="space-y-2">
+            {data.practiceSessions.map((session) => (
+              <li key={session.id} className="p-3 rounded-lg border border-chip-gray">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-near-black truncate">{session.title}</p>
+                    {session.topics.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {session.topics.map((t) => (
+                          <span key={t} className="px-1.5 py-0.5 text-[10px] rounded-full bg-chip-gray text-body-gray">
+                            {t}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {session.percentage !== null && (
+                      <span className="text-sm font-bold" style={{ color: barColor(session.percentage) }}>
+                        {session.percentage}%
+                      </span>
+                    )}
+                    {session.submittedAt && (
+                      <span className="text-xs text-muted-gray">{timeAgo(session.submittedAt)}</span>
+                    )}
+                    {session.attemptId ? (
+                      <Link
+                        to={`/student/attempts/${session.attemptId}`}
+                        className="pill-secondary text-xs inline-flex items-center gap-1"
+                      >
+                        View breakdown
+                      </Link>
+                    ) : (
+                      <Link
+                        to={`/quiz?token=${encodeURIComponent(session.shareToken)}`}
+                        className="pill-primary text-xs inline-flex items-center gap-1"
+                      >
+                        Take quiz
+                      </Link>
+                    )}
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <div className="text-center">
         <Link to="/student/dashboard" className="pill-secondary inline-flex items-center gap-1 text-sm">

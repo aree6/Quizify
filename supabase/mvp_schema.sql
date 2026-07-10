@@ -354,4 +354,31 @@ ALTER TABLE public.quiz_attempts
 
 CREATE INDEX IF NOT EXISTS idx_quiz_attempts_student_email ON public.quiz_attempts (student_email);
 
+-- Practice course support: link practice courses to parent and student
+ALTER TABLE public.mini_courses
+    ADD COLUMN IF NOT EXISTS parent_course_id uuid REFERENCES public.mini_courses(id) ON DELETE SET NULL;
+
+ALTER TABLE public.mini_courses
+    ADD COLUMN IF NOT EXISTS student_email text;
+
+CREATE INDEX IF NOT EXISTS idx_mini_courses_parent_course_id ON public.mini_courses (parent_course_id);
+CREATE INDEX IF NOT EXISTS idx_mini_courses_student_email ON public.mini_courses (student_email);
+
+-- One attempt per student per course
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint 
+        WHERE conname = 'unique_student_course_attempt' 
+        AND conrelid = 'public.quiz_attempts'::regclass
+    ) THEN
+        ALTER TABLE public.quiz_attempts
+        ADD CONSTRAINT unique_student_course_attempt UNIQUE (mini_course_id, student_email);
+    END IF;
+END $$;
+
+-- Suspicious activity logging for anti-cheating
+ALTER TABLE public.quiz_attempts
+    ADD COLUMN IF NOT EXISTS suspicious_activity jsonb;
+
 SELECT 'Schema setup complete!' as status;

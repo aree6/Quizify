@@ -22,7 +22,7 @@ import {
   previewCourse,
   reindexOutline,
 } from '../controllers/courses.controller.js';
-import { publicCourse, submitQuiz } from '../controllers/public.controller.js';
+import { publicCourse, submitQuiz, practiceWeakTopics } from '../controllers/public.controller.js';
 import { analytics } from '../controllers/analytics.controller.js';
 import { studentAttempts, studentAttemptDetail } from '../controllers/students.controller.js';
 
@@ -59,6 +59,7 @@ router.delete('/api/courses/:id', requireAuth, asyncHandler(deleteCourse));
 // so the attempt is always associated with their account.
 router.get('/api/public/course/:token', asyncHandler(publicCourse));
 router.post('/api/public/course/:token/submit', requireAuth, asyncHandler(submitQuiz));
+router.post('/api/public/course/:token/practice', requireAuth, asyncHandler(practiceWeakTopics));
 
 // Student history (requires auth)
 router.get('/api/students/attempts', requireAuth, asyncHandler(studentAttempts));
